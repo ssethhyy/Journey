@@ -1,0 +1,13 @@
+<resources>
+    <string name="app_name">Journey</string>
+    <string name="action_help_guide">Help Guide</string>
+    <string name="content_desc_back">Back</string>
+    <string name="label_beta">Beta</string>
+    <string name="map_tab_name">Map</string>
+    <string name="favourites_tab_name">Favourites</string>
+    <string name="nearby_tab_name">Nearby</string>
+    <string name="widget_name">Favourite departures</string>
+    <string name="widget_description">Live next departures from your favourite stops and stations</string>
+    <string name="island_label">Journey</string>
+    <string name="island_description">Live countdown for the service you are tracking and disruptions on your stops, with a tap-to-expand card.</string>
+</resources>

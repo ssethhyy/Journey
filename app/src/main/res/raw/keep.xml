@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Journey looks these up by name (Resources.getIdentifier), so the resource shrinker cannot see that
+  they are used and would strip them from release builds: every Material Symbol would vanish
+  (the Essentials island's alert icons included) and myki card art with them.
+-->
+<resources xmlns:tools="http://schemas.android.com/tools"
+    tools:keep="@drawable/rounded_*,@drawable/ic_myki_card,@drawable/myki_card_art*" />

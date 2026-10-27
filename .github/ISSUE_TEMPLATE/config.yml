@@ -1,0 +1,3 @@
+# Blank issues are off so every report uses a template with the right details.
+# Security problems must NOT be filed as issues: see SECURITY.md (use the Security tab → Report a vulnerability).
+blank_issues_enabled: false

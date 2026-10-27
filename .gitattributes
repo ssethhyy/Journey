@@ -1,0 +1,25 @@
+# Normalise line endings so Windows and macOS/Linux contributors produce the same diffs.
+* text=auto eol=lf
+
+# Windows batch files need CRLF.
+*.bat text eol=crlf
+
+# Shell wrapper must keep LF.
+gradlew text eol=lf
+
+# Binary files: never diff or convert.
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.webp binary
+*.gif binary
+*.ico binary
+*.jar binary
+*.ttf binary
+*.otf binary
+*.so binary
+
+# Keep GitHub's language statistics honest.
+third_party/** linguist-vendored
+docs/** linguist-documentation
+*.md linguist-documentation

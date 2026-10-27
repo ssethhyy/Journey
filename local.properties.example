@@ -1,0 +1,24 @@
+# Copy this file to `local.properties` (same folder) and fill in your own values.
+#
+#   cp local.properties.example local.properties        (macOS / Linux / Git Bash)
+#   copy local.properties.example local.properties      (Windows cmd)
+#
+# `local.properties` is listed in .gitignore, so your keys stay on your machine.
+# NEVER put real keys in this example file, in the source, or in a commit.
+#
+# Android Studio writes `sdk.dir` for you. If you build from the command line without it,
+# either uncomment one of these or set the ANDROID_HOME environment variable:
+#   sdk.dir=C\:\\Users\\you\\AppData\\Local\\Android\\Sdk
+#   sdk.dir=/Users/you/Library/Android/sdk
+#   sdk.dir=/home/you/Android/Sdk
+
+# --- PTV Timetable API (live departures, stops, routes, disruptions) ---
+# Free. Request a key from Public Transport Victoria, they email you both values:
+#   https://www.ptv.vic.gov.au/footer/data-and-reporting/datasets/ptv-timetable-api/
+ptv.devId=
+ptv.apiKey=
+
+# --- Mapbox (the map tab, trip map and journey map) ---
+# Use a PUBLIC token (starts with "pk."), never a secret one ("sk."):
+#   https://account.mapbox.com/access-tokens/
+mapbox.accessToken=

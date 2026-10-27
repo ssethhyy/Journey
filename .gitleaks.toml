@@ -1,0 +1,10 @@
+# Secret-scanning config for gitleaks (used by the CI "Secret scan" job).
+[extend]
+useDefault = true
+
+[allowlist]
+description = "Known non-secrets"
+paths = [
+  # Example credentials taken from PTV's public signing documentation, used as a test fixture.
+  '''app/src/test/java/com/ssethhyy/journey/data/PtvApiTest\.kt''',
+]

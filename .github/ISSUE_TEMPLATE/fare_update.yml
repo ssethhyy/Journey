@@ -1,0 +1,48 @@
+name: Fare or pricing update
+description: Prices, caps, discounts or public holidays are out of date or wrong
+title: "[Fares]: "
+labels: ["fares", "data"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Fares are entered by hand (there's no official feed), so reports like this keep the app correct.
+        Please link the **official source** (transport.vic.gov.au or another vic.gov.au page). We can't accept
+        figures from memory or third-party sites. See
+        [Fare and pricing updates](../blob/main/CONTRIBUTING.md#fare-and-pricing-updates).
+  - type: dropdown
+    id: kind
+    attributes:
+      label: What changed or is wrong?
+      options:
+        - Base prices or caps
+        - A new discount (free or half-price travel, etc.)
+        - A discount's dates or rules
+        - Public holidays
+        - Zone or Free Tram Zone behaviour
+        - Something else
+    validations:
+      required: true
+  - type: textarea
+    id: details
+    attributes:
+      label: Details
+      description: The old and new values, the dates they apply, and who they apply to (full, concession, child, seniors).
+    validations:
+      required: true
+  - type: input
+    id: source
+    attributes:
+      label: Official source link
+      placeholder: "https://transport.vic.gov.au/..."
+    validations:
+      required: true
+  - type: dropdown
+    id: contribute
+    attributes:
+      label: Would you like to send the fix?
+      options:
+        - "No, please update it"
+        - "Yes, I'll open a pull request"
+    validations:
+      required: true

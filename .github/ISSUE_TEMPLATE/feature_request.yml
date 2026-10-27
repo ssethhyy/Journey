@@ -1,0 +1,58 @@
+name: Feature request
+description: Suggest an idea or improvement
+title: "[Feature]: "
+labels: ["enhancement", "triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Great ideas start with a problem. Tell us what's hard today, then how you'd like it to work.
+        If you'd like to build it yourself, say so, and please wait for a thumbs up before starting anything large
+        (see [CONTRIBUTING.md](../blob/main/CONTRIBUTING.md)).
+  - type: textarea
+    id: problem
+    attributes:
+      label: What problem are you trying to solve?
+      placeholder: "I can't tell at a glance which of my trams is running late..."
+    validations:
+      required: true
+  - type: textarea
+    id: solution
+    attributes:
+      label: What would you like to happen?
+      description: Sketches, mockups and examples from other apps are welcome.
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives you've considered
+    validations:
+      required: false
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area
+      options:
+        - For You
+        - Plan / journeys
+        - Map
+        - Live tracking
+        - myki and fares
+        - Profile
+        - Widget or notifications
+        - Essentials island
+        - Design or accessibility
+        - Other
+    validations:
+      required: true
+  - type: dropdown
+    id: contribute
+    attributes:
+      label: Would you like to work on it?
+      options:
+        - "No, I'm just suggesting"
+        - "Yes, I'd like to build it"
+        - "Maybe, with some guidance"
+    validations:
+      required: true

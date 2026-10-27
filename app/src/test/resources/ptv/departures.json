@@ -1,0 +1,121 @@
+{
+  "departures": [
+    {
+      "stop_id": 1071,
+      "route_id": 6,
+      "run_id": -1,
+      "run_ref": "955123",
+      "direction_id": 1,
+      "disruption_ids": [],
+      "scheduled_departure_utc": "2026-10-18T03:30:00Z",
+      "estimated_departure_utc": "2026-10-18T03:32:00Z",
+      "at_platform": false,
+      "platform_number": "4",
+      "flags": "",
+      "departure_sequence": 0
+    },
+    {
+      "stop_id": 1071,
+      "route_id": 6,
+      "run_ref": "955124",
+      "direction_id": 1,
+      "disruption_ids": [123456],
+      "scheduled_departure_utc": "2026-10-18T03:20:00Z",
+      "estimated_departure_utc": null,
+      "at_platform": true,
+      "platform_number": "5",
+      "flags": "S_VTR",
+      "departure_sequence": 0
+    },
+    {
+      "stop_id": 1071,
+      "route_id": 11,
+      "run_ref": "955125",
+      "direction_id": 7,
+      "disruption_ids": [],
+      "scheduled_departure_utc": "2026-10-18T03:25:00Z",
+      "estimated_departure_utc": null,
+      "at_platform": false,
+      "platform_number": null,
+      "departure_sequence": 0
+    }
+  ],
+  "stops": {
+    "1071": {
+      "stop_id": 1071,
+      "stop_name": "Flinders Street Station",
+      "stop_suburb": "Melbourne City",
+      "route_type": 0,
+      "stop_latitude": -37.8183,
+      "stop_longitude": 144.9671
+    }
+  },
+  "routes": {
+    "6": {
+      "route_type": 0,
+      "route_id": 6,
+      "route_name": "Frankston",
+      "route_number": "",
+      "route_gtfs_id": "2-FKN",
+      "route_service_status": { "description": "Good Service", "timestamp": "2026-10-18T03:00:00Z" }
+    },
+    "11": {
+      "route_type": 0,
+      "route_id": 11,
+      "route_name": "Pakenham",
+      "route_number": "",
+      "route_gtfs_id": "2-PKM"
+    }
+  },
+  "runs": {
+    "955123": {
+      "run_ref": "955123",
+      "route_id": 6,
+      "route_type": 0,
+      "final_stop_id": 1073,
+      "destination_name": "Frankston",
+      "status": "scheduled",
+      "direction_id": 1,
+      "express_stop_count": 4,
+      "vehicle_descriptor": { "operator": "Metro Trains", "id": "123", "low_floor": null, "air_conditioned": true, "description": "X'Trapolis 100" }
+    },
+    "955124": {
+      "run_ref": "955124",
+      "route_id": 6,
+      "route_type": 0,
+      "destination_name": "Carrum",
+      "status": "cancelled",
+      "direction_id": 1,
+      "express_stop_count": 0
+    },
+    "955125": {
+      "run_ref": "955125",
+      "route_id": 11,
+      "route_type": 0,
+      "destination_name": "Pakenham",
+      "status": "scheduled",
+      "direction_id": 7,
+      "express_stop_count": 0
+    }
+  },
+  "directions": {
+    "1": { "direction_id": 1, "direction_name": "Frankston", "route_id": 6, "route_type": 0 },
+    "7": { "direction_id": 7, "direction_name": "Pakenham", "route_id": 11, "route_type": 0 }
+  },
+  "disruptions": {
+    "123456": {
+      "disruption_id": 123456,
+      "title": "Frankston line: Buses replace trains",
+      "url": "https://www.ptv.vic.gov.au/disruptions/123456",
+      "description": "Buses replace trains between Caulfield and Frankston.",
+      "disruption_status": "Current",
+      "disruption_type": "Planned Works",
+      "published_on": "2026-10-10T00:00:00Z",
+      "from_date": "2026-10-18T00:00:00Z",
+      "to_date": "2026-10-20T00:00:00Z",
+      "routes": [ { "route_type": 0, "route_id": 6, "route_name": "Frankston", "route_number": "" } ],
+      "stops": []
+    }
+  },
+  "status": { "version": "3.0", "health": 1 }
+}

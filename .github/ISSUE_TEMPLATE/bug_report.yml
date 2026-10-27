@@ -1,0 +1,89 @@
+name: Bug report
+description: Something isn't working as it should
+title: "[Bug]: "
+labels: ["bug", "triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time to report this! Please **do not include API keys, tokens, your home address or
+        other personal data** in this report, screenshots or logs.
+        Security problems should be reported privately, see [SECURITY.md](../blob/main/SECURITY.md).
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened?
+      description: What did you expect to happen, and what happened instead?
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      placeholder: |
+        1. Open the For You tab
+        2. Tap a stop
+        3. ...
+    validations:
+      required: true
+  - type: dropdown
+    id: area
+    attributes:
+      label: Where does it happen?
+      options:
+        - For You
+        - Plan / journeys
+        - Map
+        - Stop, route or trip screens (live tracking)
+        - myki (cards, trip logging, fares)
+        - Profile
+        - Notifications or live tracking
+        - Widget
+        - Essentials island
+        - Settings
+        - Build or setup
+        - Not sure
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: Journey version
+      description: Shown in Settings, or the commit if you built it yourself.
+      placeholder: "2.0"
+    validations:
+      required: true
+  - type: input
+    id: device
+    attributes:
+      label: Device and Android version
+      placeholder: "Pixel 8, Android 16"
+    validations:
+      required: true
+  - type: dropdown
+    id: build
+    attributes:
+      label: How did you install it?
+      options:
+        - Built from source (debug)
+        - Built from source (release)
+        - Prebuilt APK
+    validations:
+      required: false
+  - type: textarea
+    id: logs
+    attributes:
+      label: Logs or screenshots
+      description: Remove anything personal first. For crashes, `adb logcat -d` around the time helps a lot.
+      render: shell
+    validations:
+      required: false
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Before submitting
+      options:
+        - label: I searched existing issues and didn't find this one
+          required: true
+        - label: I removed API keys, addresses and other personal data from everything I attached
+          required: true

@@ -1,0 +1,104 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
+
+    <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.NFC" />
+    <uses-feature android:name="android.hardware.nfc" android:required="false" />
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
+    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
+    <uses-permission android:name="android.permission.VIBRATE" />
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    <uses-permission android:name="android.permission.POST_PROMOTED_NOTIFICATIONS" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SPECIAL_USE" />
+
+    <!-- Package visibility for the Essentials island host (approval status, launching it). -->
+    <queries>
+        <package android:name="com.sameerasw.essentials" />
+        <package android:name="au.gov.vic.ptv" />
+    </queries>
+
+    <application
+        android:name=".JourneyApp"
+        android:allowBackup="true"
+        android:dataExtractionRules="@xml/data_extraction_rules"
+        android:enableOnBackInvokedCallback="true"
+        android:fullBackupContent="@xml/backup_rules"
+        android:icon="@mipmap/ic_launcher"
+        android:label="@string/app_name"
+        android:roundIcon="@mipmap/ic_launcher_round"
+        android:supportsRtl="true"
+        android:theme="@style/Theme.Journey"
+        tools:targetApi="33">
+
+        <meta-data
+            android:name="com.mapbox.token"
+            android:value="@string/mapbox_access_token" />
+
+        <activity
+            android:name=".MainActivity"
+            android:exported="true"
+            android:label="@string/app_name"
+            android:theme="@style/Theme.Journey.Splash"
+            android:windowSoftInputMode="adjustResize">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+        <receiver
+            android:name=".widget.JourneyWidgetReceiver"
+            android:exported="true"
+            android:label="@string/widget_name">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/journey_widget_info" />
+        </receiver>
+
+        <!-- Essentials island provider (see third_party/essentials-island/ISLAND_PROVIDERS.md). -->
+        <service
+            android:name=".island.JourneyIslandService"
+            android:exported="true"
+            android:label="@string/island_label"
+            tools:ignore="ExportedService">
+            <intent-filter>
+                <action android:name="com.sameerasw.island.PROVIDER" />
+            </intent-filter>
+            <meta-data
+                android:name="com.sameerasw.island.provider.label"
+                android:value="@string/island_label" />
+            <meta-data
+                android:name="com.sameerasw.island.provider.description"
+                android:value="@string/island_description" />
+            <meta-data
+                android:name="com.sameerasw.island.provider.priority"
+                android:value="35" />
+            <meta-data
+                android:name="com.sameerasw.island.provider.settings"
+                android:value="com.ssethhyy.journey.IslandSettingsActivity" />
+        </service>
+
+        <!-- Opened by the gear next to Journey in Essentials > Island settings. -->
+        <activity-alias
+            android:name=".IslandSettingsActivity"
+            android:exported="true"
+            android:label="@string/island_label"
+            android:targetActivity=".MainActivity" />
+
+        <service
+            android:name=".tracking.TrackingService"
+            android:exported="false"
+            android:foregroundServiceType="specialUse">
+            <property
+                android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
+                android:value="Live countdown for a public transport service the user chose to track" />
+        </service>
+    </application>
+
+</manifest>

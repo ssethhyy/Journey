@@ -44,6 +44,10 @@ jobs:
       - name: Set up Gradle
         uses: gradle/actions/setup-gradle@v4
 
+      # Files created on Windows lose their executable bit, so make sure the wrapper can run.
+      - name: Make Gradle wrapper executable
+        run: chmod +x ./gradlew
+
       - name: Unit and UI tests
         run: ./gradlew :app:testDebugUnitTest --stacktrace
 

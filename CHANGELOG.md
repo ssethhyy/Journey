@@ -11,6 +11,7 @@ All notable changes to Journey are documented here. The format follows
 
 ### Fixed
 - CI no longer fails while setting up the Android SDK (the runner's preinstalled SDK is used instead of `android-actions/setup-android`).
+- CI no longer fails with `./gradlew: Permission denied`: the Gradle wrapper is marked executable in Git and made executable in the workflow.
 
 ## [1.0.0] - 2026-10-27
 

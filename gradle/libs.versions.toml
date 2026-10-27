@@ -22,7 +22,7 @@ splashscreen = "1.2.0"
 robolectric = "4.16"
 glance = "1.1.1"
 work = "2.11.2"
-gson = "2.14.0"
+gson = "2.15.0"
 
 [libraries]
 androidx-profileinstaller = { group = "androidx.profileinstaller", name = "profileinstaller", version.ref = "profileinstaller" }

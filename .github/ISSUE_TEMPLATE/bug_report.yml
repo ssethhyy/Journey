@@ -50,7 +50,7 @@ body:
     attributes:
       label: Journey version
       description: Shown in Settings, or the commit if you built it yourself.
-      placeholder: "2.0"
+      placeholder: "1.0.0"
     validations:
       required: true
   - type: input

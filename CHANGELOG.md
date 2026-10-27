@@ -9,7 +9,7 @@ All notable changes to Journey are documented here. The format follows
 ### Added
 - Repository documentation for GitHub: README, contributing guide, code of conduct, security policy, licence, third-party notices, issue and pull request templates, CI and Dependabot.
 
-## [2.0] - 2026-10-27
+## [1.0.0] - 2026-10-27
 
 ### Added
 - **For You** tab with a personal greeting, favourite stops with live departures, saved places (Home, Work, custom) and network status.
@@ -30,5 +30,5 @@ All notable changes to Journey are documented here. The format follows
 - Release builds now keep the Material Symbols and myki artwork (they were being removed by resource shrinking, which broke icons and the island's alert icon).
 - Bottom-sheet forms lift above the keyboard instead of being covered by it.
 
-[Unreleased]: https://github.com/ssethhyy/Journey/compare/v2.0...HEAD
-[2.0]: https://github.com/ssethhyy/Journey/releases/tag/v2.0
+[Unreleased]: https://github.com/ssethhyy/Journey/compare/v1.0.0...HEAD
+[1.0.0]: https://github.com/ssethhyy/Journey/releases/tag/v1.0.0

@@ -31,15 +31,15 @@ jobs:
           distribution: temurin
           java-version: 25
 
-      - name: Set up Android SDK
-        uses: android-actions/setup-android@v3
-
-      # The app compiles against Android 37.1 (see app/build.gradle.kts). If the runner image doesn't have it yet,
-      # install it. Adjust the package name here if the SDK Manager lists it differently.
-      - name: Install SDK platform
+      # GitHub's Ubuntu runners already include the Android SDK (ANDROID_HOME), so no setup action is needed.
+      # The app compiles against Android 37.1 (see app/build.gradle.kts). Accept licences and install that platform
+      # if the runner image doesn't have it yet. If the install fails, Gradle will try to download it itself.
+      - name: Install Android SDK platform
         run: |
-          yes | sdkmanager --licenses > /dev/null || true
-          sdkmanager "platforms;android-37.1" "build-tools;36.0.0"
+          SDKMANAGER="$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager"
+          [ -x "$SDKMANAGER" ] || SDKMANAGER="$(command -v sdkmanager)"
+          yes | "$SDKMANAGER" --licenses > /dev/null || true
+          "$SDKMANAGER" "platforms;android-37.1" "build-tools;36.0.0" || echo "::warning::Could not preinstall the platform, relying on Gradle to download it."
 
       - name: Set up Gradle
         uses: gradle/actions/setup-gradle@v4

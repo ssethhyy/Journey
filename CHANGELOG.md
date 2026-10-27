@@ -9,6 +9,9 @@ All notable changes to Journey are documented here. The format follows
 ### Added
 - Repository documentation for GitHub: README, contributing guide, code of conduct, security policy, licence, third-party notices, issue and pull request templates, CI and Dependabot.
 
+### Fixed
+- CI no longer fails while setting up the Android SDK (the runner's preinstalled SDK is used instead of `android-actions/setup-android`).
+
 ## [1.0.0] - 2026-10-27
 
 ### Added

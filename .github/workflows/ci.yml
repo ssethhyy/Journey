@@ -23,7 +23,7 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Validate Gradle wrapper
-        uses: gradle/actions/wrapper-validation@v4
+        uses: gradle/actions/wrapper-validation@v6
 
       - name: Set up JDK 25
         uses: actions/setup-java@v4
@@ -42,7 +42,7 @@ jobs:
           "$SDKMANAGER" "platforms;android-37.1" "build-tools;36.0.0" || echo "::warning::Could not preinstall the platform, relying on Gradle to download it."
 
       - name: Set up Gradle
-        uses: gradle/actions/setup-gradle@v4
+        uses: gradle/actions/setup-gradle@v6
 
       # Files created on Windows lose their executable bit, so make sure the wrapper can run.
       - name: Make Gradle wrapper executable

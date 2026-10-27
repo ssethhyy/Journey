@@ -24,7 +24,7 @@ android {
 
 dependencies {
     api(project(":island-sdk"))
-    implementation(platform("androidx.compose:compose-bom:2026.06.01"))
+    implementation(platform("androidx.compose:compose-bom:2026.09.00"))
     implementation("androidx.compose.ui:ui")
     implementation("androidx.lifecycle:lifecycle-runtime:2.9.4")
     implementation("androidx.savedstate:savedstate:1.3.3")

@@ -32,7 +32,7 @@ jobs:
           java-version: 25
 
       - name: Set up Android SDK
-        uses: android-actions/setup-android@v3
+        uses: android-actions/setup-android@v4
 
       # The app compiles against Android 37.1 (see app/build.gradle.kts). If the runner image doesn't have it yet,
       # install it. Adjust the package name here if the SDK Manager lists it differently.

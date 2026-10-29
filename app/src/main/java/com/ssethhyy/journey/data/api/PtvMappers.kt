@@ -89,7 +89,7 @@ object PtvMappers {
             .sortedWith(compareBy<Disruption> { it.severity.ordinal }.thenByDescending { it.publishedOn })
 
     private fun vehicle(run: RunDto?): VehicleInfo? = run?.vehicleDescriptor?.let {
-        VehicleInfo(description = it.description?.takeIf { d -> d.isNotBlank() }, lowFloor = it.lowFloor, airConditioned = it.airConditioned)
+        VehicleInfo(description = it.description?.takeIf { d -> d.isNotBlank() }, lowFloor = it.lowFloor, airConditioned = it.airConditioned, id = it.id?.takeIf { id -> id.isNotBlank() })
     }
 
     fun departureBoard(response: DeparturesResponse, now: Instant = Instant.now()): DepartureBoard {

@@ -17,6 +17,7 @@ import androidx.datastore.preferences.core.stringSetPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import com.ssethhyy.journey.BuildConfig
 import com.ssethhyy.journey.data.api.PtvCredentials
+import com.ssethhyy.journey.data.crowding.CrowdingAlertLevel
 import com.ssethhyy.journey.data.model.TransportMode
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
@@ -64,6 +65,10 @@ data class AppSettings(
     val dynamicColor: Boolean = true,
     val pitchBlack: Boolean = false,
     val barStyle: BarStyle = BarStyle.BOTTOM_BAR,
+    /** Optional Transport Victoria Open Data key for crowding; overrides the one built into the app. */
+    val openDataKeyOverride: String = "",
+    val crowdingAlerts: Boolean = true,
+    val crowdingAlertLevel: CrowdingAlertLevel = CrowdingAlertLevel.BUSY,
     val hapticsEnabled: Boolean = true,
     val timeDisplay: TimeDisplay = TimeDisplay.RELATIVE,
     val departuresPerStop: Int = 3,
@@ -99,6 +104,9 @@ class SettingsRepository(context: Context) {
         val DYNAMIC = booleanPreferencesKey("dynamic_color")
         val PITCH_BLACK = booleanPreferencesKey("pitch_black")
         val BAR_STYLE = stringPreferencesKey("bar_style")
+        val OPEN_DATA_KEY = stringPreferencesKey("open_data_key")
+        val CROWDING_ALERTS = booleanPreferencesKey("crowding_alerts")
+        val CROWDING_LEVEL = stringPreferencesKey("crowding_level")
         val HAPTICS = booleanPreferencesKey("app_haptics_enabled")
         val TIME_DISPLAY = stringPreferencesKey("time_display")
         val DEPARTURES_PER_STOP = intPreferencesKey("departures_per_stop")
@@ -131,6 +139,9 @@ class SettingsRepository(context: Context) {
             dynamicColor = p[Keys.DYNAMIC] ?: true,
             pitchBlack = p[Keys.PITCH_BLACK] ?: false,
             barStyle = p[Keys.BAR_STYLE].enumOr(BarStyle.BOTTOM_BAR),
+            openDataKeyOverride = p[Keys.OPEN_DATA_KEY].orEmpty(),
+            crowdingAlerts = p[Keys.CROWDING_ALERTS] ?: true,
+            crowdingAlertLevel = p[Keys.CROWDING_LEVEL].enumOr(CrowdingAlertLevel.BUSY),
             hapticsEnabled = p[Keys.HAPTICS] ?: true,
             timeDisplay = p[Keys.TIME_DISPLAY]?.let { runCatching { TimeDisplay.valueOf(it) }.getOrNull() } ?: TimeDisplay.RELATIVE,
             departuresPerStop = (p[Keys.DEPARTURES_PER_STOP] ?: 3).coerceIn(1, 6),
@@ -176,6 +187,9 @@ class SettingsRepository(context: Context) {
     suspend fun setDynamicColor(enabled: Boolean) = store.edit { it[Keys.DYNAMIC] = enabled }
     suspend fun setPitchBlack(enabled: Boolean) = store.edit { it[Keys.PITCH_BLACK] = enabled }
     suspend fun setBarStyle(style: BarStyle) = store.edit { it[Keys.BAR_STYLE] = style.name }
+    suspend fun setOpenDataKey(key: String) = store.edit { it[Keys.OPEN_DATA_KEY] = key.trim() }
+    suspend fun setCrowdingAlerts(enabled: Boolean) = store.edit { it[Keys.CROWDING_ALERTS] = enabled }
+    suspend fun setCrowdingAlertLevel(level: CrowdingAlertLevel) = store.edit { it[Keys.CROWDING_LEVEL] = level.name }
     suspend fun setHaptics(enabled: Boolean) = store.edit { it[Keys.HAPTICS] = enabled }
     suspend fun setTimeDisplay(display: TimeDisplay) = store.edit { it[Keys.TIME_DISPLAY] = display.name }
     suspend fun setDeparturesPerStop(count: Int) = store.edit { it[Keys.DEPARTURES_PER_STOP] = count.coerceIn(1, 6) }

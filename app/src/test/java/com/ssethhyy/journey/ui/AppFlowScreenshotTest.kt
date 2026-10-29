@@ -47,6 +47,8 @@ class TestJourneyApp : JourneyApp() {
             credentialsOverride = PtvCredentials("1234567", "test-key"),
             mapRenderingEnabled = false,
             plannerBaseUrl = baseUrl,
+            crowdingBaseUrl = baseUrl,
+            openDataKeyOverride = "test-open-data-key",
         )
 
     companion object {
@@ -147,6 +149,10 @@ class AppFlowScreenshotTest {
         // Trip / stopping pattern from a departure.
         rule.onAllNodesWithText("Carrum").onFirst().performClick()
         waitForText("Stopping pattern")
+        // Crowding from the Open Data feed: the whole train and each carriage.
+        waitForText("Standing room only")
+        waitForText("By carriage")
+        waitForText("Car 3 is fullest")
         snap("05_trip")
         rule.activity.onBackPressedDispatcher.onBackPressed()
         rule.waitForIdle()

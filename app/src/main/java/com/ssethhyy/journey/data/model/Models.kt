@@ -82,6 +82,8 @@ data class VehicleInfo(
     val description: String?,
     val lowFloor: Boolean?,
     val airConditioned: Boolean?,
+    /** The physical vehicle: carriage numbers for a Metro train ("1380T-1433T-..."), the fleet number for a tram or bus. */
+    val id: String? = null,
 )
 
 data class DepartureBoard(

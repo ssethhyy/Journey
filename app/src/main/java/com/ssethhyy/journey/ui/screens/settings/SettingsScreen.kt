@@ -365,6 +365,27 @@ fun SettingsScreen() {
                 }
             }
 
+            item(key = "crowding") {
+                SectionLabel("Crowding")
+                RoundedCardContainer {
+                    IconToggleItem(
+                        icon = Sym.Groups,
+                        title = "Crowding alerts",
+                        description = "Tell me when a service I'm tracking gets busy",
+                        isChecked = settings.crowdingAlerts,
+                        onCheckedChange = { vm.update { setCrowdingAlerts(it) } },
+                    )
+                    ConfigPickerItem(
+                        icon = Sym.Warning,
+                        title = "Alert me when it is",
+                        items = com.ssethhyy.journey.data.crowding.CrowdingAlertLevel.entries,
+                        selectedItem = settings.crowdingAlertLevel,
+                        onItemSelected = { vm.update { setCrowdingAlertLevel(it) } },
+                        labelProvider = { it.label },
+                    )
+                }
+            }
+
             item(key = "api") {
                 SectionLabel("API access")
                 ApiAccessCard(
@@ -373,6 +394,7 @@ fun SettingsScreen() {
                     onSave = vm::saveCredentials,
                     onTest = vm::testConnection,
                     onSaveMapbox = { token -> vm.update { setMapboxToken(token) } },
+                    onSaveOpenData = { key -> vm.update { setOpenDataKey(key) } },
                 )
             }
 
@@ -433,11 +455,13 @@ private fun ApiAccessCard(
     onSave: (String, String) -> Unit,
     onTest: (String, String) -> Unit,
     onSaveMapbox: (String) -> Unit,
+    onSaveOpenData: (String) -> Unit,
 ) {
     val view = LocalView.current
     var devId by rememberSaveable(settings.ptvDevIdOverride) { mutableStateOf(settings.ptvDevIdOverride) }
     var apiKey by rememberSaveable(settings.ptvApiKeyOverride) { mutableStateOf(settings.ptvApiKeyOverride) }
     var mapbox by rememberSaveable(settings.mapboxTokenOverride) { mutableStateOf(settings.mapboxTokenOverride) }
+    var openData by rememberSaveable(settings.openDataKeyOverride) { mutableStateOf(settings.openDataKeyOverride) }
     var showKey by rememberSaveable { mutableStateOf(false) }
     val builtIn = BuildConfig.PTV_DEV_ID.isNotBlank() && BuildConfig.PTV_API_KEY.isNotBlank()
 
@@ -545,6 +569,43 @@ private fun ApiAccessCard(
                 HapticUtil.performConfirmHaptic(view)
                 onSaveMapbox(mapbox)
             }) { Text("Save token") }
+        }
+        Column(
+            Modifier
+                .fillMaxWidth()
+                .background(MaterialTheme.colorScheme.surfaceBright)
+                .padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp),
+        ) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Icon(Sym.Groups, null, tint = MaterialTheme.colorScheme.primary)
+                Spacer(Modifier.width(12.dp))
+                Column(Modifier.weight(1f)) {
+                    Text("Transport Victoria Open Data", style = MaterialTheme.typography.titleMedium)
+                    Text(
+                        if (settings.openDataKeyOverride.isNotBlank() || BuildConfig.OPENDATA_KEY.isNotBlank()) {
+                            "Key added: crowding is on"
+                        } else {
+                            "Optional. A free key shows how busy a service and its carriages are."
+                        },
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+            }
+            OutlinedTextField(
+                value = openData,
+                onValueChange = { openData = it.trim() },
+                label = { Text("Open Data API key") },
+                singleLine = true,
+                visualTransformation = PasswordVisualTransformation(),
+                shape = RoundedCornerShape(16.dp),
+                modifier = Modifier.fillMaxWidth(),
+            )
+            FilledTonalButton(onClick = {
+                HapticUtil.performConfirmHaptic(view)
+                onSaveOpenData(openData)
+            }) { Text("Save key") }
         }
     }
 }

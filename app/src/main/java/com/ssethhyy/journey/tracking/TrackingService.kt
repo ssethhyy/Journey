@@ -24,6 +24,10 @@ import androidx.core.content.ContextCompat
 import com.ssethhyy.journey.MainActivity
 import com.ssethhyy.journey.R
 import com.ssethhyy.journey.appContainer
+import com.ssethhyy.journey.data.crowding.CrowdingAlertPolicy
+import com.ssethhyy.journey.data.crowding.CrowdingResult
+import com.ssethhyy.journey.data.crowding.Occupancy
+import com.ssethhyy.journey.data.crowding.VehicleCrowding
 import com.ssethhyy.journey.ui.theme.ModeColors
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -108,6 +112,7 @@ class TrackingService : Service() {
         var lastStatus: TrackingStatus? = null
         var lastFetch = Instant.EPOCH
         var departure: com.ssethhyy.journey.data.model.Departure? = null
+        var lastCrowdAlert: Occupancy? = null
         var journey = (target as? TrackingTarget.Trip)?.let { container.journeyRepository.journey(it.journeyId) }
 
         while (scope.isActive) {
@@ -120,7 +125,7 @@ class TrackingService : Service() {
                         container.ptvRepository.departures(target.mode, target.stopId, maxResults = 12, force = true)
                     }.onSuccess { board ->
                         departure = board.departures.firstOrNull { it.runRef == target.runRef }
-                    }
+                    }.also { lastCrowdAlert = checkCrowding(target, lastCrowdAlert) }
                     is TrackingTarget.Trip -> runCatching { container.journeyRepository.refreshJourney(target.journeyId) }
                         .onSuccess { refreshed -> if (refreshed != null) journey = refreshed }
                 }
@@ -142,6 +147,51 @@ class TrackingService : Service() {
             delay(15_000)
         }
         stopTracking()
+    }
+
+    /** Alerts once when the tracked service reaches the user's crowding level, again only if it gets worse. */
+    private suspend fun checkCrowding(target: TrackingTarget.Service, lastAlerted: Occupancy?): Occupancy? {
+        val container = appContainer
+        val settings = container.settingsRepository.current()
+        if (!settings.crowdingAlerts || !container.crowdingRepository.isConfigured()) return lastAlerted
+        val result = runCatching {
+            val pattern = container.ptvRepository.stoppingPattern(target.runRef, target.mode, withPath = false)
+            container.crowdingRepository.crowdingFor(
+                target.mode,
+                pattern.vehicle?.id,
+                pattern.vehiclePosition?.let { it.latitude to it.longitude },
+            )
+        }.getOrNull() as? CrowdingResult.Found ?: return lastAlerted
+        val decision = CrowdingAlertPolicy.next(lastAlerted, result.crowding.overall, settings.crowdingAlertLevel.minimum)
+        if (decision.alert) notifyCrowding(target, result.crowding)
+        return decision.lastAlerted
+    }
+
+    private fun notifyCrowding(target: TrackingTarget.Service, crowding: VehicleCrowding) {
+        if (!manager.canPostNotifications()) return
+        val nm = getSystemService(NotificationManager::class.java)
+        if (nm.getNotificationChannel(CROWDING_CHANNEL_ID) == null) {
+            nm.createNotificationChannel(
+                NotificationChannel(CROWDING_CHANNEL_ID, "Crowding alerts", NotificationManager.IMPORTANCE_DEFAULT).apply {
+                    description = "When the service you're tracking gets busy"
+                },
+            )
+        }
+        val open = PendingIntent.getActivity(
+            this,
+            2,
+            Intent(this, MainActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP),
+            PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
+        )
+        val notification = Notification.Builder(this, CROWDING_CHANNEL_ID)
+            .setSmallIcon(R.drawable.ic_stat_tracking)
+            .setContentTitle("${target.routeLabel} to ${target.headsign} is busy")
+            .setContentText(CrowdingAlertPolicy.message(crowding))
+            .setCategory(Notification.CATEGORY_STATUS)
+            .setAutoCancel(true)
+            .setContentIntent(open)
+            .build()
+        nm.notify(CROWDING_NOTIFICATION_ID, notification)
     }
 
     private fun stopTracking() {
@@ -226,5 +276,7 @@ class TrackingService : Service() {
         const val ACTION_STOP = "com.ssethhyy.journey.tracking.STOP"
         private const val CHANNEL_ID = "live_tracking"
         private const val NOTIFICATION_ID = 4201
+        private const val CROWDING_CHANNEL_ID = "crowding_alerts"
+        private const val CROWDING_NOTIFICATION_ID = 4202
     }
 }

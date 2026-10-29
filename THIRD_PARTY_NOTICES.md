@@ -38,6 +38,8 @@ each service's own terms when you run it with your own keys.
   published by the State of Victoria (Department of Transport and Planning) under
   [Creative Commons Attribution 4.0](https://creativecommons.org/licenses/by/4.0/), so credit them if you
   redistribute it. Journey credits Transport Victoria on its journey screen.
+- **Transport Victoria Open Data** GTFS Realtime vehicle positions (crowding), © State of Victoria (Department of Transport and Planning), licensed
+  [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/). Used only with your own free key.
 - **[Transitous](https://transitous.org)** (MOTIS), a community-run journey planner built on open transit
   feeds and OpenStreetMap. No key is needed. Please keep request volume modest.
 - **Mapbox** map tiles. Map data © Mapbox, © OpenStreetMap contributors.

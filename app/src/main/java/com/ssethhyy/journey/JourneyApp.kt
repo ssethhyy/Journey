@@ -48,6 +48,9 @@ class AppContainer(
     /** False where no GPU surface exists (Robolectric), so the map shows its placeholder. */
     val mapRenderingEnabled: Boolean = true,
     plannerBaseUrl: String = PlannerApi.DEFAULT_BASE_URL,
+    crowdingBaseUrl: String = com.ssethhyy.journey.data.crowding.CrowdingApi.DEFAULT_BASE_URL,
+    /** A fixed Open Data key (tests); otherwise Settings, then the key built into the app. */
+    openDataKeyOverride: String? = null,
 ) {
     val appScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
     val settingsRepository = SettingsRepository(context)
@@ -58,6 +61,15 @@ class AppContainer(
         baseUrl = ptvBaseUrl,
     )
     val ptvRepository = PtvRepository(ptvApi)
+    val crowdingRepository = com.ssethhyy.journey.data.crowding.CrowdingRepository(
+        com.ssethhyy.journey.data.crowding.CrowdingApi(
+            keyProvider = {
+                openDataKeyOverride
+                    ?: settingsRepository.current().openDataKeyOverride.ifBlank { com.ssethhyy.journey.BuildConfig.OPENDATA_KEY }
+            },
+            baseUrl = crowdingBaseUrl,
+        ),
+    )
     val placesRepository = PlacesRepository(context)
     val mykiRepository = com.ssethhyy.journey.data.myki.MykiRepository(context)
     val fareConfigRepository = com.ssethhyy.journey.data.fare.FareConfigRepository(context)

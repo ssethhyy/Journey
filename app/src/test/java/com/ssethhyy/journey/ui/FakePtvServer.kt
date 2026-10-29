@@ -81,6 +81,13 @@ class FakePtvServer {
     private val dispatcher = object : Dispatcher() {
         override fun dispatch(request: RecordedRequest): MockResponse {
             val path = request.path.orEmpty().substringBefore("?")
+            if (path.startsWith("/opendata/public-transport/gtfs/realtime/")) {
+                // A four-car train: car 3 is the fullest.
+                val feed = com.ssethhyy.journey.data.crowding.feed(
+                    com.ssethhyy.journey.data.crowding.train("1380T", -37.8403f, 144.9968f, 3, listOf(1, 2, 5, 3)),
+                )
+                return MockResponse().setBody(okio.Buffer().write(feed)).setHeader("Content-Type", "application/x-protobuf")
+            }
             val body = when {
                 path.startsWith("/v3/departures/route_type/") -> {
                     val parts = path.split("/")
@@ -132,7 +139,7 @@ class FakePtvServer {
         }
         val stopMap = names.mapIndexed { i, n -> """"${100 + i}":{"stop_id":${100 + i},"stop_name":"$n Station","stop_suburb":"Melbourne","route_type":0,"stop_latitude":${coords[i].first},"stop_longitude":${coords[i].second},"stop_sequence":$i}""" }.joinToString(",")
         val vehicle = """{"latitude":-37.8403,"longitude":144.9968,"bearing":140.0,"datetime_utc":"${t(0)}","expiry_time":"${t(5)}"}"""
-        return """{"departures":[$deps],"stops":{$stopMap},"routes":{"6":${routeJson(frankston)}},"runs":{"6-0":{"run_ref":"6-0","route_id":6,"route_type":0,"destination_name":"Frankston","status":"scheduled","direction_id":1,"express_stop_count":0,"vehicle_descriptor":{"air_conditioned":true,"description":"X'Trapolis 100"},"vehicle_position":$vehicle}},"directions":{},"disruptions":{}}"""
+        return """{"departures":[$deps],"stops":{$stopMap},"routes":{"6":${routeJson(frankston)}},"runs":{"6-0":{"run_ref":"6-0","route_id":6,"route_type":0,"destination_name":"Frankston","status":"scheduled","direction_id":1,"express_stop_count":0,"vehicle_descriptor":{"id":"1380T-1433T-159M","air_conditioned":true,"description":"X'Trapolis 100"},"vehicle_position":$vehicle}},"directions":{},"disruptions":{}}"""
     }
 
     fun start(): String {

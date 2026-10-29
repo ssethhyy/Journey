@@ -52,6 +52,9 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
+import com.ssethhyy.journey.data.crowding.AirConditioning
+import com.ssethhyy.journey.data.crowding.AirConditioningCheck
+import com.ssethhyy.journey.data.crowding.CrowdingResult
 import com.ssethhyy.journey.data.model.PatternStop
 import com.ssethhyy.journey.data.model.TripProgress
 import com.ssethhyy.journey.data.model.TripWindowItem
@@ -101,6 +104,8 @@ class TripViewModel(private val container: AppContainer, private val runRef: Str
     val state: StateFlow<LoadState<StoppingPattern>> = _state.asStateFlow()
     private val _refreshing = MutableStateFlow(false)
     val refreshing: StateFlow<Boolean> = _refreshing.asStateFlow()
+    private val _crowding = MutableStateFlow<CrowdingUi>(CrowdingUi.Idle)
+    val crowding: StateFlow<CrowdingUi> = _crowding.asStateFlow()
 
     init {
         load()
@@ -116,6 +121,18 @@ class TripViewModel(private val container: AppContainer, private val runRef: Str
         }
         _state.value = if (result is LoadState.Error && _state.value is LoadState.Success) _state.value else result
         _refreshing.value = false
+        (_state.value.dataOrNull)?.let { loadCrowding(it, force = userInitiated) }
+    }
+
+    /** Crowding is a bonus: any failure just changes the card, it never affects the stopping pattern. */
+    private suspend fun loadCrowding(pattern: StoppingPattern, force: Boolean) {
+        val position = pattern.vehiclePosition?.let { it.latitude to it.longitude }
+        _crowding.value = when (val r = container.crowdingRepository.crowdingFor(mode, pattern.vehicle?.id, position, force)) {
+            CrowdingResult.NotConfigured -> CrowdingUi.NotConfigured
+            CrowdingResult.NotFound -> CrowdingUi.NotFound
+            is CrowdingResult.Found -> CrowdingUi.Data(r.crowding)
+            is CrowdingResult.Failed -> if (_crowding.value is CrowdingUi.Data && !r.badKey) _crowding.value else CrowdingUi.Unavailable(r.reason, r.badKey)
+        }
     }
 }
 
@@ -128,6 +145,7 @@ fun TripScreen(key: TripKey) {
     val vm = appViewModel(key = "trip_${key.runRef}") { TripViewModel(it, key.runRef, key.mode) }
     val state by vm.state.collectAsStateWithLifecycle()
     val refreshing by vm.refreshing.collectAsStateWithLifecycle()
+    val crowding by vm.crowding.collectAsStateWithLifecycle()
     val navigator = currentNavigator
     val now by rememberNow()
     var showAllStops by rememberSaveable { mutableStateOf(false) }
@@ -199,6 +217,9 @@ fun TripScreen(key: TripKey) {
                                     progress = progress,
                                     now = now,
                                 )
+                            }
+                            item(key = "crowding") {
+                                CrowdingCard(crowding, AirConditioningCheck.check(data.vehicle, data.disruptions))
                             }
                             if (stops.isEmpty()) {
                                 item(key = "chips") { TripChips(data) }

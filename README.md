@@ -114,6 +114,7 @@ This repository contains **no keys**. Journey needs two free credentials, and yo
 | Credential | Used for | Where to get it | Cost |
 |---|---|---|---|
 | `ptv.devId` and `ptv.apiKey` | Live departures, stops, routes, disruptions, fare zones, vehicle positions | Request a key from Public Transport Victoria on the [PTV Timetable API page](https://www.ptv.vic.gov.au/footer/data-and-reporting/datasets/ptv-timetable-api/). They email you a **developer ID** and an **API key**. | Free |
+| `vic.opendata.key` | *Optional.* Crowding: how busy a service and its carriages are, plus crowding alerts | Create a free account and key at [opendata.transport.vic.gov.au](https://opendata.transport.vic.gov.au) | Free |
 | `mapbox.accessToken` | The map tab, trip map and journey map | Create a **public** token (starts with `pk.`) at [account.mapbox.com](https://account.mapbox.com/access-tokens/) | Free tier |
 
 Journey's journey planner uses [Transitous](https://transitous.org), which needs **no key**.

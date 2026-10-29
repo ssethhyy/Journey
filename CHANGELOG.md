@@ -7,6 +7,9 @@ All notable changes to Journey are documented here. The format follows
 ## [Unreleased]
 
 ### Added
+- **Crowding.** The trip screen shows how busy a service is (a five-step meter with a plain label) and, for trains that report it, how full each carriage is with the fullest cars named. Data comes from Victoria's free GTFS Realtime vehicle position feeds on Transport Victoria Open Data; add a free key in *Settings → API access* or `vic.opendata.key` in `local.properties`. Without a key the card explains how to set it up.
+- **Crowding alerts.** While you track a service, Journey sends one notification when it reaches your chosen level (*Standing room only*, *Very crowded* or *Full*) and again only if it gets worse. Configure in *Settings → Crowding*.
+- **Air conditioning.** The trip screen says when the fleet data lists a vehicle without air conditioning and when an active service alert mentions an air-conditioning fault. PTV publishes no live air-conditioning status, so nothing more can be shown.
 - **Bottom bar navigation style**, now the default. The floating navbar is always on screen: on a page it turns into a back button, the page name and an action button for that page (for example *Track this service*, *Add to favourites*, *Settings*), with small icon actions beside the title. Switch back to the original floating **Top pill** in *Settings → Appearance → Navigation bar*.
 - Repository documentation for GitHub: README, contributing guide, code of conduct, security policy, licence, third-party notices, issue and pull request templates, CI and Dependabot.
 

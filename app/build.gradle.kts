@@ -10,6 +10,7 @@ plugins {
 //   ptv.devId=1234567
 //   ptv.apiKey=xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
 //   mapbox.accessToken=pk.xxxx
+//   vic.opendata.key=xxxx        (optional, enables crowding)
 // They can also be entered at runtime from Settings → API access.
 val localProps = Properties().apply {
     val file = rootProject.file("local.properties")
@@ -37,6 +38,8 @@ android {
 
         buildConfigField("String", "PTV_DEV_ID", "\"${localProp("ptv.devId")}\"")
         buildConfigField("String", "PTV_API_KEY", "\"${localProp("ptv.apiKey")}\"")
+        // Optional: Transport Victoria Open Data key for the crowding feeds.
+        buildConfigField("String", "OPENDATA_KEY", "\"${localProp("vic.opendata.key")}\"")
         resValue("string", "mapbox_access_token", localProp("mapbox.accessToken").ifEmpty { "YOUR_MAPBOX_ACCESS_TOKEN" })
     }
 

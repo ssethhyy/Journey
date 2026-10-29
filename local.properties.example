@@ -22,3 +22,9 @@ ptv.apiKey=
 # Use a PUBLIC token (starts with "pk."), never a secret one ("sk."):
 #   https://account.mapbox.com/access-tokens/
 mapbox.accessToken=
+
+# --- Transport Victoria Open Data (OPTIONAL: how busy a service and its carriages are) ---
+# Free key from the Open Data portal (create an account, then generate an API key):
+#   https://opendata.transport.vic.gov.au
+# Leave empty to skip crowding. You can also paste the key in the app under Settings -> API access.
+vic.opendata.key=

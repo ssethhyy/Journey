@@ -143,7 +143,7 @@ object WidgetRenderer {
         }
 
         val rss = 22.8f * u
-        val textLeft = r.left + max(0.0872f * rowW, r.height() + 10f * u)
+        val textLeft = r.left + max(0.0872f * rowW, r.height() + 22f * u)
         val rightEdge = r.left + min(0.9767f * rowW, rowW - rss - 4f * u)
         if (departure != null && row.isLive) {
             rssBitmap(context)?.let { canvas.drawBitmap(it, null, RectF(r.right - rss, r.top, r.right, r.top + rss), Paint(Paint.FILTER_BITMAP_FLAG)) }

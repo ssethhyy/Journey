@@ -27,6 +27,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.windowInsetsPadding
+import androidx.compose.foundation.layout.windowInsetsTopHeight
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
@@ -70,6 +71,49 @@ fun ReusableTopAppBar(
     onBackClick: (() -> Unit)? = null,
     visible: Boolean = true,
     actions: (@Composable RowScope.() -> Unit)? = null,
+    /** Bottom-bar style: the big action button for this page. Ignored by the top pill. */
+    pageFab: ToolbarFab? = null,
+    /** Bottom-bar style: small icon buttons beside the title. Ignored by the top pill. */
+    pageActions: List<ToolbarFab> = emptyList(),
+    /** A main tab (For You, Plan): the bottom bar already names it, so no page chrome is registered. */
+    isTabRoot: Boolean = false,
+) {
+    if (usesBottomBar()) {
+        BottomBarPageHeader(title, subtitle, onBackClick, pageFab, pageActions, isTabRoot, modifier)
+    } else {
+        TopPillBar(title, modifier, subtitle, onBackClick, visible, actions)
+    }
+}
+
+/**
+ * Bottom-bar style: the page's title and actions go to the always-on toolbar, and only the status bar's
+ * height is reserved at the top (the progressive blur there softens content passing under the clock and icons).
+ */
+@Composable
+private fun BottomBarPageHeader(
+    title: String,
+    subtitle: String?,
+    onBackClick: (() -> Unit)?,
+    pageFab: ToolbarFab?,
+    pageActions: List<ToolbarFab>,
+    isTabRoot: Boolean,
+    modifier: Modifier,
+) {
+    if (!isTabRoot && onBackClick != null) {
+        RegisterChrome(ChromeSpec.Page(title = title, subtitle = subtitle, onBack = onBackClick, fab = pageFab, actions = pageActions))
+    }
+    Spacer(modifier.fillMaxWidth().windowInsetsTopHeight(WindowInsets.statusBars))
+}
+
+/** The original style: a floating pill at the top of the page. */
+@Composable
+private fun TopPillBar(
+    title: String,
+    modifier: Modifier,
+    subtitle: String?,
+    onBackClick: (() -> Unit)?,
+    visible: Boolean,
+    actions: (@Composable RowScope.() -> Unit)?,
 ) {
     val view = LocalView.current
     val density = LocalDensity.current

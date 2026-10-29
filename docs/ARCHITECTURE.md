@@ -173,9 +173,17 @@ only at meaningful moments (`TrackingPeekPolicy`). `IslandHostSimulatorTest` pla
   motion. Mode colours and typography live in `ui.theme`.
 - **Icons:** Material Symbols **Rounded** vectors in `res/drawable/rounded_*`, accessed through `Sym`. There are no
   fallbacks to the old icon set. `res/raw/keep.xml` stops release builds stripping them (they're loaded by name).
-- **Floating bars:** the bottom navigation bar and the top pill (`ReusableTopAppBar`) float over content that scrolls
-  underneath them, with an AGSL progressive blur (`progressiveBlur`, `floatingBarBlur`). The blur is skipped below
-  Android 13 or in power-saving mode.
+- **Navigation bar styles** (`BarStyle`, chosen in *Settings → Appearance*):
+  - **Bottom bar (default).** One floating toolbar (`JourneyFloatingToolbar`) is drawn above the whole navigation
+    stack by `AppChromeHost`. Screens don't draw it: they *register* what it should show with `RegisterChrome`
+    (`ChromeSpec.Tabs` from the home screen, `ChromeSpec.Page` from `ReusableTopAppBar`), and the newest
+    registration wins. A page appearing on top takes over and the tabs return when it leaves, with the bar morphing
+    between the two. Pages give it a title, a back action, an optional main action (`pageFab`) and small icon actions.
+  - **Top pill (classic).** `ReusableTopAppBar` draws a floating title pill at the top of each page, and the toolbar
+    shows only on the three tabs. This is the original code path and is kept intact.
+  - Either way content scrolls under the bars with an AGSL progressive blur (`progressiveBlur`, `floatingBarBlur`),
+    which is skipped below Android 13 or in power-saving mode. In the bottom bar style only the status bar area is
+    blurred at the top.
 - **Sheets:** `StandardBottomSheet(scrollable = true)` for forms (opens full height, scrolls, lifts above the keyboard).
 
 ## Testing

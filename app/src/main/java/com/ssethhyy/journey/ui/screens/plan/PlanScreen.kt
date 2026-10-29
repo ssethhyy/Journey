@@ -106,6 +106,7 @@ fun PlanScreen() {
     Scaffold(
         topBar = {
             ReusableTopAppBar(
+                isTabRoot = true,
                 title = "Plan",
                 subtitle = state.to?.let { "To ${it.name}" } ?: "Where are you going?",
             )

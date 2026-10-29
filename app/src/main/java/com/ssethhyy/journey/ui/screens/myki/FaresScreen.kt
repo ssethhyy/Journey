@@ -9,6 +9,8 @@
 
 package com.ssethhyy.journey.ui.screens.myki
 
+import com.ssethhyy.journey.ui.components.pageBottomInset
+import com.ssethhyy.journey.ui.components.ToolbarFab
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
@@ -100,13 +102,14 @@ fun FaresScreen() {
                 title = "Fares and discounts",
                 subtitle = config.table.label,
                 onBackClick = navigator::back,
+                pageFab = ToolbarFab(Sym.Add, "Add a discount") { addingRule = true },
             )
         },
         containerColor = MaterialTheme.colorScheme.surface,
     ) { padding ->
         LazyColumn(
             modifier = Modifier.fillMaxSize().floatingBarBlur(padding.calculateTopPadding()),
-            contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = padding.calculateTopPadding(), bottom = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding() + 32.dp),
+            contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = padding.calculateTopPadding(), bottom = pageBottomInset(32.dp)),
             verticalArrangement = Arrangement.spacedBy(10.dp),
         ) {
             if (FareConfigs.needsReview(config, today)) {

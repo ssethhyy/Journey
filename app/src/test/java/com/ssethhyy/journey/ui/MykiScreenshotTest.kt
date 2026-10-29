@@ -7,6 +7,7 @@ import androidx.compose.ui.test.captureToImage
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onAllNodesWithContentDescription
 import androidx.compose.ui.test.onAllNodesWithText
+import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.performClick
@@ -57,6 +58,7 @@ class MykiScreenshotTest {
         runBlocking {
             container.settingsRepository.setThemeMode(ThemeMode.DARK)
             container.settingsRepository.setDynamicColor(false)
+            container.settingsRepository.setBarStyle(com.ssethhyy.journey.data.repository.BarStyle.BOTTOM_BAR)
             container.mykiRepository.clear()
             container.favouritesRepository.clear()
         }
@@ -94,7 +96,7 @@ class MykiScreenshotTest {
         snap("myki_04_card_topped_up")
 
         // Log a custom deduction from the card page.
-        rule.onNodeWithText("Log trip", useUnmergedTree = true).performClick()
+        rule.onNodeWithContentDescription("Log trip").performClick()
         waitForText("Log a trip")
         snap("myki_06_log_trip_sheet")
         rule.onNodeWithText("Custom amount").performClick()

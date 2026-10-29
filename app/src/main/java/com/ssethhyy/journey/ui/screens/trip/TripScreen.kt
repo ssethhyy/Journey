@@ -6,6 +6,9 @@
 
 package com.ssethhyy.journey.ui.screens.trip
 
+import com.ssethhyy.journey.ui.components.pageBottomInset
+import com.ssethhyy.journey.ui.components.usesBottomBar
+import com.ssethhyy.journey.ui.components.rememberTrackFab
 import com.ssethhyy.journey.ui.components.Sym
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
@@ -131,30 +134,29 @@ fun TripScreen(key: TripKey) {
     AutoRefreshEffect(enabled = true, intervalMs = LIVE_REFRESH_MS) { vm.load() }
 
     val pattern = state.dataOrNull
+    val stopName = pattern?.stops?.firstOrNull { it.stop.id == key.fromStopId }?.stop?.name
+    val trackTarget = pattern?.let {
+        TrackingTarget.Service(
+            runRef = key.runRef,
+            mode = key.mode,
+            stopId = key.fromStopId,
+            stopName = stopName ?: "Your stop",
+            routeLabel = it.route?.badgeLabel?.let { badge -> if (key.mode == TransportMode.TRAIN || key.mode == TransportMode.VLINE) "$badge line" else "${key.mode.label} $badge" } ?: key.mode.label,
+            headsign = it.destination ?: key.title,
+        )
+    }
     Scaffold(
         topBar = {
             ReusableTopAppBar(
                 title = "To ${pattern?.destination ?: key.title}",
                 subtitle = listOfNotNull(pattern?.route?.displayName, key.mode.label).joinToString(" · "),
                 onBackClick = navigator::back,
+                pageFab = trackTarget?.let { rememberTrackFab(it, "Track this service") },
             )
         },
         containerColor = MaterialTheme.colorScheme.surface,
         floatingActionButton = {
-            val stopName = pattern?.stops?.firstOrNull { it.stop.id == key.fromStopId }?.stop?.name
-            if (pattern != null) {
-                TrackButton(
-                    target = TrackingTarget.Service(
-                        runRef = key.runRef,
-                        mode = key.mode,
-                        stopId = key.fromStopId,
-                        stopName = stopName ?: "Your stop",
-                        routeLabel = pattern.route?.badgeLabel?.let { if (key.mode == TransportMode.TRAIN || key.mode == TransportMode.VLINE) "$it line" else "${key.mode.label} $it" } ?: key.mode.label,
-                        headsign = pattern.destination ?: key.title,
-                    ),
-                    label = "Track this service",
-                )
-            }
+            if (!usesBottomBar() && trackTarget != null) TrackButton(target = trackTarget, label = "Track this service")
         },
     ) { padding ->
         Column(Modifier.fillMaxSize().padding(top = padding.calculateTopPadding())) {
@@ -185,7 +187,7 @@ fun TripScreen(key: TripKey) {
                         modifier = Modifier.weight(1f).fillMaxWidth(),
                     ) {
                         LazyColumn(
-                            contentPadding = PaddingValues(start = 16.dp, end = 16.dp, bottom = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding() + 104.dp),
+                            contentPadding = PaddingValues(start = 16.dp, end = 16.dp, bottom = pageBottomInset(104.dp)),
                             verticalArrangement = Arrangement.spacedBy(6.dp),
                         ) {
                             item(key = "live") {

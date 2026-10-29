@@ -118,6 +118,7 @@ class AppFlowScreenshotTest {
     fun walkThroughMainScreens() {
         val container = rule.activity.appContainer
         runBlocking {
+            container.settingsRepository.setBarStyle(com.ssethhyy.journey.data.repository.BarStyle.BOTTOM_BAR)
             container.settingsRepository.setThemeMode(ThemeMode.LIGHT)
             // Robolectric has no real wallpaper palette, so show the app's own fallback scheme.
             container.settingsRepository.setDynamicColor(false)
@@ -161,7 +162,7 @@ class AppFlowScreenshotTest {
 
         // Plan tab: saved places and recent journeys.
         rule.onNode(hasContentDescription("Plan")).performClick()
-        waitForText("Where are you going?")
+        waitForText("Plan a journey")
         snap("07_plan")
 
         // Tap Home to plan a journey from the current location.
@@ -176,7 +177,7 @@ class AppFlowScreenshotTest {
 
         // Log the journey on the default myki (no myki yet, then one).
         runBlocking { container.mykiRepository.clear() }
-        rule.onNodeWithText("Log trip", useUnmergedTree = true).performClick()
+        rule.onNodeWithContentDescription("Log trip").performClick()
         waitForText("Add a myki first", substring = true)
         snap("09b_log_journey_no_myki")
         // Adding mykis while the sheet is open turns it into the logging form.

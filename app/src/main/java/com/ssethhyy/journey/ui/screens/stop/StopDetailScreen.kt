@@ -6,6 +6,8 @@
 
 package com.ssethhyy.journey.ui.screens.stop
 
+import com.ssethhyy.journey.ui.components.pageBottomInset
+import com.ssethhyy.journey.ui.components.ToolbarFab
 import com.ssethhyy.journey.ui.components.Sym
 import androidx.compose.foundation.background
 import androidx.compose.foundation.horizontalScroll
@@ -92,6 +94,12 @@ fun StopDetailScreen(key: StopDetailKey) {
                 title = stop.name,
                 subtitle = listOfNotNull(stop.suburb, stop.mode.label).joinToString(" · "),
                 onBackClick = navigator::back,
+                pageFab = ToolbarFab(
+                    icon = if (state.isFavourite) Sym.StarFilled else Sym.Star,
+                    contentDescription = if (state.isFavourite) "Remove from favourites" else "Add to favourites",
+                    onClick = vm::toggleFavourite,
+                ),
+                pageActions = if (stop.latitude != 0.0) listOf(ToolbarFab(Sym.Map, "Show on map") { navigator.showOnMap(stop) }) else emptyList(),
                 actions = {
                     if (stop.latitude != 0.0) {
                         HapticIconButton(Sym.Map, "Show on map", onClick = { navigator.showOnMap(stop) })
@@ -125,7 +133,7 @@ fun StopDetailScreen(key: StopDetailKey) {
                     start = 16.dp,
                     end = 16.dp,
                     top = innerPadding.calculateTopPadding(),
-                    bottom = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding() + 32.dp,
+                    bottom = pageBottomInset(32.dp),
                 ),
                 verticalArrangement = Arrangement.spacedBy(8.dp),
             ) {

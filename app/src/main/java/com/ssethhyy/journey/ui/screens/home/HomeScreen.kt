@@ -52,7 +52,10 @@ import androidx.compose.ui.input.nestedscroll.NestedScrollSource
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.unit.dp
+import com.ssethhyy.journey.ui.components.ChromeSpec
 import com.ssethhyy.journey.ui.components.JourneyFloatingToolbar
+import com.ssethhyy.journey.ui.components.RegisterChrome
+import com.ssethhyy.journey.ui.components.usesBottomBar
 import com.ssethhyy.journey.ui.components.LocalTabActive
 import com.ssethhyy.journey.ui.components.ToolbarFab
 import com.ssethhyy.journey.ui.components.ToolbarItem
@@ -210,21 +213,26 @@ fun HomeScreen(requestedTab: HomeTab?, onTabRequestHandled: () -> Unit) {
             )
         }
 
-        AnimatedVisibility(
-            visible = showBars,
-            enter = slideInVertically(spring(dampingRatio = Spring.DampingRatioLowBouncy, stiffness = Spring.StiffnessMediumLow)) { it } + fadeIn(),
-            exit = slideOutVertically(spring(stiffness = Spring.StiffnessMedium)) { it } + fadeOut(),
-            modifier = Modifier.align(Alignment.BottomCenter),
-        ) {
-            JourneyFloatingToolbar(
-                modifier = Modifier
-                    .windowInsetsPadding(WindowInsets.navigationBars)
-                    .padding(bottom = 12.dp),
-                items = items,
-                selectedIndex = selectedTab.ordinal,
-                fab = fab,
-                expanded = true,
-            )
+        if (usesBottomBar()) {
+            // The toolbar lives above the whole navigation stack so it stays put when a page opens.
+            RegisterChrome(ChromeSpec.Tabs(items = items, selectedIndex = selectedTab.ordinal, fab = fab, visible = showBars))
+        } else {
+            AnimatedVisibility(
+                visible = showBars,
+                enter = slideInVertically(spring(dampingRatio = Spring.DampingRatioLowBouncy, stiffness = Spring.StiffnessMediumLow)) { it } + fadeIn(),
+                exit = slideOutVertically(spring(stiffness = Spring.StiffnessMedium)) { it } + fadeOut(),
+                modifier = Modifier.align(Alignment.BottomCenter),
+            ) {
+                JourneyFloatingToolbar(
+                    modifier = Modifier
+                        .windowInsetsPadding(WindowInsets.navigationBars)
+                        .padding(bottom = 12.dp),
+                    items = items,
+                    selectedIndex = selectedTab.ordinal,
+                    fab = fab,
+                    expanded = true,
+                )
+            }
         }
     }
 

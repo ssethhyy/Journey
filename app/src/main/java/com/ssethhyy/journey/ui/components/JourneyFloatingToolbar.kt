@@ -22,6 +22,7 @@ import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.basicMarquee
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.height
@@ -81,7 +82,10 @@ fun JourneyFloatingToolbar(
     selectedIndex: Int = -1,
     // Standard Mode
     title: String? = null,
+    subtitle: String? = null,
     onBackClick: (() -> Unit)? = null,
+    /** Small icon buttons beside the title (standard mode). */
+    actions: List<ToolbarFab> = emptyList(),
     // FAB / Action
     fab: ToolbarFab? = null,
     scrollBehavior: FloatingToolbarScrollBehavior? = null,
@@ -150,17 +154,43 @@ fun JourneyFloatingToolbar(
 
                 if (title != null) {
                     Spacer(modifier = Modifier.width(8.dp))
-                    Text(
-                        text = title,
-                        style = MaterialTheme.typography.titleMedium,
-                        color = MaterialTheme.colorScheme.onPrimary,
-                        maxLines = 1,
+                    // Leave room for the back button, the FAB and any action buttons on narrow screens.
+                    val titleMax = (configuration.screenWidthDp - 32 - 16 - 56 - 12 - 48 - 8 - 24 - actions.size * 44).coerceIn(90, 260).dp
+                    Column(
                         modifier = Modifier
-                            .widthIn(min = 100.dp, max = 250.dp)
+                            .widthIn(min = 90.dp, max = titleMax)
                             .padding(horizontal = 8.dp)
-                            .basicMarquee()
                             .align(Alignment.CenterVertically),
-                    )
+                    ) {
+                        Text(
+                            text = title,
+                            style = MaterialTheme.typography.titleMedium,
+                            color = MaterialTheme.colorScheme.onPrimary,
+                            maxLines = 1,
+                            modifier = Modifier.basicMarquee(),
+                        )
+                        if (subtitle != null) {
+                            Text(
+                                text = subtitle,
+                                style = MaterialTheme.typography.labelMedium,
+                                color = MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.8f),
+                                maxLines = 1,
+                                modifier = Modifier.basicMarquee(),
+                            )
+                        }
+                    }
+                    actions.forEach { action ->
+                        IconButton(
+                            onClick = {
+                                HapticUtil.performUIHaptic(view)
+                                action.onClick()
+                            },
+                            modifier = Modifier.size(44.dp),
+                            colors = IconButtonDefaults.iconButtonColors(contentColor = MaterialTheme.colorScheme.onPrimary),
+                        ) {
+                            Icon(action.icon, contentDescription = action.contentDescription, modifier = Modifier.size(22.dp))
+                        }
+                    }
                 }
             } else {
                 // TABBED MODE - Expanding labels

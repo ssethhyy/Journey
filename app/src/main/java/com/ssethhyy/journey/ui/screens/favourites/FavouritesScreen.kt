@@ -129,6 +129,7 @@ fun FavouritesScreen(onAddFromNearby: () -> Unit, onAddFromSearch: () -> Unit) {
         topBar = {
             // The big greeting is the first list item; once it has scrolled away this pill takes over.
             ReusableTopAppBar(
+                isTabRoot = true,
                 title = "For You",
                 subtitle = TimeFormatter.shortToday(now),
                 visible = headerGone || !state.isLoaded,

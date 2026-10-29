@@ -78,6 +78,39 @@ fun TrackButton(target: TrackingTarget, modifier: Modifier = Modifier, label: St
     )
 }
 
+/**
+ * The same track / stop-tracking action as [TrackButton], as a toolbar button for the bottom-bar style.
+ * [label] names the action while nothing is being tracked.
+ */
+@Composable
+fun rememberTrackFab(target: TrackingTarget, label: String = "Track"): ToolbarFab {
+    val manager = LocalContext.current.appContainer.trackingManager
+    val view = LocalView.current
+    val current by manager.target.collectAsStateWithLifecycle()
+    val tracking = current?.id == target.id
+    val permission = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) {
+        // Track regardless; without permission the in-app banner still shows progress.
+        manager.start(target)
+    }
+    return ToolbarFab(
+        icon = if (tracking) Sym.NotificationsOff else Sym.NotificationsActive,
+        contentDescription = if (tracking) "Stop tracking" else label,
+        onClick = {
+            if (tracking) {
+                HapticUtil.performUIHaptic(view)
+                manager.stop()
+            } else {
+                HapticUtil.performConfirmHaptic(view)
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU && !manager.canPostNotifications()) {
+                    permission.launch(Manifest.permission.POST_NOTIFICATIONS)
+                } else {
+                    manager.start(target)
+                }
+            }
+        },
+    )
+}
+
 /** Compact live banner while tracking, shown above the floating toolbar. */
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable

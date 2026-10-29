@@ -48,10 +48,18 @@ class ForYouScrollTest {
     private fun titleTop(): Float =
         rule.onAllNodesWithText("Good", substring = true).onFirst().fetchSemanticsNode().boundsInRoot.top
 
+    @org.junit.After
+    fun restoreDefaultStyle() {
+        // Settings outlive a single test within the test JVM, so put the default back for the next class.
+        runBlocking { rule.activity.appContainer.settingsRepository.setBarStyle(com.ssethhyy.journey.data.repository.BarStyle.BOTTOM_BAR) }
+    }
+
     @Test
     fun scrollsFullyBackToTheTopAndTheHeaderExpands() {
         val container = rule.activity.appContainer
         runBlocking {
+            // This test covers the original top-pill style, whose pill appears once the greeting scrolls away.
+            container.settingsRepository.setBarStyle(com.ssethhyy.journey.data.repository.BarStyle.TOP_PILL)
             container.favouritesRepository.clear()
             container.favouritesRepository.add(Stop(1071, TransportMode.TRAIN, "Flinders Street Station", "Melbourne City", -37.8183, 144.9671))
             container.favouritesRepository.add(Stop(2258, TransportMode.TRAM, "Bourke St/Spencer St #1", "Melbourne City", -37.8166, 144.9548))

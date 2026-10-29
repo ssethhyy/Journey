@@ -38,6 +38,13 @@ enum class IslandDisruptionScope(val label: String) { FAVOURITES("My stops"), NE
 /** Lowest disruption severity counted on the island. */
 enum class IslandSeverity(val label: String) { ALL("All"), DELAYS("Delays+"), MAJOR("Major") }
 
+/**
+ * Where page navigation lives. BOTTOM_BAR keeps the floating navbar on screen everywhere: on a page it turns into
+ * a back button, the page name and a related action button. TOP_PILL is the original look: a floating title pill at
+ * the top of each page, with the navbar only on the three main tabs.
+ */
+enum class BarStyle(val label: String) { BOTTOM_BAR("Bottom bar"), TOP_PILL("Top pill") }
+
 enum class IslandIconStyle(val label: String) { PICTOGRAM("PTV pictograms"), MONOCHROME("Monochrome") }
 
 enum class TimeDisplay(val label: String) { RELATIVE("Minutes"), CLOCK("Clock time") }
@@ -56,6 +63,7 @@ data class AppSettings(
     val themeMode: ThemeMode = ThemeMode.SYSTEM,
     val dynamicColor: Boolean = true,
     val pitchBlack: Boolean = false,
+    val barStyle: BarStyle = BarStyle.BOTTOM_BAR,
     val hapticsEnabled: Boolean = true,
     val timeDisplay: TimeDisplay = TimeDisplay.RELATIVE,
     val departuresPerStop: Int = 3,
@@ -90,6 +98,7 @@ class SettingsRepository(context: Context) {
         val THEME = stringPreferencesKey("theme_mode")
         val DYNAMIC = booleanPreferencesKey("dynamic_color")
         val PITCH_BLACK = booleanPreferencesKey("pitch_black")
+        val BAR_STYLE = stringPreferencesKey("bar_style")
         val HAPTICS = booleanPreferencesKey("app_haptics_enabled")
         val TIME_DISPLAY = stringPreferencesKey("time_display")
         val DEPARTURES_PER_STOP = intPreferencesKey("departures_per_stop")
@@ -121,6 +130,7 @@ class SettingsRepository(context: Context) {
             themeMode = p[Keys.THEME]?.let { runCatching { ThemeMode.valueOf(it) }.getOrNull() } ?: ThemeMode.SYSTEM,
             dynamicColor = p[Keys.DYNAMIC] ?: true,
             pitchBlack = p[Keys.PITCH_BLACK] ?: false,
+            barStyle = p[Keys.BAR_STYLE].enumOr(BarStyle.BOTTOM_BAR),
             hapticsEnabled = p[Keys.HAPTICS] ?: true,
             timeDisplay = p[Keys.TIME_DISPLAY]?.let { runCatching { TimeDisplay.valueOf(it) }.getOrNull() } ?: TimeDisplay.RELATIVE,
             departuresPerStop = (p[Keys.DEPARTURES_PER_STOP] ?: 3).coerceIn(1, 6),
@@ -165,6 +175,7 @@ class SettingsRepository(context: Context) {
     suspend fun setThemeMode(mode: ThemeMode) = store.edit { it[Keys.THEME] = mode.name }
     suspend fun setDynamicColor(enabled: Boolean) = store.edit { it[Keys.DYNAMIC] = enabled }
     suspend fun setPitchBlack(enabled: Boolean) = store.edit { it[Keys.PITCH_BLACK] = enabled }
+    suspend fun setBarStyle(style: BarStyle) = store.edit { it[Keys.BAR_STYLE] = style.name }
     suspend fun setHaptics(enabled: Boolean) = store.edit { it[Keys.HAPTICS] = enabled }
     suspend fun setTimeDisplay(display: TimeDisplay) = store.edit { it[Keys.TIME_DISPLAY] = display.name }
     suspend fun setDeparturesPerStop(count: Int) = store.edit { it[Keys.DEPARTURES_PER_STOP] = count.coerceIn(1, 6) }

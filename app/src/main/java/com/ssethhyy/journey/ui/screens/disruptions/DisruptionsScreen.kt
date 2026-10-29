@@ -6,6 +6,7 @@
 
 package com.ssethhyy.journey.ui.screens.disruptions
 
+import com.ssethhyy.journey.ui.components.pageBottomInset
 import com.ssethhyy.journey.ui.components.Sym
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.PaddingValues
@@ -111,7 +112,7 @@ fun DisruptionsScreen() {
                 is LoadState.Error -> ErrorState(d.error, onRetry = { vm.load() }, onOpenSettings = navigator::openSettings)
                 is LoadState.Success -> LazyColumn(
                     modifier = Modifier.fillMaxSize().floatingBarBlur(padding.calculateTopPadding()),
-                    contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = padding.calculateTopPadding(), bottom = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding() + 32.dp),
+                    contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = padding.calculateTopPadding(), bottom = pageBottomInset(32.dp)),
                     verticalArrangement = Arrangement.spacedBy(8.dp),
                 ) {
                     item(key = "filters") { ModeFilterRow(selected = state.filter, onToggle = vm::toggle, contentPadding = PaddingValues(0.dp)) }

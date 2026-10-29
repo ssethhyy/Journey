@@ -6,6 +6,7 @@
 
 package com.ssethhyy.journey.ui.screens.search
 
+import com.ssethhyy.journey.ui.components.pageBottomInset
 import com.ssethhyy.journey.ui.components.Sym
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -200,7 +201,7 @@ fun SearchScreen() {
             ModeFilterRow(selected = modes, onToggle = vm::toggleMode)
             Spacer(Modifier.padding(4.dp))
 
-            val bottomPadding = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding() + 24.dp
+            val bottomPadding = pageBottomInset(24.dp)
             when (val r = results) {
                 null -> RecentSearches(recent, onSelect = vm::setQuery, onClear = vm::clearRecent, bottomPadding = bottomPadding)
                 LoadState.Loading -> LoadingState()

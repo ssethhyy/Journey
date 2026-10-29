@@ -7,6 +7,9 @@
 
 package com.ssethhyy.journey.ui.screens.myki
 
+import com.ssethhyy.journey.ui.components.pageBottomInset
+import com.ssethhyy.journey.ui.components.usesBottomBar
+import com.ssethhyy.journey.ui.components.ToolbarFab
 import android.content.ClipData
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -136,13 +139,9 @@ fun MykiCardScreen(key: MykiCardKey) {
     // Removed (here or elsewhere): leave the screen.
     LaunchedEffect(cards, card) { if (cards != null && card == null) navigator.back() }
 
-    Scaffold(
-        topBar = {
-            ReusableTopAppBar(
-                title = card?.nickname ?: "myki",
-                onBackClick = navigator::back,
-                actions = {
-                    Box {
+    // The card's options menu: in the top pill it sits in the actions; in the bottom-bar style it moves into the page.
+    val optionsMenu: @Composable () -> Unit = {
+Box {
                         HapticIconButton(Sym.MoreVert, "More options", onClick = { menu = true })
                         DropdownMenu(expanded = menu, onDismissRequest = { menu = false }) {
                             if (card != null && !card.isDefault) {
@@ -156,11 +155,19 @@ fun MykiCardScreen(key: MykiCardKey) {
                             DropdownMenuItem(text = { Text("Remove from Journey") }, leadingIcon = { Icon(Sym.Delete, null) }, onClick = { menu = false; dialog = "remove" })
                         }
                     }
-                },
+    }
+
+    Scaffold(
+        topBar = {
+            ReusableTopAppBar(
+                title = card?.nickname ?: "myki",
+                onBackClick = navigator::back,
+                actions = { optionsMenu() },
+                pageFab = if (card != null) ToolbarFab(Sym.Route, "Log trip") { sheet = "log" } else null,
             )
         },
         bottomBar = {
-            if (card != null) {
+            if (card != null && !usesBottomBar()) {
                 Box(
                     Modifier
                         .fillMaxWidth()
@@ -196,6 +203,23 @@ fun MykiCardScreen(key: MykiCardKey) {
             contentPadding = padding,
             onBalance = { sheet = "balance" },
             onDismissTip = { vm.dismissTip(card.id) },
+            inlineActions = if (usesBottomBar()) {
+                {
+                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
+                        Button(
+                            onClick = { sheet = "money" },
+                            modifier = Modifier.weight(1f).height(52.dp),
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = MaterialTheme.colorScheme.primaryContainer,
+                                contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
+                            ),
+                        ) { Text("Add money or pass", style = MaterialTheme.typography.titleMedium, maxLines = 1) }
+                        optionsMenu()
+                    }
+                }
+            } else {
+                null
+            },
         )
     }
 
@@ -226,7 +250,13 @@ fun MykiCardScreen(key: MykiCardKey) {
 }
 
 @Composable
-private fun CardContent(card: MykiCard, contentPadding: PaddingValues, onBalance: () -> Unit, onDismissTip: () -> Unit) {
+private fun CardContent(
+    card: MykiCard,
+    contentPadding: PaddingValues,
+    onBalance: () -> Unit,
+    onDismissTip: () -> Unit,
+    inlineActions: (@Composable () -> Unit)? = null,
+) {
     val view = LocalView.current
     val clipboard = LocalClipboard.current
     val scope = rememberCoroutineScope()
@@ -236,10 +266,11 @@ private fun CardContent(card: MykiCard, contentPadding: PaddingValues, onBalance
             start = 16.dp,
             end = 16.dp,
             top = contentPadding.calculateTopPadding() + 8.dp,
-            bottom = contentPadding.calculateBottomPadding() + 16.dp,
+            bottom = if (usesBottomBar()) pageBottomInset(16.dp) else contentPadding.calculateBottomPadding() + 16.dp,
         ),
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
+        inlineActions?.let { actions -> item(key = "inline_actions") { actions() } }
         item(key = "art") { MykiCardArt(card, Modifier.padding(horizontal = 8.dp), cornerRadius = 24.dp) }
         item(key = "number") {
             Row(

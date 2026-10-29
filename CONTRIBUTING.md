@@ -130,9 +130,14 @@ Journey has a consistent design language. New UI should feel like it belongs.
   2. Save it as `app/src/main/res/drawable/rounded_<name>_24px.xml` (or `rounded_<name>_fill_24px.xml` for the filled style) and delete the `android:tint` line.
   3. Add `val Name … = symbol("rounded_<name>")` to `Symbols.kt` **and** the name to `allResourceNames`.
   4. List it in `art/material-symbols.md`. The `SymbolsTest` test fails if a file is missing.
-- **Top bar and navigation.** Use `ReusableTopAppBar` (the floating pill). Scrolling content should pass *under* it:
-  apply the Scaffold's top padding as the list's `contentPadding` and add `Modifier.floatingBarBlur(...)`. Don't
-  use collapsing app bars. Forms in bottom sheets use `StandardBottomSheet(scrollable = true)` so they lift above the keyboard.
+- **Top bar and navigation.** Every pushed page calls `ReusableTopAppBar(title, onBackClick, pageFab, pageActions, …)`.
+  In the default *bottom bar* style that registers the page's title and actions with the always-on toolbar
+  (`AppChrome`, drawn by `AppChromeHost`). In the *top pill* style it draws the original floating pill, and
+  `actions` and any Scaffold FAB are used for that. Support both: give a page a `pageFab` (its one main action) and
+  optional `pageActions`, and keep the classic FAB behind `!usesBottomBar()`. Scrolling content passes *under* the
+  bars: apply the Scaffold's top padding as the list's `contentPadding`, use `pageBottomInset()` for the bottom
+  padding, and add `Modifier.floatingBarBlur(...)`. Don't use collapsing app bars. Forms in bottom sheets use
+  `StandardBottomSheet(scrollable = true)` so they lift above the keyboard.
 - **Motion** is expressive but purposeful: springs for shape and size changes, no animation that gets in the way of
   quick glances at a departure board.
 - **Accessibility:** give icons a `contentDescription` (or `null` if purely decorative), keep touch targets at 48dp

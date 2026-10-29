@@ -6,6 +6,7 @@
 
 package com.ssethhyy.journey.ui.screens.settings
 
+import com.ssethhyy.journey.ui.components.pageBottomInset
 import com.ssethhyy.journey.ui.components.Sym
 import android.os.Build
 import android.widget.Toast
@@ -69,6 +70,7 @@ import com.ssethhyy.journey.data.api.PtvApi
 import com.ssethhyy.journey.data.api.PtvCredentials
 import com.ssethhyy.journey.data.model.TransportMode
 import com.ssethhyy.journey.data.repository.AppSettings
+import com.ssethhyy.journey.data.repository.BarStyle
 import com.ssethhyy.journey.data.repository.ThemeMode
 import com.ssethhyy.journey.data.repository.TimeDisplay
 import com.ssethhyy.journey.ui.appViewModel
@@ -169,7 +171,7 @@ fun SettingsScreen() {
     ) { padding ->
         LazyColumn(
             modifier = Modifier.fillMaxSize().floatingBarBlur(padding.calculateTopPadding()),
-            contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = padding.calculateTopPadding(), bottom = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding() + 32.dp),
+            contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = padding.calculateTopPadding(), bottom = pageBottomInset(32.dp)),
         ) {
             item(key = "personal") {
                 SectionLabel("You")
@@ -211,6 +213,14 @@ fun SettingsScreen() {
                         items = ThemeMode.entries,
                         selectedItem = settings.themeMode,
                         onItemSelected = { vm.update { setThemeMode(it) } },
+                        labelProvider = { it.label },
+                    )
+                    ConfigPickerItem(
+                        icon = Sym.Widgets,
+                        title = "Navigation bar",
+                        items = BarStyle.entries,
+                        selectedItem = settings.barStyle,
+                        onItemSelected = { vm.update { setBarStyle(it) } },
                         labelProvider = { it.label },
                     )
                     val dynamicSupported = Build.VERSION.SDK_INT >= Build.VERSION_CODES.S

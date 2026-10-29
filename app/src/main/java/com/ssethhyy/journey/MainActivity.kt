@@ -6,6 +6,13 @@
 
 package com.ssethhyy.journey
 
+import androidx.compose.ui.Alignment
+import androidx.compose.foundation.layout.Box
+import com.ssethhyy.journey.ui.components.LocalBarStyle
+import com.ssethhyy.journey.ui.components.LocalAppChrome
+import com.ssethhyy.journey.ui.components.AppChromeHost
+import com.ssethhyy.journey.ui.components.AppChrome
+import com.ssethhyy.journey.data.repository.BarStyle
 import android.animation.ObjectAnimator
 import android.content.Intent
 import android.os.Bundle
@@ -212,41 +219,51 @@ fun JourneyRoot(
         }
     }
 
-    CompositionLocalProvider(LocalNavigator provides navigator) {
-        NavDisplay(
-            backStack = backStack,
-            modifier = Modifier
-                .fillMaxSize()
-                .background(MaterialTheme.colorScheme.surface),
-            onBack = { navigator.back() },
-            entryDecorators = listOf(
-                rememberSaveableStateHolderNavEntryDecorator(),
-                rememberViewModelStoreNavEntryDecorator(),
-            ),
-            transitionSpec = {
-                (slideInHorizontally { it / 3 } + fadeIn()) togetherWith (slideOutHorizontally { -it / 6 } + fadeOut())
-            },
-            popTransitionSpec = {
-                (slideInHorizontally { -it / 6 } + fadeIn()) togetherWith (slideOutHorizontally { it / 3 } + fadeOut())
-            },
-            predictivePopTransitionSpec = {
-                (slideInHorizontally { -it / 6 } + fadeIn()) togetherWith (slideOutHorizontally { it / 3 } + fadeOut())
-            },
-            entryProvider = entryProvider {
-                entry<HomeKey> { HomeScreen(requestedTab = requestedTab, onTabRequestHandled = { requestedTab = null }) }
-                entry<StopDetailKey> { key -> StopDetailScreen(key) }
-                entry<RouteDetailKey> { key -> RouteDetailScreen(key) }
-                entry<TripKey> { key -> TripScreen(key) }
-                entry<SearchKey> { SearchScreen() }
-                entry<SettingsKey> { SettingsScreen() }
-                entry<DisruptionsKey> { DisruptionsScreen() }
-                entry<IslandSettingsKey> { IslandSettingsScreen() }
-                entry<MykiWalletKey> { MykiWalletScreen() }
-                entry<MykiCardKey> { key -> MykiCardScreen(key) }
-                entry<FaresKey> { FaresScreen() }
-                entry<ProfileKey> { ProfileScreen() }
-                entry<JourneyDetailKey> { key -> JourneyDetailScreen(key) }
-            },
-        )
+    val settings by container.settingsRepository.settings.collectAsStateWithLifecycle(initialValue = null)
+    val barStyle = settings?.barStyle ?: BarStyle.BOTTOM_BAR
+    val chrome = remember { AppChrome() }
+
+    CompositionLocalProvider(LocalNavigator provides navigator, LocalAppChrome provides chrome, LocalBarStyle provides barStyle) {
+        Box(Modifier.fillMaxSize()) {
+            NavDisplay(
+                backStack = backStack,
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(MaterialTheme.colorScheme.surface),
+                onBack = { navigator.back() },
+                entryDecorators = listOf(
+                    rememberSaveableStateHolderNavEntryDecorator(),
+                    rememberViewModelStoreNavEntryDecorator(),
+                ),
+                transitionSpec = {
+                    (slideInHorizontally { it / 3 } + fadeIn()) togetherWith (slideOutHorizontally { -it / 6 } + fadeOut())
+                },
+                popTransitionSpec = {
+                    (slideInHorizontally { -it / 6 } + fadeIn()) togetherWith (slideOutHorizontally { it / 3 } + fadeOut())
+                },
+                predictivePopTransitionSpec = {
+                    (slideInHorizontally { -it / 6 } + fadeIn()) togetherWith (slideOutHorizontally { it / 3 } + fadeOut())
+                },
+                entryProvider = entryProvider {
+                    entry<HomeKey> { HomeScreen(requestedTab = requestedTab, onTabRequestHandled = { requestedTab = null }) }
+                    entry<StopDetailKey> { key -> StopDetailScreen(key) }
+                    entry<RouteDetailKey> { key -> RouteDetailScreen(key) }
+                    entry<TripKey> { key -> TripScreen(key) }
+                    entry<SearchKey> { SearchScreen() }
+                    entry<SettingsKey> { SettingsScreen() }
+                    entry<DisruptionsKey> { DisruptionsScreen() }
+                    entry<IslandSettingsKey> { IslandSettingsScreen() }
+                    entry<MykiWalletKey> { MykiWalletScreen() }
+                    entry<MykiCardKey> { key -> MykiCardScreen(key) }
+                    entry<FaresKey> { FaresScreen() }
+                    entry<ProfileKey> { ProfileScreen() }
+                    entry<JourneyDetailKey> { key -> JourneyDetailScreen(key) }
+                },
+            )
+            // Bottom-bar style: one toolbar above every page.
+            if (barStyle == BarStyle.BOTTOM_BAR) {
+                AppChromeHost(chrome, Modifier.align(Alignment.BottomCenter))
+            }
+        }
     }
 }

@@ -68,6 +68,7 @@ class ProfileScreenshotTest {
         runBlocking {
             container.settingsRepository.setThemeMode(ThemeMode.DARK)
             container.settingsRepository.setDynamicColor(false)
+            container.settingsRepository.setBarStyle(com.ssethhyy.journey.data.repository.BarStyle.BOTTOM_BAR)
             container.settingsRepository.setUserName("Alex")
             container.mykiRepository.clear()
             container.mykiRepository.add(

@@ -6,6 +6,7 @@
 
 package com.ssethhyy.journey.ui.screens.route
 
+import com.ssethhyy.journey.ui.components.pageBottomInset
 import com.ssethhyy.journey.ui.components.Sym
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -143,7 +144,7 @@ fun RouteDetailScreen(key: RouteDetailKey) {
                 modifier = Modifier
                     .fillMaxSize()
                     .floatingBarBlur(padding.calculateTopPadding()),
-                contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = padding.calculateTopPadding(), bottom = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding() + 32.dp),
+                contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = padding.calculateTopPadding(), bottom = pageBottomInset(32.dp)),
                 verticalArrangement = Arrangement.spacedBy(8.dp),
             ) {
                 val paths = d.data.geopaths[state.directionId] ?: d.data.geopaths.values.firstOrNull().orEmpty()

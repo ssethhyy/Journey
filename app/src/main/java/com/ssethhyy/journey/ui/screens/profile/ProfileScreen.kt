@@ -7,6 +7,9 @@
 
 package com.ssethhyy.journey.ui.screens.profile
 
+import com.ssethhyy.journey.ui.components.pageBottomInset
+import com.ssethhyy.journey.ui.components.usesBottomBar
+import com.ssethhyy.journey.ui.components.ToolbarFab
 import androidx.compose.animation.Crossfade
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.Animatable
@@ -134,9 +137,16 @@ fun ProfileScreen() {
     var editingName by rememberSaveable { mutableStateOf(false) }
 
     Scaffold(
-        topBar = { ReusableTopAppBar(title = "Profile", subtitle = settings.userName.takeIf { it.isNotBlank() }, onBackClick = navigator::back) },
+        topBar = {
+            ReusableTopAppBar(
+                title = "Profile",
+                subtitle = settings.userName.takeIf { it.isNotBlank() },
+                onBackClick = navigator::back,
+                pageFab = ToolbarFab(Sym.Settings, "Settings") { navigator.openSettings() },
+            )
+        },
         floatingActionButton = {
-            FloatingActionButton(
+            if (!usesBottomBar()) FloatingActionButton(
                 onClick = {
                     HapticUtil.performUIHaptic(view)
                     navigator.openSettings()
@@ -155,7 +165,7 @@ fun ProfileScreen() {
                 start = 16.dp,
                 end = 16.dp,
                 top = padding.calculateTopPadding() + 8.dp,
-                bottom = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding() + 104.dp,
+                bottom = pageBottomInset(104.dp),
             ),
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {

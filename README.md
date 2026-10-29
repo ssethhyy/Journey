@@ -74,7 +74,7 @@ Live departures, journey planning, a live map, myki balance and trip tracking fo
 ### 🧩 More
 - **Home screen widget** (Jetpack Glance): favourites with live times, a refresh button and a last-updated time, responsive to its size.
 - **[Essentials](https://github.com/sameerasw/essentials) island provider:** live tracking and a disruptions alert (coloured by severity) on the Dynamic Island-style overlay.
-- **Design:** Material 3 Expressive, dynamic colour, a floating navigation bar and top pill with progressive blur, Material Symbols Rounded, optional pitch-black dark theme and haptics.
+- **Design:** Material 3 Expressive, dynamic colour, a floating navigation bar that follows you onto every page (back button, page name and an action), progressive blur under the status bar, Material Symbols Rounded, optional pitch-black dark theme and haptics. Prefer the original floating title pill? Switch in *Settings → Appearance → Navigation bar*.
 
 ## Requirements
 

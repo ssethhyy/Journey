@@ -7,6 +7,8 @@
 
 package com.ssethhyy.journey.ui.screens.myki
 
+import com.ssethhyy.journey.ui.components.pageBottomInset
+import com.ssethhyy.journey.ui.components.ToolbarFab
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -121,6 +123,7 @@ fun MykiWalletScreen() {
                     else -> "$n cards"
                 },
                 onBackClick = navigator::back,
+                pageFab = ToolbarFab(Sym.AddCard, "Add myki") { scanned = null; scanMessage = null; adding = true },
             )
         },
         snackbarHost = { SnackbarHost(snackbar) },
@@ -136,7 +139,7 @@ fun MykiWalletScreen() {
             )
             else -> LazyColumn(
                 modifier = Modifier.fillMaxSize().floatingBarBlur(padding.calculateTopPadding()),
-                contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = padding.calculateTopPadding() + 8.dp, bottom = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding() + 24.dp),
+                contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = padding.calculateTopPadding() + 8.dp, bottom = pageBottomInset(24.dp)),
                 verticalArrangement = Arrangement.spacedBy(20.dp),
             ) {
                 item(key = "stack") {

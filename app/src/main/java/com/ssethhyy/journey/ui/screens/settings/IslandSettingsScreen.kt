@@ -7,6 +7,7 @@
 
 package com.ssethhyy.journey.ui.screens.settings
 
+import com.ssethhyy.journey.ui.components.pageBottomInset
 import android.content.Context
 import android.content.Intent
 import android.widget.Toast
@@ -106,7 +107,7 @@ fun IslandSettingsScreen() {
     ) { padding ->
         LazyColumn(
             modifier = Modifier.fillMaxSize().floatingBarBlur(padding.calculateTopPadding()),
-            contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = padding.calculateTopPadding(), bottom = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding() + 32.dp),
+            contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = padding.calculateTopPadding(), bottom = pageBottomInset(32.dp)),
         ) {
             item(key = "status") {
                 ConnectionCard(

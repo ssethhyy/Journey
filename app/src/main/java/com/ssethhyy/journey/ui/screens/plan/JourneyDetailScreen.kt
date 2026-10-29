@@ -6,6 +6,10 @@
 
 package com.ssethhyy.journey.ui.screens.plan
 
+import com.ssethhyy.journey.ui.components.pageBottomInset
+import com.ssethhyy.journey.ui.components.ToolbarFab
+import com.ssethhyy.journey.ui.components.usesBottomBar
+import com.ssethhyy.journey.ui.components.rememberTrackFab
 import com.ssethhyy.journey.ui.components.Sym
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -114,11 +118,13 @@ fun JourneyDetailScreen(key: JourneyDetailKey) {
                 title = "To ${key.toName.ifBlank { "destination" }}",
                 subtitle = journey?.let { "${TimeFormatter.clock(it.start)} – ${TimeFormatter.clock(it.end)} · ${formatDuration(it.durationMinutes)}" },
                 onBackClick = navigator::back,
+                pageFab = if (journey?.isWalkOnly == false) rememberTrackFab(TrackingTarget.Trip(key.journeyId, key.fromName, key.toName), "Track journey") else null,
+                pageActions = if (journey?.isWalkOnly == false) listOf(ToolbarFab(Sym.Contactless, "Log trip") { logging = true }) else emptyList(),
             )
         },
         containerColor = MaterialTheme.colorScheme.surface,
         floatingActionButton = {
-            if (journey?.isWalkOnly == false) {
+            if (!usesBottomBar() && journey?.isWalkOnly == false) {
                 Column(horizontalAlignment = Alignment.End, verticalArrangement = Arrangement.spacedBy(12.dp)) {
                     androidx.compose.material3.ExtendedFloatingActionButton(
                         onClick = { logging = true },
@@ -144,7 +150,7 @@ fun JourneyDetailScreen(key: JourneyDetailKey) {
             modifier = Modifier
                 .fillMaxSize()
                 .floatingBarBlur(padding.calculateTopPadding()),
-            contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = padding.calculateTopPadding(), bottom = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding() + 104.dp),
+            contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = padding.calculateTopPadding(), bottom = pageBottomInset(104.dp)),
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
             item(key = "map") { JourneyMap(journey) }

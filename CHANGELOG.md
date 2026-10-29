@@ -7,7 +7,12 @@ All notable changes to Journey are documented here. The format follows
 ## [Unreleased]
 
 ### Added
+- **Bottom bar navigation style**, now the default. The floating navbar is always on screen: on a page it turns into a back button, the page name and an action button for that page (for example *Track this service*, *Add to favourites*, *Settings*), with small icon actions beside the title. Switch back to the original floating **Top pill** in *Settings → Appearance → Navigation bar*.
 - Repository documentation for GitHub: README, contributing guide, code of conduct, security policy, licence, third-party notices, issue and pull request templates, CI and Dependabot.
+
+### Changed
+- In the bottom bar style the progressive blur at the top covers only the status bar (clock, Wi-Fi and battery icons) instead of the whole title pill area.
+- On the myki card page the *Add money or pass* button and the options menu move into the page when the bottom bar is used.
 
 ### Fixed
 - CI no longer fails while setting up the Android SDK (the runner's preinstalled SDK is used instead of `android-actions/setup-android`).

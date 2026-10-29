@@ -14,6 +14,7 @@ All notable changes to Journey are documented here. The format follows
 - Repository documentation for GitHub: README, contributing guide, code of conduct, security policy, licence, third-party notices, issue and pull request templates, CI and Dependabot.
 
 ### Changed
+- **Home-screen widget redesigned** to match the design file: a coloured mode circle, a bold stretched stop name over a light "400m away", and a right-aligned time over "towards City", with the live icon beside the time. It is drawn with Google Sans Flex's weight, width and roundness axes, which normal widget text cannot use. Every text is a single line that narrows and then trims with "…" instead of wrapping into the next row. Up to seven stops show, and the slim *Updated* line and refresh button stay at the bottom. Tapping a row still opens that stop.
 - In the bottom bar style the progressive blur at the top covers only the status bar (clock, Wi-Fi and battery icons) instead of the whole title pill area.
 - On the myki card page the *Add money or pass* button and the options menu move into the page when the bottom bar is used.
 

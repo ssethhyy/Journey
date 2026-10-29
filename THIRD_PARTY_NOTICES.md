@@ -28,6 +28,12 @@ which Journey uses as its UI reference but does not include.
 
 Exact versions are in [`gradle/libs.versions.toml`](gradle/libs.versions.toml).
 
+## Fonts
+
+- **Google Sans Flex** (`app/src/main/assets/fonts/GoogleSansFlex.ttf`), © The Google Sans Flex Authors,
+  licensed under the [SIL Open Font License 1.1](third_party/fonts/GoogleSansFlex-OFL.txt). Used to draw the
+  home-screen widget.
+
 ## Services and data
 
 Journey is a client for these services. It does not host or redistribute their data, and you must follow

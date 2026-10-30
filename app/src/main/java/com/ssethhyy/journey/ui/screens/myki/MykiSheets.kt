@@ -7,6 +7,8 @@
 
 package com.ssethhyy.journey.ui.screens.myki
 
+import com.ssethhyy.journey.ui.components.hapticSelect
+import com.ssethhyy.journey.ui.components.hapticConfirm
 import android.app.Activity
 import android.content.Context
 import android.content.ContextWrapper
@@ -192,7 +194,7 @@ fun ScanPrompt(nfc: NfcState, message: String?, modifier: Modifier = Modifier) {
                 )
             }
             if (nfc == NfcState.OFF) {
-                TextButton(onClick = { openNfcSettings(context) }) { Text("Turn on") }
+                TextButton(onClick = hapticConfirm { openNfcSettings(context) }) { Text("Turn on") }
             }
         }
     }
@@ -247,7 +249,7 @@ fun AddMykiSheet(
         Text("Fare type", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
         FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             MykiFareType.entries.forEach { type ->
-                FilterChip(selected = fareType == type, onClick = { fareType = type }, label = { Text(type.label) })
+                FilterChip(selected = fareType == type, onClick = hapticSelect { fareType = type }, label = { Text(type.label) })
             }
         }
         OutlinedTextField(
@@ -294,7 +296,7 @@ fun BalanceSheet(currentCents: Long?, onDismiss: () -> Unit, onSave: (Long) -> U
             singleLine = true,
             modifier = Modifier.fillMaxWidth(),
         )
-        Button(onClick = { cents?.let(onSave) }, enabled = cents != null, modifier = Modifier.fillMaxWidth().height(52.dp)) { Text("Save balance") }
+        Button(onClick = hapticConfirm { cents?.let(onSave) }, enabled = cents != null, modifier = Modifier.fillMaxWidth().height(52.dp)) { Text("Save balance") }
     }
 }
 

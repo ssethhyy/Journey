@@ -6,6 +6,7 @@
 
 package com.ssethhyy.journey.ui.screens.route
 
+import com.ssethhyy.journey.ui.components.hapticClick
 import com.ssethhyy.journey.ui.components.pageBottomInset
 import com.ssethhyy.journey.ui.components.Sym
 import androidx.compose.foundation.layout.Arrangement
@@ -181,7 +182,7 @@ fun RouteDetailScreen(key: RouteDetailKey) {
                                         lineColor = color,
                                         isFirst = index == 0,
                                         isLast = index == stops.data.lastIndex,
-                                        onClick = { navigator.openStop(stop) },
+                                        onClick = hapticClick { navigator.openStop(stop) },
                                     )
                                 }
                             }

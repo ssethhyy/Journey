@@ -9,6 +9,7 @@
 
 package com.ssethhyy.journey.ui.components
 
+import kotlinx.coroutines.flow.distinctUntilChanged
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
@@ -232,9 +233,14 @@ fun FloatingPullToRefreshBox(
     content: @Composable androidx.compose.foundation.layout.BoxScope.() -> Unit,
 ) {
     val state = rememberPullToRefreshState()
+    PullRefreshHaptics(state, isRefreshing)
+    val view = androidx.compose.ui.platform.LocalView.current
     PullToRefreshBox(
         isRefreshing = isRefreshing,
-        onRefresh = onRefresh,
+        onRefresh = {
+            HapticUtil.performConfirmHaptic(view)
+            onRefresh()
+        },
         modifier = modifier,
         state = state,
         indicator = {
@@ -246,4 +252,17 @@ fun FloatingPullToRefreshBox(
         },
         content = content,
     )
+}
+
+/** A tick the moment a pull has gone far enough that letting go will refresh. */
+@androidx.compose.material3.ExperimentalMaterial3Api
+@Composable
+fun PullRefreshHaptics(state: androidx.compose.material3.pulltorefresh.PullToRefreshState, isRefreshing: Boolean) {
+    val view = androidx.compose.ui.platform.LocalView.current
+    val refreshing by androidx.compose.runtime.rememberUpdatedState(isRefreshing)
+    androidx.compose.runtime.LaunchedEffect(state) {
+        androidx.compose.runtime.snapshotFlow { state.distanceFraction >= 1f }
+            .distinctUntilChanged()
+            .collect { ready -> if (ready && !refreshing) HapticUtil.performRefreshReadyHaptic(view) }
+    }
 }

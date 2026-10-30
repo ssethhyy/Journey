@@ -133,7 +133,7 @@ fun IconToggleItem(
             .fillMaxWidth()
             .background(MaterialTheme.colorScheme.surfaceBright)
             .clickable(role = if (onClick == null) Role.Switch else Role.Button) {
-                HapticUtil.performVirtualKeyHaptic(view)
+                if (enabled && onClick == null) HapticUtil.performToggleHaptic(view, !isChecked) else HapticUtil.performVirtualKeyHaptic(view)
                 when {
                     !enabled -> onDisabledClick?.invoke()
                     onClick != null -> onClick()
@@ -159,7 +159,7 @@ fun IconToggleItem(
                 checked = isChecked,
                 enabled = enabled,
                 onCheckedChange = {
-                    HapticUtil.performVirtualKeyHaptic(view)
+                    HapticUtil.performToggleHaptic(view, it)
                     onCheckedChange(it)
                 },
             )
@@ -248,7 +248,7 @@ fun <T> SegmentedPicker(
             ToggleButton(
                 checked = selected,
                 onCheckedChange = {
-                    HapticUtil.performUIHaptic(view)
+                    HapticUtil.performLightHaptic(view)
                     onItemSelected(item)
                 },
                 modifier = Modifier

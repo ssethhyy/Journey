@@ -29,6 +29,7 @@ import com.ssethhyy.journey.data.crowding.CrowdingResult
 import com.ssethhyy.journey.data.crowding.Occupancy
 import com.ssethhyy.journey.data.crowding.VehicleCrowding
 import com.ssethhyy.journey.ui.theme.ModeColors
+import com.ssethhyy.journey.utils.HapticUtil
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -52,6 +53,7 @@ class TrackingManager(private val context: Context) {
     val status: StateFlow<TrackingStatus?> = _status.asStateFlow()
 
     fun start(target: TrackingTarget) {
+        HapticUtil.performSuccessHaptic(context)
         _target.value = target
         _status.value = null
         ContextCompat.startForegroundService(context, Intent(context, TrackingService::class.java).setAction(TrackingService.ACTION_START))
@@ -136,6 +138,9 @@ class TrackingService : Service() {
                     ?: TrackingStatus("Journey unavailable", "Plan the trip again to keep tracking", "—", 1f, false, true, null, now)
             }
             if (status != lastStatus) {
+                // Taps on the wrist of the phone: leaving now needs you; arriving is a small "well done".
+                if (status.chip == "Now" && !status.finished && lastStatus?.chip != "Now") HapticUtil.performAttentionHaptic(this@TrackingService)
+                if (status.finished && lastStatus?.finished != true && status.chip == "Arrived") HapticUtil.performSuccessHaptic(this@TrackingService)
                 lastStatus = status
                 manager.publish(status)
                 notify(target, status)

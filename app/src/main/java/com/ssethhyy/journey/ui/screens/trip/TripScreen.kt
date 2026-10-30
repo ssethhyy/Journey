@@ -6,6 +6,8 @@
 
 package com.ssethhyy.journey.ui.screens.trip
 
+import com.ssethhyy.journey.utils.HapticUtil
+import com.ssethhyy.journey.ui.components.hapticConfirm
 import com.ssethhyy.journey.ui.components.pageBottomInset
 import com.ssethhyy.journey.ui.components.usesBottomBar
 import com.ssethhyy.journey.ui.components.rememberTrackFab
@@ -147,6 +149,7 @@ fun TripScreen(key: TripKey) {
     val refreshing by vm.refreshing.collectAsStateWithLifecycle()
     val crowding by vm.crowding.collectAsStateWithLifecycle()
     val navigator = currentNavigator
+    val view = androidx.compose.ui.platform.LocalView.current
     val now by rememberNow()
     var showAllStops by rememberSaveable { mutableStateOf(false) }
     AutoRefreshEffect(enabled = true, intervalMs = LIVE_REFRESH_MS) { vm.load() }
@@ -199,9 +202,15 @@ fun TripScreen(key: TripKey) {
                         fromStopId = key.fromStopId,
                         modifier = Modifier.padding(start = 16.dp, end = 16.dp, top = 2.dp, bottom = 8.dp),
                     )
+                    val pullState = androidx.compose.material3.pulltorefresh.rememberPullToRefreshState()
+                    com.ssethhyy.journey.ui.components.PullRefreshHaptics(pullState, refreshing)
                     PullToRefreshBox(
                         isRefreshing = refreshing,
-                        onRefresh = { vm.load(userInitiated = true) },
+                        state = pullState,
+                        onRefresh = {
+                            HapticUtil.performConfirmHaptic(view)
+                            vm.load(userInitiated = true)
+                        },
                         modifier = Modifier.weight(1f).fillMaxWidth(),
                     ) {
                         LazyColumn(
@@ -268,7 +277,7 @@ fun TripScreen(key: TripKey) {
                                 }
                                 if (showAllStops && stops.size > 8) {
                                     item(key = "fewer") {
-                                        TextButton(onClick = { showAllStops = false }, modifier = Modifier.fillMaxWidth()) { Text("Show fewer stops") }
+                                        TextButton(onClick = hapticConfirm { showAllStops = false }, modifier = Modifier.fillMaxWidth()) { Text("Show fewer stops") }
                                     }
                                 }
                             }

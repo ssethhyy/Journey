@@ -8,6 +8,8 @@
 
 package com.ssethhyy.journey.ui.screens.myki
 
+import com.ssethhyy.journey.ui.components.hapticSelect
+import com.ssethhyy.journey.ui.components.hapticConfirm
 import android.widget.Toast
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -141,7 +143,7 @@ private fun NoMykiNotice(onDismiss: () -> Unit) {
         style = MaterialTheme.typography.bodyMedium,
         color = MaterialTheme.colorScheme.onSurfaceVariant,
     )
-    Button(onClick = { onDismiss(); navigator.openMyki() }, modifier = Modifier.fillMaxWidth().height(52.dp)) {
+    Button(onClick = hapticConfirm { onDismiss(); navigator.openMyki() }, modifier = Modifier.fillMaxWidth().height(52.dp)) {
         Icon(Sym.AddCard, null, Modifier.size(20.dp))
         Spacer(Modifier.width(8.dp))
         Text("Add a myki")
@@ -234,9 +236,9 @@ fun TripFareSection(
         Text("Fare zone", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
         FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             listOf(FareZone.ZONE_1_2, FareZone.ZONE_2).forEach { zone ->
-                FilterChip(selected = trip.zone == zone, onClick = { zoneOverride = zone }, label = { Text(zone.label) })
+                FilterChip(selected = trip.zone == zone, onClick = hapticSelect { zoneOverride = zone }, label = { Text(zone.label) })
             }
-            if (trip.zone == FareZone.FREE_TRAM) FilterChip(selected = true, onClick = {}, label = { Text(FareZone.FREE_TRAM.label) })
+            if (trip.zone == FareZone.FREE_TRAM) FilterChip(selected = true, onClick = hapticSelect {}, label = { Text(FareZone.FREE_TRAM.label) })
         }
         Text(
             if (resolved.zonesKnown) "Zones come from PTV's stop data. A trip through Zone 1 between two Zone 2 stops costs Zone 1+2."
@@ -257,7 +259,7 @@ fun TripFareSection(
             singleLine = true,
             modifier = Modifier.fillMaxWidth(),
         )
-        if (!manual) TextButton(onClick = { amountText = null }) { Text("Use the calculated fare") }
+        if (!manual) TextButton(onClick = hapticConfirm { amountText = null }) { Text("Use the calculated fare") }
     } else {
         TextButton(onClick = { amountText = q.chargeCents?.let { formatDollars(it).removePrefix("$") } ?: "" }) { Text("Edit amount") }
     }
@@ -371,8 +373,8 @@ fun LogManualTripSheet(card: MykiCard, onDismiss: () -> Unit) {
             } else {
                 MykiPicker(cards.ifEmpty { listOf(card) }, active.id, onSelect = { selectedId = it })
                 FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    FilterChip(selected = kind == LogKind.TRIP, onClick = { kind = LogKind.TRIP }, label = { Text("Trip fare") }, leadingIcon = { Icon(Sym.Route, null, Modifier.size(18.dp)) })
-                    FilterChip(selected = kind == LogKind.CUSTOM, onClick = { kind = LogKind.CUSTOM }, label = { Text("Custom amount") }, leadingIcon = { Icon(Sym.Toll, null, Modifier.size(18.dp)) })
+                    FilterChip(selected = kind == LogKind.TRIP, onClick = hapticSelect { kind = LogKind.TRIP }, label = { Text("Trip fare") }, leadingIcon = { Icon(Sym.Route, null, Modifier.size(18.dp)) })
+                    FilterChip(selected = kind == LogKind.CUSTOM, onClick = hapticSelect { kind = LogKind.CUSTOM }, label = { Text("Custom amount") }, leadingIcon = { Icon(Sym.Toll, null, Modifier.size(18.dp)) })
                 }
                 if (kind == LogKind.TRIP) {
                     FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -395,7 +397,7 @@ fun LogManualTripSheet(card: MykiCard, onDismiss: () -> Unit) {
                     Text("When", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         listOf(0 to "Now", 30 to "30 min ago", 60 to "1 hour ago", 120 to "2 hours ago").forEach { (m, label) ->
-                            FilterChip(selected = minutesAgo == m, onClick = { minutesAgo = m }, label = { Text(label) })
+                            FilterChip(selected = minutesAgo == m, onClick = hapticSelect { minutesAgo = m }, label = { Text(label) })
                         }
                     }
                     when {
@@ -507,7 +509,7 @@ private fun StopSearch(mode: TransportMode, title: String, onPick: (Stop) -> Uni
                         .padding(vertical = 2.dp)
                         .then(Modifier),
                 ) {
-                    TextButton(onClick = { onPick(stop) }, modifier = Modifier.fillMaxWidth()) {
+                    TextButton(onClick = hapticConfirm { onPick(stop) }, modifier = Modifier.fillMaxWidth()) {
                         Column(Modifier.weight(1f)) {
                             Text(stop.name, style = MaterialTheme.typography.bodyLarge, maxLines = 1)
                             stop.suburb?.let { Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant) }

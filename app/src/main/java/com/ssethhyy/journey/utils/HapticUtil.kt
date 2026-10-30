@@ -169,13 +169,84 @@ object HapticUtil {
         }
     }
 
+    /**
+     * A single tap of the given strength. Uses the click primitive where the motor has it (API 30+), which scales
+     * cleanly from a faint tick to a firm tap; otherwise falls back to a short amplitude pulse, then a tick.
+     */
     private fun performCustomHapticDirect(vibrator: Vibrator, strength: Float) {
         if (!vibrator.hasVibrator()) return
-        val clampedStrength = strength.coerceIn(0.01f, 1.0f)
+        val clamped = strength.coerceIn(0.01f, 1.0f)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R && vibrator.areAllPrimitivesSupported(VibrationEffect.Composition.PRIMITIVE_CLICK)) {
+            vibrateWithTouchAttributes(
+                vibrator,
+                VibrationEffect.startComposition().addPrimitive(VibrationEffect.Composition.PRIMITIVE_CLICK, clamped).compose(),
+            )
+            return
+        }
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O && vibrator.hasAmplitudeControl()) {
+            val amplitude = (clamped * clamped * 255).toInt().coerceIn(1, 255)
+            vibrator.vibrate(VibrationEffect.createOneShot(12, amplitude))
+        } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            vibrateWithTouchAttributes(vibrator, VibrationEffect.createPredefined(VibrationEffect.EFFECT_TICK))
+        }
+    }
+
+    /** Switch or checkbox changing state: the system's on/off feel on Android 14+, a confirm or tick before that. */
+    fun performToggleHaptic(view: View, on: Boolean) {
+        if (!isAppHapticsEnabled.value) return
+        when {
+            Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE ->
+                view.performHapticFeedback(if (on) HapticFeedbackConstants.TOGGLE_ON else HapticFeedbackConstants.TOGGLE_OFF)
+            Build.VERSION.SDK_INT >= Build.VERSION_CODES.R ->
+                view.performHapticFeedback(if (on) HapticFeedbackConstants.CONFIRM else HapticFeedbackConstants.CLOCK_TICK)
+            else -> view.performHapticFeedback(HapticFeedbackConstants.CLOCK_TICK)
+        }
+    }
+
+    /** Pulling to refresh has pulled far enough to trigger on release. */
+    fun performRefreshReadyHaptic(view: View) = performGestureThresholdHaptic(view)
+
+    /** Something you asked for has started: a soft rise into a click. */
+    fun performSuccessHaptic(context: Context) {
+        if (!isAppHapticsEnabled.value) return
+        val vibrator = getVibrator(context)
+        if (!vibrator.hasVibrator()) return
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R &&
+            vibrator.areAllPrimitivesSupported(VibrationEffect.Composition.PRIMITIVE_QUICK_RISE, VibrationEffect.Composition.PRIMITIVE_CLICK)
+        ) {
+            runCatching {
+                vibrateWithTouchAttributes(
+                    vibrator,
+                    VibrationEffect.startComposition()
+                        .addPrimitive(VibrationEffect.Composition.PRIMITIVE_QUICK_RISE, 0.5f)
+                        .addPrimitive(VibrationEffect.Composition.PRIMITIVE_CLICK, 0.9f, 30)
+                        .compose(),
+                )
+            }
+            return
+        }
+        performStrongTickHaptic(context)
+    }
+
+    /** Needs attention now (a service is leaving): two firm taps. */
+    fun performAttentionHaptic(context: Context) {
+        if (!isAppHapticsEnabled.value) return
+        val vibrator = getVibrator(context)
+        if (!vibrator.hasVibrator()) return
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R && vibrator.areAllPrimitivesSupported(VibrationEffect.Composition.PRIMITIVE_CLICK)) {
+            runCatching {
+                vibrateWithTouchAttributes(
+                    vibrator,
+                    VibrationEffect.startComposition()
+                        .addPrimitive(VibrationEffect.Composition.PRIMITIVE_CLICK, 0.8f)
+                        .addPrimitive(VibrationEffect.Composition.PRIMITIVE_CLICK, 1.0f, 110)
+                        .compose(),
+                )
+            }
+            return
+        }
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            val amplitude = (clampedStrength * 255).toInt().coerceIn(1, 255)
-            val effect = VibrationEffect.createOneShot(12, amplitude)
-            vibrator.vibrate(effect)
+            vibrator.vibrate(VibrationEffect.createWaveform(longArrayOf(0, 40, 80, 50), intArrayOf(0, 180, 0, 230), -1))
         }
     }
 

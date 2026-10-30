@@ -9,6 +9,9 @@
 
 package com.ssethhyy.journey.ui.screens.myki
 
+import com.ssethhyy.journey.ui.components.hapticToggle
+import com.ssethhyy.journey.ui.components.hapticSelect
+import com.ssethhyy.journey.ui.components.hapticConfirm
 import com.ssethhyy.journey.ui.components.pageBottomInset
 import com.ssethhyy.journey.ui.components.ToolbarFab
 import androidx.compose.foundation.layout.Arrangement
@@ -120,7 +123,7 @@ fun FaresScreen() {
                             Text("Fares usually change on 1 January. Compare them with transport.vic.gov.au, then edit anything that's different.", style = MaterialTheme.typography.bodyMedium)
                             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                                 TextButton(onClick = { scope.launch { repo.confirmPrices() } }) { Text("They're correct") }
-                                TextButton(onClick = { editingPrices = true }) { Text("Edit prices") }
+                                TextButton(onClick = hapticConfirm { editingPrices = true }) { Text("Edit prices") }
                             }
                         }
                     }
@@ -150,7 +153,7 @@ fun FaresScreen() {
                 )
             }
             item(key = "add_rule") {
-                FilledTonalButton(onClick = { addingRule = true }, modifier = Modifier.fillMaxWidth().height(52.dp)) {
+                FilledTonalButton(onClick = hapticConfirm { addingRule = true }, modifier = Modifier.fillMaxWidth().height(52.dp)) {
                     Icon(Sym.Add, null, Modifier.size(20.dp))
                     Spacer(Modifier.width(8.dp))
                     Text("Add a discount")
@@ -229,7 +232,7 @@ private fun RuleCard(rule: FareRule, activeNow: Boolean, onToggle: (Boolean) -> 
                 if (rule.note.isNotBlank()) Text(rule.note, style = MaterialTheme.typography.bodySmall)
                 Text(scopeText(rule), style = MaterialTheme.typography.labelSmall, color = LocalContentColorVariant())
             }
-            Switch(checked = rule.enabled, onCheckedChange = onToggle)
+            Switch(checked = rule.enabled, onCheckedChange = hapticToggle(onToggle))
         }
     }
 }
@@ -290,7 +293,7 @@ private fun RuleSheet(initial: FareRule?, onDismiss: () -> Unit, onSave: (FareRu
             Text("For a government announcement like free or half-price travel, or anything else that changes what you pay.", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
             FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 listOf("Free travel" to 100, "Half price" to 50, "25% off" to 25).forEach { (name, value) ->
-                    FilterChip(selected = false, onClick = { percent = value.toString(); if (label.isBlank()) label = name }, label = { Text(name) })
+                    FilterChip(selected = false, onClick = hapticSelect { percent = value.toString(); if (label.isBlank()) label = name }, label = { Text(name) })
                 }
             }
             OutlinedTextField(value = label, onValueChange = { label = it.take(40) }, label = { Text("Name") }, singleLine = true, modifier = Modifier.fillMaxWidth())
@@ -329,16 +332,16 @@ private fun RuleSheet(initial: FareRule?, onDismiss: () -> Unit, onSave: (FareRu
             Text("Applies to (none selected = everything)", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
             FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 TransportMode.entries.filter { it != TransportMode.NIGHT_BUS }.forEach { m ->
-                    FilterChip(selected = m in modes, onClick = { modes = if (m in modes) modes - m else modes + m }, label = { Text(m.label) })
+                    FilterChip(selected = m in modes, onClick = hapticSelect { modes = if (m in modes) modes - m else modes + m }, label = { Text(m.label) })
                 }
             }
             FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 MykiFareType.entries.forEach { t ->
-                    FilterChip(selected = t in types, onClick = { types = if (t in types) types - t else types + t }, label = { Text(t.label) })
+                    FilterChip(selected = t in types, onClick = hapticSelect { types = if (t in types) types - t else types + t }, label = { Text(t.label) })
                 }
             }
             FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                DayKind.entries.forEach { d -> FilterChip(selected = days == d, onClick = { days = d }, label = { Text(d.label) }) }
+                DayKind.entries.forEach { d -> FilterChip(selected = days == d, onClick = hapticSelect { days = d }, label = { Text(d.label) }) }
             }
             Button(
                 onClick = {

@@ -133,6 +133,8 @@ class PlanViewModel(private val container: AppContainer) : ViewModel() {
                 val from = resolve(s.from)
                 val destination = resolve(to)
                 container.journeyRepository.plan(from, destination, s.timeMode, s.time).also {
+                    // Frequent trips become commutes on For You. Live refreshes don't count as new trips.
+                    if (!silent) container.commuteRepository.record(s.from, destination.copy(name = to.name, subtitle = to.subtitle))
                     container.placesRepository.addRecent(
                         RecentTrip(
                             fromName = s.from.name,

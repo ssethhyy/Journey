@@ -71,6 +71,7 @@ class AppContainer(
         ),
     )
     val placesRepository = PlacesRepository(context)
+    val commuteRepository = com.ssethhyy.journey.data.commute.CommuteRepository(context)
     val mykiRepository = com.ssethhyy.journey.data.myki.MykiRepository(context)
     val fareConfigRepository = com.ssethhyy.journey.data.fare.FareConfigRepository(context)
     val journeyRepository = JourneyRepository(PlannerApi(plannerBaseUrl))

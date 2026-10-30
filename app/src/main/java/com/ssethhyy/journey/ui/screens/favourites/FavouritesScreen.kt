@@ -114,8 +114,22 @@ fun FavouritesScreen(onAddFromNearby: () -> Unit, onAddFromSearch: () -> Unit) {
     var renaming by remember { mutableStateOf<FavouriteStop?>(null) }
     var askingName by rememberSaveable { mutableStateOf(false) }
     var editingPlace by remember { mutableStateOf<Pair<PlaceKind, SavedPlace?>?>(null) }
+    val commutesVm = appViewModel(key = "commutes") { CommutesViewModel(it) }
+    val commutes by commutesVm.state.collectAsStateWithLifecycle()
+    // null = closed, Pair(null, _) = new commute, Pair(commute, _) = editing
+    var commuteEditor by remember { mutableStateOf<Pair<com.ssethhyy.journey.data.commute.Commute?, Boolean>?>(null) }
+    val commuteActions = remember(commutesVm) {
+        CommuteActions(
+            onPlan = { c -> navigator.planTo(c.to.toPlan(), c.from.toPlan().takeIf { !c.from.isCurrent }) },
+            onOpen = { c, journey -> navigator.openJourney(journey.id, if (c.from.isCurrent) "Your location" else c.from.name, c.to.name) },
+            onAdd = { commuteEditor = null to true },
+            onEdit = { c -> commuteEditor = c to true },
+            onRemove = { c -> commutesVm.remove(c) },
+        )
+    }
 
     AutoRefreshEffect(enabled = state.settings.autoRefresh && state.favourites.isNotEmpty()) { vm.refresh(force = true) }
+    AutoRefreshEffect(enabled = commutes.cards.isNotEmpty(), intervalMs = 60_000) { commutesVm.refresh() }
 
     val onRemove: (FavouriteStop) -> Unit = { fav ->
         vm.remove(fav.key)
@@ -140,7 +154,10 @@ fun FavouritesScreen(onAddFromNearby: () -> Unit, onAddFromSearch: () -> Unit) {
     ) { innerPadding ->
         FloatingPullToRefreshBox(
             isRefreshing = state.refreshing,
-            onRefresh = { vm.refresh(force = true, userInitiated = true) },
+            onRefresh = {
+                vm.refresh(force = true, userInitiated = true)
+                commutesVm.refresh()
+            },
             topInset = innerPadding.calculateTopPadding(),
             modifier = Modifier.fillMaxSize(),
         ) {
@@ -177,6 +194,7 @@ fun FavouritesScreen(onAddFromNearby: () -> Unit, onAddFromSearch: () -> Unit) {
                             contentPadding = PaddingValues(0.dp),
                         )
                     }
+                    commutesSection(commutes, now, commuteActions)
                     if (state.favourites.isEmpty()) {
                         item(key = "empty") { EmptyFavourites(onAddFromNearby, onAddFromSearch) }
                         return@LazyColumn
@@ -234,6 +252,10 @@ fun FavouritesScreen(onAddFromNearby: () -> Unit, onAddFromSearch: () -> Unit) {
                 }
             }
         }
+    }
+
+    commuteEditor?.let { (existing, _) ->
+        CommuteEditorSheet(existing = existing, newId = commutesVm::newId, onSave = { commutesVm.saveManual(it) }, onDismiss = { commuteEditor = null })
     }
 
     editingPlace?.let { (kind, place) ->

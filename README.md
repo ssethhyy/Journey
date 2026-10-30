@@ -48,6 +48,7 @@ Live departures, journey planning, a live map, myki balance and trip tracking fo
 ### 🏠 For You
 - A greeting with today's date, then your favourite stops with **live departures** grouped by mode (trains, trams, buses).
 - Saved places (Home, Work and your own) one tap away from planning a trip.
+- **Commutes:** the trips you make most (learned from your planning, or added by you) with when to leave, a backup if you miss it, and one-tap tracking or planning.
 - Network status at a glance, mode filters, pull to refresh and auto refresh.
 - A **Profile** with stats from the trips you log, and an avatar that morphs between Material 3 Expressive shapes.
 

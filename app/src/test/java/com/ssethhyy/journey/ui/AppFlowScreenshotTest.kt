@@ -29,7 +29,6 @@ import com.ssethhyy.journey.data.repository.SavedPlace
 import com.ssethhyy.journey.data.repository.ThemeMode
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
-import org.junit.AfterClass
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -263,13 +262,5 @@ class AppFlowScreenshotTest {
         waitForText("Add favourite")
         waitForText("Southern Cross Station")
         snap("03_add_favourite_sheet_dark")
-    }
-
-    companion object {
-        @JvmStatic
-        @AfterClass
-        fun stopServer() {
-            runCatching { TestJourneyApp.fake.shutdown() }
-        }
     }
 }

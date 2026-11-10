@@ -6,6 +6,9 @@ All notable changes to Journey are documented here. The format follows
 
 ## [Unreleased]
 
+### Changed
+- Release builds are signed with your own release key when `release.storeFile`, `release.storePassword`, `release.keyAlias` and `release.keyPassword` are set in `local.properties`. Without them (a fresh clone, CI) they still fall back to the debug key.
+
 ## [1.1.0] - 2026-11-10
 
 Everything since 1.0.0, including all the changes tried out in the beta builds.

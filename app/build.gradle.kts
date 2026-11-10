@@ -43,6 +43,21 @@ android {
         resValue("string", "mapbox_access_token", localProp("mapbox.accessToken").ifEmpty { "YOUR_MAPBOX_ACCESS_TOKEN" })
     }
 
+    // Your release key, from local.properties (git-ignored), so it never reaches the repository:
+    //   release.storeFile, release.storePassword, release.keyAlias, release.keyPassword
+    // Without them (for example in a fresh clone or CI) release builds fall back to the debug key.
+    val releaseStore = localProp("release.storeFile").takeIf { it.isNotEmpty() }?.let { file(it) }?.takeIf { it.exists() }
+    signingConfigs {
+        if (releaseStore != null) {
+            create("release") {
+                storeFile = releaseStore
+                storePassword = localProp("release.storePassword")
+                keyAlias = localProp("release.keyAlias")
+                keyPassword = localProp("release.keyPassword")
+            }
+        }
+    }
+
     buildTypes {
         debug {
             // Installs next to a release build, so testing never replaces (or wipes) the copy you use day to day.
@@ -53,9 +68,7 @@ android {
             optimization {
                 enable = true
             }
-            // Signed with the debug key so release builds can be installed locally for testing.
-            // Replace with a real signing config before publishing.
-            signingConfig = signingConfigs.getByName("debug")
+            signingConfig = signingConfigs.findByName("release") ?: signingConfigs.getByName("debug")
         }
     }
     compileOptions {

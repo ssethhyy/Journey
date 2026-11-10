@@ -9,6 +9,10 @@
 
 package com.ssethhyy.journey.ui.components
 
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.draw.drawWithContent
 import kotlinx.coroutines.flow.distinctUntilChanged
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animateFloatAsState
@@ -213,13 +217,37 @@ private fun TopPillBar(
     }
 }
 
-/** Progressive blur over the top [topInset] of scrolling content, so it softens as it passes under the bar. */
+/**
+ * Progressive blur over the top of scrolling content, so it softens as it passes under the status bar (and the
+ * top pill, in that style). It reaches a little past [topInset] so the fade has room to happen below the clock
+ * and icons instead of ending exactly at them, with a soft tint of the page colour for legibility.
+ */
 @Composable
 fun Modifier.floatingBarBlur(topInset: Dp): Modifier {
     val density = LocalDensity.current
     val available = rememberBlurAvailable()
-    val radius = if (available) with(density) { 18.dp.toPx() } else 0f
-    return this.progressiveBlur(radius, with(density) { topInset.toPx() }, BlurDirection.TOP)
+    val reach = topInset + 28.dp
+    val radius = if (available) with(density) { 24.dp.toPx() } else 0f
+    val tint = MaterialTheme.colorScheme.surface
+    val reachPx = with(density) { reach.toPx() }
+    val insetPx = with(density) { topInset.toPx() }
+    return this
+        .progressiveBlur(radius, reachPx, BlurDirection.TOP)
+        .drawWithContent {
+            drawContent()
+            // Strongest behind the status bar, fading out over the extra reach. Without blur (older Android,
+            // battery saver) the tint alone keeps text from clashing with the clock.
+            val strength = if (available) 0.55f else 0.85f
+            drawRect(
+                Brush.verticalGradient(
+                    0f to tint.copy(alpha = strength),
+                    (insetPx / reachPx).coerceIn(0f, 1f) to tint.copy(alpha = strength * 0.6f),
+                    1f to Color.Transparent,
+                    endY = reachPx,
+                ),
+                size = Size(size.width, reachPx),
+            )
+        }
 }
 
 /** Pull to refresh whose spinner appears below the floating bar rather than behind it. */

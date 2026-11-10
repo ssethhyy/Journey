@@ -356,7 +356,7 @@ private fun BalanceCard(card: MykiCard, onClick: () -> Unit) {
             }
             Text(
                 card.balanceCents?.let { formatDollars(it) } ?: "—",
-                style = MaterialTheme.typography.headlineMedium,
+                style = MaterialTheme.typography.headlineMediumEmphasized,
                 fontWeight = FontWeight.Medium,
             )
         }

@@ -223,8 +223,7 @@ private fun PrimaryTrip(journey: Journey, now: Instant, onOpen: () -> Unit) {
             Row(verticalAlignment = Alignment.Bottom, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 Text(
                     if (countdown == "Now") "Leave now" else "Leave in $countdown",
-                    style = MaterialTheme.typography.headlineSmall,
-                    fontWeight = FontWeight.SemiBold,
+                    style = MaterialTheme.typography.headlineSmallEmphasized,
                 )
                 Text(
                     "Arrive ${TimeFormatter.clock(journey.end)} · ${formatDuration(journey.durationMinutes)}",

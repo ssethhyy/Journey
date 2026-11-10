@@ -30,9 +30,9 @@ Exact versions are in [`gradle/libs.versions.toml`](gradle/libs.versions.toml).
 
 ## Fonts
 
-- **Google Sans Flex** (`app/src/main/assets/fonts/GoogleSansFlex.ttf`), © The Google Sans Flex Authors,
-  licensed under the [SIL Open Font License 1.1](third_party/fonts/GoogleSansFlex-OFL.txt). Used to draw the
-  home-screen widget.
+- **Google Sans Flex** (`app/src/main/res/font/google_sans_flex.ttf`), © The Google Sans Flex Authors,
+  licensed under the [SIL Open Font License 1.1](third_party/fonts/GoogleSansFlex-OFL.txt). Used for all text in
+  the app, the home-screen widget and the Essentials island.
 
 ## Services and data
 

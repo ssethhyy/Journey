@@ -67,7 +67,7 @@ fun StandardBottomSheet(
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
             if (title != null) {
-                Text(title, style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
+                Text(title, style = MaterialTheme.typography.headlineSmallEmphasized)
             }
             content()
         }

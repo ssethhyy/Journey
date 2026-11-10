@@ -305,7 +305,7 @@ private fun AddFavouriteButton(onClick: () -> Unit) {
 @Composable
 private fun GreetingHeader(greeting: String, today: String) {
     Column(Modifier.fillMaxWidth().padding(start = 8.dp, end = 8.dp, top = 4.dp, bottom = 8.dp)) {
-        Text(greeting, style = MaterialTheme.typography.displaySmall, fontWeight = FontWeight.Medium)
+        Text(greeting, style = MaterialTheme.typography.displaySmallEmphasized)
         Text(today, style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
     }
 }

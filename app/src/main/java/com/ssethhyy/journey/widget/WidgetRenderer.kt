@@ -63,7 +63,7 @@ object WidgetRenderer {
     @Volatile private var typeface: Typeface? = null
 
     private fun face(context: Context): Typeface = typeface ?: synchronized(this) {
-        typeface ?: runCatching { Typeface.createFromAsset(context.applicationContext.assets, "fonts/GoogleSansFlex.ttf") }
+        typeface ?: runCatching { androidx.core.content.res.ResourcesCompat.getFont(context.applicationContext, R.font.google_sans_flex)!! }
             .getOrDefault(Typeface.DEFAULT).also { typeface = it }
     }
 

@@ -251,7 +251,7 @@ private fun ProfileHeader(name: String, onEditName: () -> Unit) {
         Spacer(Modifier.height(16.dp))
         Text(
             name.ifBlank { "Your name" },
-            style = MaterialTheme.typography.displaySmall,
+            style = MaterialTheme.typography.displaySmallEmphasized,
             fontWeight = FontWeight.Medium,
             color = if (name.isBlank()) MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.onSurface,
             textAlign = TextAlign.Center,
@@ -359,7 +359,7 @@ private fun StatCard(
                 }
                 Text(label, style = MaterialTheme.typography.labelLarge, color = content.copy(alpha = 0.75f), maxLines = 1)
             }
-            Text(value, style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold, maxLines = 1)
+            Text(value, style = MaterialTheme.typography.headlineMediumEmphasized, maxLines = 1)
             Text(detail, style = MaterialTheme.typography.bodySmall, color = content.copy(alpha = 0.75f), maxLines = 2)
         }
     }

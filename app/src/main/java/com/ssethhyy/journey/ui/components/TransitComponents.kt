@@ -171,8 +171,7 @@ fun DepartureTime(departure: Departure, now: Instant, display: TimeDisplay, modi
         ) { text ->
             Text(
                 text,
-                style = MaterialTheme.typography.titleLarge,
-                fontWeight = FontWeight.Bold,
+                style = MaterialTheme.typography.titleLargeEmphasized,
                 color = when {
                     departure.isCancelled -> MaterialTheme.colorScheme.error
                     departure.isLive -> MaterialTheme.colorScheme.primary

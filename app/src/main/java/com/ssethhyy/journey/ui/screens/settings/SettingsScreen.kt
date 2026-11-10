@@ -383,6 +383,59 @@ fun SettingsScreen() {
                 }
             }
 
+            item(key = "game") {
+                SectionLabel("Game")
+                RoundedCardContainer {
+                    IconToggleItem(
+                        icon = Sym.Casino,
+                        title = "Stop roulette",
+                        description = "Roll a random stop to travel to, from the Map tab (from MelbourneTrainGame)",
+                        isChecked = settings.gameEnabled,
+                        onCheckedChange = { vm.update { setGameEnabled(it) } },
+                    )
+                    if (settings.gameEnabled) {
+                        ConfigPickerItem(
+                            icon = Sym.DirectionsTransit,
+                            title = "Roll a",
+                            items = com.ssethhyy.journey.data.model.TransportMode.entries,
+                            selectedItem = settings.gameMode,
+                            onItemSelected = { vm.update { setGameMode(it) } },
+                            labelProvider = { it.label },
+                        )
+                        SliderItem(
+                            icon = Sym.NearMe,
+                            title = "Search radius",
+                            value = settings.gameRadiusMeters / 1000,
+                            range = 1..40,
+                            step = 1,
+                            valueLabel = { "$it km" },
+                            onValueChangeFinished = { vm.update { setGameRadius(it * 1000) } },
+                        )
+                        IconToggleItem(
+                            icon = Sym.DirectionsWalk,
+                            title = "Skip stops within walking distance",
+                            description = "Nothing closer than 1.5 km, so every roll is a real trip",
+                            isChecked = settings.gameSkipNearby,
+                            onCheckedChange = { vm.update { setGameSkipNearby(it) } },
+                        )
+                        IconToggleItem(
+                            icon = Sym.StarFilled,
+                            title = "Travel challenges",
+                            description = "Add a twist to the trip, like no phone or getting off a stop early",
+                            isChecked = settings.gameChallenges,
+                            onCheckedChange = { vm.update { setGameChallenges(it) } },
+                        )
+                        IconToggleItem(
+                            icon = Sym.Refresh,
+                            title = "Rolling animation",
+                            description = "Shuffle through stops before landing on one",
+                            isChecked = settings.gameRollAnimation,
+                            onCheckedChange = { vm.update { setGameRollAnimation(it) } },
+                        )
+                    }
+                }
+            }
+
             item(key = "crowding") {
                 SectionLabel("Crowding")
                 RoundedCardContainer {

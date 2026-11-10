@@ -78,6 +78,14 @@ data class AppSettings(
     val forYouNearby: Boolean = true,
     /** How many nearby stops For You shows. */
     val forYouNearbyCount: Int = 3,
+    /** Stop roulette (from MelbourneTrainGame) on the Map tab. */
+    val gameEnabled: Boolean = true,
+    val gameRadiusMeters: Int = 10_000,
+    val gameMode: TransportMode = TransportMode.TRAIN,
+    /** Skip stops within walking distance, so the roll is a real trip. */
+    val gameSkipNearby: Boolean = true,
+    val gameChallenges: Boolean = true,
+    val gameRollAnimation: Boolean = true,
     val nearbyModes: Set<TransportMode> = TransportMode.entries.toSet(),
     val mapModes: Set<TransportMode> = TransportMode.entries.toSet(),
     val mapFollowsTheme: Boolean = true,
@@ -118,6 +126,12 @@ class SettingsRepository(context: Context) {
         val NEARBY_RADIUS = intPreferencesKey("nearby_radius")
         val FOR_YOU_NEARBY = booleanPreferencesKey("for_you_nearby")
         val FOR_YOU_NEARBY_COUNT = intPreferencesKey("for_you_nearby_count")
+        val GAME_ENABLED = booleanPreferencesKey("game_enabled")
+        val GAME_RADIUS = intPreferencesKey("game_radius")
+        val GAME_MODE = stringPreferencesKey("game_mode")
+        val GAME_SKIP_NEARBY = booleanPreferencesKey("game_skip_nearby")
+        val GAME_CHALLENGES = booleanPreferencesKey("game_challenges")
+        val GAME_ANIMATION = booleanPreferencesKey("game_animation")
         val NEARBY_MODES = stringSetPreferencesKey("nearby_modes")
         val MAP_MODES = stringSetPreferencesKey("map_modes")
         val MAP_FOLLOWS_THEME = booleanPreferencesKey("map_follows_theme")
@@ -155,6 +169,12 @@ class SettingsRepository(context: Context) {
             nearbyRadiusMeters = (p[Keys.NEARBY_RADIUS] ?: 1000).coerceIn(250, 3000),
             forYouNearby = p[Keys.FOR_YOU_NEARBY] ?: true,
             forYouNearbyCount = (p[Keys.FOR_YOU_NEARBY_COUNT] ?: 3).coerceIn(1, 8),
+            gameEnabled = p[Keys.GAME_ENABLED] ?: true,
+            gameRadiusMeters = (p[Keys.GAME_RADIUS] ?: 10_000).coerceIn(1_000, 40_000),
+            gameMode = p[Keys.GAME_MODE].enumOr(TransportMode.TRAIN),
+            gameSkipNearby = p[Keys.GAME_SKIP_NEARBY] ?: true,
+            gameChallenges = p[Keys.GAME_CHALLENGES] ?: true,
+            gameRollAnimation = p[Keys.GAME_ANIMATION] ?: true,
             nearbyModes = p[Keys.NEARBY_MODES]?.toModes() ?: TransportMode.entries.toSet(),
             mapModes = p[Keys.MAP_MODES]?.toModes() ?: TransportMode.entries.toSet(),
             mapFollowsTheme = p[Keys.MAP_FOLLOWS_THEME] ?: true,
@@ -205,6 +225,12 @@ class SettingsRepository(context: Context) {
     suspend fun setNearbyRadius(meters: Int) = store.edit { it[Keys.NEARBY_RADIUS] = meters.coerceIn(250, 3000) }
     suspend fun setForYouNearby(enabled: Boolean) = store.edit { it[Keys.FOR_YOU_NEARBY] = enabled }
     suspend fun setForYouNearbyCount(count: Int) = store.edit { it[Keys.FOR_YOU_NEARBY_COUNT] = count.coerceIn(1, 8) }
+    suspend fun setGameEnabled(enabled: Boolean) = store.edit { it[Keys.GAME_ENABLED] = enabled }
+    suspend fun setGameRadius(meters: Int) = store.edit { it[Keys.GAME_RADIUS] = meters.coerceIn(1_000, 40_000) }
+    suspend fun setGameMode(mode: TransportMode) = store.edit { it[Keys.GAME_MODE] = mode.name }
+    suspend fun setGameSkipNearby(enabled: Boolean) = store.edit { it[Keys.GAME_SKIP_NEARBY] = enabled }
+    suspend fun setGameChallenges(enabled: Boolean) = store.edit { it[Keys.GAME_CHALLENGES] = enabled }
+    suspend fun setGameRollAnimation(enabled: Boolean) = store.edit { it[Keys.GAME_ANIMATION] = enabled }
     suspend fun setNearbyModes(modes: Set<TransportMode>) = store.edit { it[Keys.NEARBY_MODES] = modes.map { m -> m.name }.toSet() }
     suspend fun setMapModes(modes: Set<TransportMode>) = store.edit { it[Keys.MAP_MODES] = modes.map { m -> m.name }.toSet() }
     suspend fun setMapFollowsTheme(enabled: Boolean) = store.edit { it[Keys.MAP_FOLLOWS_THEME] = enabled }

@@ -105,6 +105,7 @@ object Sym {
     val Brightness4: ImageVector @Composable get() = symbol("rounded_brightness_4")
     val ArrowUpward: ImageVector @Composable get() = symbol("rounded_arrow_upward")
     val ArrowDownward: ImageVector @Composable get() = symbol("rounded_arrow_downward")
+    val Casino: ImageVector @Composable get() = symbol("rounded_casino")
     val Groups: ImageVector @Composable get() = symbol("rounded_groups")
     val AcUnit: ImageVector @Composable get() = symbol("rounded_ac_unit")
     val VolumeUp: ImageVector @Composable get() = symbol("rounded_volume_up")
@@ -219,6 +220,7 @@ object Sym {
         "rounded_arrow_downward",
         "rounded_ac_unit",
         "rounded_groups",
+        "rounded_casino",
         "rounded_volume_up",
         "rounded_open_in_new",
         "rounded_arrow_forward",

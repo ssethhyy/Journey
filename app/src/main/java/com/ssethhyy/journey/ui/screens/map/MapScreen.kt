@@ -153,6 +153,14 @@ fun MapScreen(isActive: Boolean, modifier: Modifier = Modifier) {
     }
 
     val locating by vm.locating.collectAsStateWithLifecycle()
+    val rouletteVm = appViewModel(key = "stop_roulette") { StopRouletteViewModel(it) }
+    val roulette by rouletteVm.state.collectAsStateWithLifecycle()
+    val rollStop = {
+        rouletteVm.roll { stop ->
+            vm.focusStop(stop)
+            flyTo(stop.latitude, stop.longitude, 14.5)
+        }
+    }
     // Permission first, then the system Location switch, then find the user and the stops around them.
     val enableLocation = com.ssethhyy.journey.ui.components.rememberLocationEnabler(
         onUnavailable = {
@@ -330,6 +338,14 @@ fun MapScreen(isActive: Boolean, modifier: Modifier = Modifier) {
                 onOpen = { navigator.openTracked(it) },
                 modifier = Modifier.padding(horizontal = 16.dp).padding(bottom = 8.dp),
             )
+            StopRouletteCard(
+                state = roulette,
+                onPlan = { stop -> navigator.planTo(com.ssethhyy.journey.data.planner.PlanLocation(stop.name, stop.latitude, stop.longitude, stop.suburb)) },
+                onOpenStop = navigator::openStop,
+                onRollAgain = rollStop,
+                onClose = rouletteVm::dismiss,
+                modifier = Modifier.padding(horizontal = 16.dp).padding(bottom = 8.dp),
+            )
             when {
                 state.zoomedOutTooFar -> StatusPill(icon = { Icon(Sym.ZoomIn, null, Modifier.size(18.dp)) }, text = "Zoom in to see stops")
                 state.error != null -> StatusPill(
@@ -367,6 +383,14 @@ fun MapScreen(isActive: Boolean, modifier: Modifier = Modifier) {
                         showNearby = true
                         nearbyExpanded = true
                     },
+                )
+            }
+            if (state.settings.gameEnabled) {
+                MapOverlayButton(
+                    icon = Sym.Casino,
+                    contentDescription = "Roll a random stop",
+                    loading = roulette is RouletteState.Rolling,
+                    onClick = rollStop,
                 )
             }
             MapOverlayButton(

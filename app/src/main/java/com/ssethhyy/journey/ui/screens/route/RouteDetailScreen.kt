@@ -6,6 +6,8 @@
 
 package com.ssethhyy.journey.ui.screens.route
 
+import androidx.compose.runtime.remember
+import androidx.compose.ui.graphics.toArgb
 import com.ssethhyy.journey.ui.components.hapticClick
 import com.ssethhyy.journey.ui.components.pageBottomInset
 import com.ssethhyy.journey.ui.components.Sym
@@ -223,11 +225,13 @@ private fun RouteMapPreview(paths: List<List<Pair<Double, Double>>>, color: andr
             }
         },
     ) {
-        points.forEach { line ->
-            PolylineAnnotation(points = line) {
-                lineColor = color
-                lineWidth = 5.0
-            }
-        }
+        // Emissive, so Mapbox Standard's night lighting doesn't dim the line colour.
+        val lineState = remember { com.mapbox.maps.extension.compose.annotation.generated.PolylineAnnotationGroupState().apply { lineEmissiveStrength = 1.0 } }
+        com.mapbox.maps.extension.compose.annotation.generated.PolylineAnnotationGroup(
+            annotations = points.map { line ->
+                com.mapbox.maps.plugin.annotation.generated.PolylineAnnotationOptions().withPoints(line).withLineColor(color.toArgb()).withLineWidth(5.0)
+            },
+            polylineAnnotationGroupState = lineState,
+        )
     }
 }

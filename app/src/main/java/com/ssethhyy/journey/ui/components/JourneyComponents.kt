@@ -206,7 +206,7 @@ private fun WalkLegRow(leg: JourneyLeg, isLast: Boolean, destinationName: String
             .padding(horizontal = 16.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Box(Modifier.width(56.dp))
+        Box(Modifier.width(TimeColumnWidth))
         Box(Modifier.width(24.dp).fillMaxHeight(), contentAlignment = Alignment.Center) {
             Column(Modifier.fillMaxHeight(), verticalArrangement = Arrangement.SpaceEvenly) {
                 repeat(4) {
@@ -250,7 +250,7 @@ private fun TransitLegBlock(leg: JourneyLeg) {
             .height(IntrinsicSize.Min)
             .padding(horizontal = 16.dp),
     ) {
-        Box(Modifier.width(56.dp))
+        Box(Modifier.width(TimeColumnWidth))
         Box(Modifier.width(24.dp).fillMaxHeight(), contentAlignment = Alignment.Center) {
             Box(Modifier.width(6.dp).fillMaxHeight().background(lineColor, RoundedCornerShape(3.dp)))
         }
@@ -329,8 +329,8 @@ private fun StopPoint(
             .padding(horizontal = 16.dp, vertical = 4.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Column(Modifier.width(56.dp)) {
-            Text(TimeFormatter.clock(time), style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.SemiBold)
+        Column(Modifier.width(TimeColumnWidth)) {
+            Text(TimeFormatter.clock(time), style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.SemiBold, maxLines = 1, softWrap = false)
             if (realTime) {
                 Text(
                     TimeFormatter.punctuality(delayMinutes) ?: "Live",
@@ -356,3 +356,6 @@ private fun StopPoint(
         }
     }
 }
+
+/** Room for "12:48 pm" on one line in the journey timeline, at the app's slightly wide label type. */
+private val TimeColumnWidth = 72.dp

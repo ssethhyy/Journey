@@ -6,6 +6,14 @@
 
 package com.ssethhyy.journey.ui.screens.plan
 
+import androidx.compose.ui.graphics.toArgb
+import com.mapbox.maps.plugin.annotation.generated.CircleAnnotationOptions
+import com.mapbox.maps.plugin.annotation.generated.PolylineAnnotationOptions
+import com.mapbox.maps.extension.compose.annotation.generated.CircleAnnotationGroupState
+import com.mapbox.maps.extension.compose.annotation.generated.CircleAnnotationGroup
+import com.mapbox.maps.extension.compose.annotation.generated.PolylineAnnotationGroupState
+import com.mapbox.maps.extension.compose.annotation.generated.PolylineAnnotationGroup
+import com.mapbox.maps.extension.style.layers.properties.generated.LineJoin
 import com.ssethhyy.journey.ui.components.pageBottomInset
 import com.ssethhyy.journey.ui.components.ToolbarFab
 import com.ssethhyy.journey.ui.components.usesBottomBar
@@ -229,27 +237,45 @@ private fun JourneyMap(journey: Journey) {
             }
         },
     ) {
-        legs.forEach { leg ->
+        // One line per leg in its mode's colour (train blue, tram green, bus orange, V/Line purple, walking white),
+        // each starting where the previous one ended so the route reads as one joined line. A thin dark border on
+        // every leg keeps light colours, white walking especially, visible on the day map.
+        val segments = legs.mapIndexed { index, leg ->
             val points = leg.path.map { Point.fromLngLat(it.longitude, it.latitude) }
-            PolylineAnnotation(points = points) {
-                lineColor = if (leg.kind == LegKind.WALK) walkColor else leg.badgeColor()
-                lineWidth = if (leg.kind == LegKind.WALK) 3.0 else 6.0
-                lineOpacity = if (leg.kind == LegKind.WALK) 0.8 else 1.0
-            }
+            val joined = legs.getOrNull(index - 1)?.path?.lastOrNull()?.let { listOf(Point.fromLngLat(it.longitude, it.latitude)) + points } ?: points
+            leg to joined
         }
+        // Emissive, so Mapbox Standard's night lighting doesn't dim the colours to near black.
+        val lineState = remember { PolylineAnnotationGroupState().apply { lineEmissiveStrength = 1.0; lineJoin = LineJoin.ROUND } }
+        PolylineAnnotationGroup(
+            annotations = segments.map { (leg, points) ->
+                PolylineAnnotationOptions()
+                    .withPoints(points)
+                    .withLineColor(leg.mapColor().toArgb())
+                    .withLineWidth(if (leg.kind == LegKind.WALK) 4.0 else 6.0)
+                    .withLineBorderColor(Color.Black.copy(alpha = if (dark && settings.mapFollowsTheme) 0.6f else 0.35f).toArgb())
+                    .withLineBorderWidth(1.5)
+            },
+            polylineAnnotationGroupState = lineState,
+        )
         val start = all.first()
         val end = all.last()
-        CircleAnnotation(point = start) {
-            circleRadius = 7.0
-            circleColor = Color.White
-            circleStrokeColor = Color(0xFF1B6EF3)
-            circleStrokeWidth = 4.0
-        }
-        CircleAnnotation(point = end) {
-            circleRadius = 8.0
-            circleColor = Color(0xFFD93025)
-            circleStrokeColor = Color.White
-            circleStrokeWidth = 3.0
-        }
+        val circleState = remember { CircleAnnotationGroupState().apply { circleEmissiveStrength = 1.0 } }
+        CircleAnnotationGroup(
+            annotations = listOf(
+                CircleAnnotationOptions().withPoint(start).withCircleRadius(7.0).withCircleColor(Color.White.toArgb())
+                    .withCircleStrokeColor(Color(0xFF1B6EF3).toArgb()).withCircleStrokeWidth(4.0),
+                CircleAnnotationOptions().withPoint(end).withCircleRadius(8.0).withCircleColor(Color(0xFFD93025).toArgb())
+                    .withCircleStrokeColor(Color.White.toArgb()).withCircleStrokeWidth(3.0),
+            ),
+            circleAnnotationGroupState = circleState,
+        )
     }
+}
+
+/** The colour a leg is drawn in on the journey map: its PTV mode colour, white for walking. */
+private fun com.ssethhyy.journey.data.planner.JourneyLeg.mapColor(): Color = when {
+    kind == LegKind.WALK -> Color.White
+    mode != null -> com.ssethhyy.journey.ui.theme.ModeColors.of(mode)
+    else -> badgeColor()
 }

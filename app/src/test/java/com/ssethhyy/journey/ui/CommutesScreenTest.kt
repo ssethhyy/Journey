@@ -33,7 +33,10 @@ class CommutesScreenTest {
 
     @After
     fun clean() {
-        runBlocking { rule.activity.appContainer.commuteRepository.clear() }
+        runBlocking {
+            rule.activity.appContainer.commuteRepository.clear()
+            rule.activity.appContainer.settingsRepository.setForYouNearby(true)
+        }
     }
 
     private fun snap(name: String) {

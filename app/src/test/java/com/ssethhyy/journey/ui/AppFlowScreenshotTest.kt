@@ -102,6 +102,8 @@ class AppFlowScreenshotTest {
     }
 
     private fun seedFavourites(container: AppContainer) = runBlocking {
+        // This walk-through is about favourites; the Near you section (tested elsewhere) would push them off screen.
+        container.settingsRepository.setForYouNearby(false)
         container.favouritesRepository.clear()
         container.favouritesRepository.add(Stop(1071, TransportMode.TRAIN, "Flinders Street Station", "Melbourne City", -37.8183, 144.9671))
         container.favouritesRepository.add(Stop(2258, TransportMode.TRAM, "Bourke St/Spencer St #1", "Melbourne City", -37.8166, 144.9548))

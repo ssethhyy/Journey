@@ -6,6 +6,7 @@
 
 package com.ssethhyy.journey.ui.components
 
+import androidx.compose.ui.graphics.Color
 import android.Manifest
 import android.os.Build
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -111,7 +112,11 @@ fun rememberTrackFab(target: TrackingTarget, label: String = "Track"): ToolbarFa
     )
 }
 
-/** Compact live banner while tracking, shown above the floating toolbar. */
+/**
+ * Compact live banner while tracking, shown above the floating toolbar. A tonal surface from the app's own
+ * palette (not an inverted, high-contrast slab) so it sits with the toolbar and cards: the mode pictogram with a
+ * live dot, what to do next, and the countdown in a pill.
+ */
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 fun TrackingBanner(onOpen: (TrackingTarget) -> Unit, modifier: Modifier = Modifier) {
@@ -120,28 +125,46 @@ fun TrackingBanner(onOpen: (TrackingTarget) -> Unit, modifier: Modifier = Modifi
     val target by manager.target.collectAsStateWithLifecycle()
     val status by manager.status.collectAsStateWithLifecycle()
     val t = target ?: return
+    val mode = status?.mode ?: (t as? TrackingTarget.Service)?.mode
+    val live = status?.isLive == true
     Surface(
         onClick = {
             HapticUtil.performUIHaptic(view)
             onOpen(t)
         },
         modifier = modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(24.dp),
-        color = MaterialTheme.colorScheme.inverseSurface,
-        contentColor = MaterialTheme.colorScheme.inverseOnSurface,
-        shadowElevation = 4.dp,
+        shape = RoundedCornerShape(28.dp),
+        color = MaterialTheme.colorScheme.surfaceContainerHigh,
+        contentColor = MaterialTheme.colorScheme.onSurface,
+        shadowElevation = 6.dp,
     ) {
-        Column(Modifier.padding(start = 16.dp, end = 4.dp, top = 10.dp, bottom = 10.dp)) {
+        Column(Modifier.padding(start = 12.dp, end = 4.dp, top = 10.dp, bottom = 12.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Box(
-                    Modifier
-                        .size(10.dp)
-                        .background(if (status?.isLive == true) MaterialTheme.colorScheme.tertiary else MaterialTheme.colorScheme.inversePrimary, CircleShape),
-                )
-                Spacer(Modifier.width(10.dp))
+                Box {
+                    if (mode != null) {
+                        ModePictogram(mode, size = 40.dp)
+                    } else {
+                        Box(Modifier.size(40.dp).background(MaterialTheme.colorScheme.secondaryContainer, CircleShape), contentAlignment = Alignment.Center) {
+                            Icon(Sym.Directions, null, tint = MaterialTheme.colorScheme.onSecondaryContainer, modifier = Modifier.size(20.dp))
+                        }
+                    }
+                    if (live) {
+                        Box(
+                            Modifier
+                                .align(Alignment.BottomEnd)
+                                .size(13.dp)
+                                .background(MaterialTheme.colorScheme.surfaceContainerHigh, CircleShape)
+                                .padding(2.5.dp)
+                                .background(Color(0xFF3DBE6A), CircleShape),
+                        )
+                    }
+                }
+                Spacer(Modifier.width(12.dp))
                 Column(Modifier.weight(1f)) {
-                    AnimatedContent(targetState = status?.title ?: "Starting live tracking…", label = "tracking_title") {
-                        Text(it, style = MaterialTheme.typography.titleSmall, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    // The countdown has its own pill, so "Frankston line in 4 min" becomes "Frankston line".
+                    val title = status?.let { st -> st.title.removeSuffix(" in ${st.chip}") } ?: "Starting live tracking…"
+                    AnimatedContent(targetState = title, label = "tracking_title") {
+                        Text(it, style = MaterialTheme.typography.titleSmallEmphasized, maxLines = 1, overflow = TextOverflow.Ellipsis)
                     }
                     Text(
                         status?.detail ?: when (t) {
@@ -149,19 +172,29 @@ fun TrackingBanner(onOpen: (TrackingTarget) -> Unit, modifier: Modifier = Modifi
                             is TrackingTarget.Trip -> "To ${t.toName}"
                         },
                         style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
                     )
                 }
-                HapticIconButton(Sym.Close, "Stop tracking", onClick = manager::stop, tint = MaterialTheme.colorScheme.inverseOnSurface)
+                status?.chip?.let { chip ->
+                    Spacer(Modifier.width(8.dp))
+                    Surface(shape = RoundedCornerShape(16.dp), color = MaterialTheme.colorScheme.primaryContainer, contentColor = MaterialTheme.colorScheme.onPrimaryContainer) {
+                        AnimatedContent(targetState = chip, label = "tracking_chip") {
+                            Text(it, style = MaterialTheme.typography.titleMediumEmphasized, maxLines = 1, modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp))
+                        }
+                    }
+                }
+                HapticIconButton(Sym.Close, "Stop tracking", onClick = manager::stop, tint = MaterialTheme.colorScheme.onSurfaceVariant)
             }
             status?.let {
                 LinearWavyProgressIndicator(
                     progress = { it.progress },
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(top = 6.dp, end = 12.dp),
-                    color = MaterialTheme.colorScheme.inversePrimary,
+                        .padding(start = 4.dp, top = 8.dp, end = 12.dp),
+                    color = MaterialTheme.colorScheme.primary,
+                    trackColor = MaterialTheme.colorScheme.surfaceContainerHighest,
                 )
             }
         }

@@ -31,7 +31,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Semaphore
 import kotlinx.coroutines.sync.withPermit
 
-enum class LocationStatus { UNKNOWN, NO_PERMISSION, LOCATING, FOUND, FALLBACK }
+enum class LocationStatus { UNKNOWN, NO_PERMISSION, SERVICES_OFF, LOCATING, FOUND, FALLBACK }
 
 data class NearbyUiState(
     val stops: LoadState<List<Stop>> = LoadState.Loading,
@@ -93,7 +93,11 @@ class NearbyViewModel(private val container: AppContainer) : ViewModel() {
             } else {
                 if (lastLocation == null) locationStatus.value = LocationStatus.LOCATING
                 val found = container.locationProvider.currentLocation()
-                locationStatus.value = if (found != null) LocationStatus.FOUND else LocationStatus.FALLBACK
+                locationStatus.value = when {
+                    !container.locationProvider.isLocationEnabled() -> LocationStatus.SERVICES_OFF
+                    found != null -> LocationStatus.FOUND
+                    else -> LocationStatus.FALLBACK
+                }
                 found ?: lastLocation ?: LocationProvider.MELBOURNE_CBD
             }
             lastLocation = location

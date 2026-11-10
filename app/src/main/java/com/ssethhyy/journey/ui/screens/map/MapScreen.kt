@@ -152,9 +152,18 @@ fun MapScreen(isActive: Boolean, modifier: Modifier = Modifier) {
         )
     }
 
-    val permissionLauncher = rememberLauncherForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) { grants ->
-        locationEnabled = grants.values.any { it }
-        if (locationEnabled) vm.locateUser { flyTo(it.latitude, it.longitude) }
+    val locating by vm.locating.collectAsStateWithLifecycle()
+    // Permission first, then the system Location switch, then find the user and the stops around them.
+    val enableLocation = com.ssethhyy.journey.ui.components.rememberLocationEnabler(
+        onUnavailable = {
+            locationEnabled = vm.hasLocationPermission()
+            nearbyVm.load(force = true)
+        },
+    ) {
+        locationEnabled = true
+        vm.locateUser(
+            onFailed = { android.widget.Toast.makeText(context, "Couldn't find your location. Try again outside or near a window.", android.widget.Toast.LENGTH_LONG).show() },
+        ) { flyTo(it.latitude, it.longitude) }
         nearbyVm.load(force = true)
     }
 
@@ -363,15 +372,8 @@ fun MapScreen(isActive: Boolean, modifier: Modifier = Modifier) {
             MapOverlayButton(
                 icon = Sym.MyLocation,
                 contentDescription = "Centre on my location",
-                onClick = {
-                    if (vm.hasLocationPermission()) {
-                        locationEnabled = true
-                        vm.locateUser { flyTo(it.latitude, it.longitude) }
-                        nearbyVm.load(force = true)
-                    } else {
-                        permissionLauncher.launch(arrayOf(Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.ACCESS_COARSE_LOCATION))
-                    }
-                },
+                loading = locating,
+                onClick = enableLocation,
             )
         }
 
@@ -398,9 +400,7 @@ fun MapScreen(isActive: Boolean, modifier: Modifier = Modifier) {
                     vm.focusStop(stop)
                     flyTo(stop.latitude, stop.longitude, 16.5)
                 },
-                onAllowLocation = {
-                    permissionLauncher.launch(arrayOf(Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.ACCESS_COARSE_LOCATION))
-                },
+                onAllowLocation = enableLocation,
             )
         }
 

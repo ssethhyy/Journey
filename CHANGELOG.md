@@ -21,6 +21,9 @@ All notable changes to Journey are documented here. The format follows
 - On the myki card page the *Add money or pass* button and the options menu move into the page when the bottom bar is used.
 
 ### Fixed
+- **Current location on the map.** Tapping the location button with the phone's Location switch off used to wait about eight seconds and then do nothing. Journey now shows the system *Turn on location?* dialog (asking for permission first if needed), shows a spinner on the button while it finds you, points the map at your last known position straight away, and tells you if no location could be found. The Nearby panel says when Location is switched off and offers *Turn on*.
+- Long route names (such as V/Line coach routes) no longer squash the stop name in Nearby.
+- Debug builds install as `com.ssethhyy.journey.dev`, next to a release build, so testing never replaces or wipes the copy you use.
 - CI no longer fails while setting up the Android SDK (the runner's preinstalled SDK is used instead of `android-actions/setup-android`).
 - CI no longer fails with `./gradlew: Permission denied`: the Gradle wrapper is marked executable in Git and made executable in the workflow.
 

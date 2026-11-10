@@ -86,7 +86,7 @@ fun NearbyPanel(
         state.stops is LoadState.Loading -> "Finding stops near you…"
         state.stops is LoadState.Error -> "Couldn't load nearby stops"
         stops.isEmpty() -> "No stops within ${DistanceFormatter.distance(state.settings.nearbyRadiusMeters.toDouble())}"
-        state.locationStatus == LocationStatus.NO_PERMISSION || state.locationStatus == LocationStatus.FALLBACK ->
+        state.locationStatus == LocationStatus.NO_PERMISSION || state.locationStatus == LocationStatus.SERVICES_OFF || state.locationStatus == LocationStatus.FALLBACK ->
             "${stops.size} stops near the city"
         else -> "${stops.size} stops within ${DistanceFormatter.distance(state.settings.nearbyRadiusMeters.toDouble())}"
     }
@@ -156,7 +156,8 @@ fun NearbyPanel(
 
             AnimatedVisibility(visible = expanded, enter = expandVertically() + fadeIn(), exit = shrinkVertically() + fadeOut()) {
                 Column {
-                    if (state.locationStatus == LocationStatus.NO_PERMISSION) {
+                    val blocked = state.locationStatus == LocationStatus.NO_PERMISSION || state.locationStatus == LocationStatus.SERVICES_OFF
+                    if (blocked) {
                         Row(
                             Modifier
                                 .padding(horizontal = 12.dp)
@@ -169,12 +170,12 @@ fun NearbyPanel(
                             Icon(Sym.LocationOff, null, tint = MaterialTheme.colorScheme.onTertiaryContainer, modifier = Modifier.size(18.dp))
                             Spacer(Modifier.width(8.dp))
                             Text(
-                                "Location is off",
+                                if (state.locationStatus == LocationStatus.SERVICES_OFF) "Location is switched off on this phone" else "Location isn't allowed",
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onTertiaryContainer,
                                 modifier = Modifier.weight(1f),
                             )
-                            TextButton(onClick = onAllowLocation) { Text("Allow") }
+                            TextButton(onClick = onAllowLocation, colors = androidx.compose.material3.ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.onTertiaryContainer)) { Text(if (state.locationStatus == LocationStatus.SERVICES_OFF) "Turn on" else "Allow") }
                         }
                     }
                     LazyColumn(

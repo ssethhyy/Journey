@@ -161,11 +161,32 @@ class MapViewModel(private val container: AppContainer) : ViewModel() {
 
     fun toggleFavourite(stop: Stop) = viewModelScope.launch { container.favouritesRepository.toggle(stop) }
 
-    fun locateUser(onLocated: (LatLng) -> Unit) {
-        viewModelScope.launch {
-            container.locationProvider.currentLocation()?.let {
+    private val _locating = MutableStateFlow(false)
+    /** True while waiting for a location fix after the user asked for one. */
+    val locating: StateFlow<Boolean> = _locating.asStateFlow()
+    private var locateJob: Job? = null
+
+    /**
+     * Points the map at the user: straight away at the last known fix if there is one, then again at a fresh fix.
+     * [onFailed] runs if no location could be found at all.
+     */
+    fun locateUser(onFailed: () -> Unit = {}, onLocated: (LatLng) -> Unit) {
+        locateJob?.cancel()
+        locateJob = viewModelScope.launch {
+            _locating.value = true
+            val quick = container.locationProvider.lastKnownLocation()
+            quick?.let {
                 userLocation.value = it
                 onLocated(it)
+            }
+            val fresh = container.locationProvider.currentLocation()
+            _locating.value = false
+            when {
+                fresh != null && (quick == null || GeoUtils.haversineMeters(quick.latitude, quick.longitude, fresh.latitude, fresh.longitude) > 30) -> {
+                    userLocation.value = fresh
+                    onLocated(fresh)
+                }
+                fresh == null && quick == null -> onFailed()
             }
         }
     }

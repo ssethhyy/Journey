@@ -135,7 +135,7 @@ fun RouteBadge(route: Route, modifier: Modifier = Modifier, compact: Boolean = f
         modifier = modifier
             .clip(RoundedCornerShape(8.dp))
             .background(route.mode.color)
-            .widthIn(min = if (compact) 32.dp else 40.dp)
+            .widthIn(min = if (compact) 32.dp else 40.dp, max = if (compact) 120.dp else 200.dp)
             .padding(horizontal = 8.dp, vertical = if (compact) 2.dp else 4.dp),
         contentAlignment = Alignment.Center,
     ) {
@@ -622,7 +622,8 @@ fun DepartureSkeleton(rows: Int = 3, modifier: Modifier = Modifier) {
 
 /** Small circular icon button with tonal background, used over the map. */
 @Composable
-fun MapOverlayButton(icon: ImageVector, contentDescription: String, onClick: () -> Unit, modifier: Modifier = Modifier) {
+@OptIn(androidx.compose.material3.ExperimentalMaterial3ExpressiveApi::class)
+fun MapOverlayButton(icon: ImageVector, contentDescription: String, onClick: () -> Unit, modifier: Modifier = Modifier, loading: Boolean = false) {
     val view = LocalView.current
     Surface(
         onClick = {
@@ -636,7 +637,11 @@ fun MapOverlayButton(icon: ImageVector, contentDescription: String, onClick: () 
         shadowElevation = 3.dp,
     ) {
         Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-            Icon(icon, contentDescription = contentDescription)
+            if (loading) {
+                androidx.compose.material3.LoadingIndicator(Modifier.size(32.dp).semantics { this.contentDescription = "Finding your location" })
+            } else {
+                Icon(icon, contentDescription = contentDescription)
+            }
         }
     }
 }

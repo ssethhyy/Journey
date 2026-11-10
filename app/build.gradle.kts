@@ -44,6 +44,10 @@ android {
     }
 
     buildTypes {
+        debug {
+            // Installs next to a release build, so testing never replaces (or wipes) the copy you use day to day.
+            applicationIdSuffix = ".dev"
+        }
         release {
             // R8 shrinks and optimises the code; Compose apps run noticeably smoother with it.
             optimization {

@@ -454,6 +454,7 @@ fun MapScreen(isActive: Boolean, modifier: Modifier = Modifier) {
                     onOpen = { navigator.openStop(stop) },
                     onRetry = vm::refreshSelected,
                     onOpenTrip = { dep -> dep.runRef?.let { navigator.openTrip(it, stop.mode, stop.id, dep.headsign) } },
+                    onPlan = { navigator.planTo(com.ssethhyy.journey.data.planner.PlanLocation(stop.name, stop.latitude, stop.longitude, stop.suburb)) },
                 )
             }
         }
@@ -494,6 +495,7 @@ private fun StopPreviewCard(
     onOpen: () -> Unit,
     onRetry: () -> Unit,
     onOpenTrip: (com.ssethhyy.journey.data.model.Departure) -> Unit,
+    onPlan: () -> Unit,
 ) {
     val view = LocalView.current
     Surface(
@@ -517,6 +519,7 @@ private fun StopPreviewCard(
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                 }
+                HapticIconButton(Sym.Directions, "Plan a trip to ${stop.name}", onClick = onPlan)
                 FavouriteToggle(isFavourite, onToggleFavourite)
                 HapticIconButton(Sym.Close, "Close", onClick = onClose)
             }

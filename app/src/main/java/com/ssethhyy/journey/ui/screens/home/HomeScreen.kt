@@ -112,9 +112,11 @@ fun HomeScreen(requestedTab: HomeTab?, onTabRequestHandled: () -> Unit) {
 
     LaunchedEffect(requestedTab) {
         val tab = requestedTab ?: return@LaunchedEffect
-        onTabRequestHandled()
         tabJob?.cancel()
-        tabJob = launch { pagerState.animateScrollToPage(tab.ordinal) }
+        // Run in the screen's scope: marking the request handled changes this effect's key, which would cancel a
+        // child coroutine before the pager even moved (Plan buttons used to leave you on the same tab).
+        tabJob = scope.launch { pagerState.animateScrollToPage(tab.ordinal) }
+        onTabRequestHandled()
     }
 
     // A light tick and a fully expanded toolbar each time a new tab settles.

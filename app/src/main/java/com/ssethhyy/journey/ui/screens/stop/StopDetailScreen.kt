@@ -99,7 +99,16 @@ fun StopDetailScreen(key: StopDetailKey) {
                     contentDescription = if (state.isFavourite) "Remove from favourites" else "Add to favourites",
                     onClick = vm::toggleFavourite,
                 ),
-                pageActions = if (stop.latitude != 0.0) listOf(ToolbarFab(Sym.Map, "Show on map") { navigator.showOnMap(stop) }) else emptyList(),
+                pageActions = if (stop.latitude != 0.0) {
+                    listOf(
+                        ToolbarFab(Sym.Directions, "Plan a trip here") {
+                            navigator.planTo(com.ssethhyy.journey.data.planner.PlanLocation(stop.name, stop.latitude, stop.longitude, stop.suburb))
+                        },
+                        ToolbarFab(Sym.Map, "Show on map") { navigator.showOnMap(stop) },
+                    )
+                } else {
+                    emptyList()
+                },
                 actions = {
                     if (stop.latitude != 0.0) {
                         HapticIconButton(Sym.Map, "Show on map", onClick = { navigator.showOnMap(stop) })

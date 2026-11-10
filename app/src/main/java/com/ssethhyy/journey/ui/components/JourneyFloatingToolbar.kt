@@ -126,16 +126,11 @@ fun JourneyFloatingToolbar(
         }
     }
 
-    HorizontalFloatingToolbar(
-        modifier = modifier.padding(horizontal = 16.dp),
-        expanded = expanded,
-        floatingActionButton = finalFab,
-        scrollBehavior = scrollBehavior,
-        colors = FloatingToolbarDefaults.vibrantFloatingToolbarColors(
-            toolbarContentColor = MaterialTheme.colorScheme.onSurface,
-            toolbarContainerColor = MaterialTheme.colorScheme.primary,
-        ),
-        content = {
+    val colors = FloatingToolbarDefaults.vibrantFloatingToolbarColors(
+        toolbarContentColor = MaterialTheme.colorScheme.onSurface,
+        toolbarContainerColor = MaterialTheme.colorScheme.primary,
+    )
+    val toolbarContent: @Composable androidx.compose.foundation.layout.RowScope.() -> Unit = {
             if (onBackClick != null) {
                 // BACK BUTTON - Unified with Tabbed style (pop-out effect)
                 IconButton(
@@ -268,6 +263,24 @@ fun JourneyFloatingToolbar(
                     }
                 }
             }
-        },
-    )
+    }
+    // Without a FAB the bar uses the plain toolbar, which has no space reserved for one, so it sits centred.
+    if (fab != null) {
+        HorizontalFloatingToolbar(
+            modifier = modifier.padding(horizontal = 16.dp),
+            expanded = expanded,
+            floatingActionButton = finalFab,
+            scrollBehavior = scrollBehavior,
+            colors = colors,
+            content = toolbarContent,
+        )
+    } else {
+        HorizontalFloatingToolbar(
+            expanded = expanded,
+            modifier = modifier.padding(horizontal = 16.dp),
+            colors = colors,
+            scrollBehavior = scrollBehavior,
+            content = toolbarContent,
+        )
+    }
 }

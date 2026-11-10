@@ -27,6 +27,11 @@ All notable changes to Journey are documented here. The format follows
 - On the myki card page the *Add money or pass* button and the options menu move into the page when the bottom bar is used.
 
 ### Fixed
+- **Plan buttons go to the Plan tab again.** Tapping a saved place (Home, Work and others), a commute's *Plan*, the game's *Plan trip* and similar buttons planned the trip but left you on the same tab. They now switch to Plan. The map's stop preview and each stop's page also gain a *Plan a trip here* button.
+- **Journey map colours.** The route on a journey's map is drawn one leg at a time in each mode's PTV colour (train blue, tram green, bus orange, V/Line purple) with walking in white. Each leg joins the next, and a thin border keeps the lines visible. In dark mode the lines and start and end dots were dimmed almost to black by the map's night lighting; they now keep their colours, and route maps do too.
+- **The top blur behind the status bar is visible again.** It had shrunk to just the status bar's height and was too faint to notice. It now reaches a little below the clock and icons, blurs more strongly, and adds a soft tint of the page colour.
+- **The bottom bar is centred on pages without an action button** (such as Settings) instead of sitting to the left of an empty space.
+- Times in a journey's timeline no longer wrap onto two lines ("6:48 p / m") with the wider type.
 - **Current location on the map.** Tapping the location button with the phone's Location switch off used to wait about eight seconds and then do nothing. Journey now shows the system *Turn on location?* dialog (asking for permission first if needed), shows a spinner on the button while it finds you, points the map at your last known position straight away, and tells you if no location could be found. The Nearby panel says when Location is switched off and offers *Turn on*.
 - Long route names (such as V/Line coach routes) no longer squash the stop name in Nearby.
 - Debug builds install as `com.ssethhyy.journey.dev`, next to a release build, so testing never replaces or wipes the copy you use.

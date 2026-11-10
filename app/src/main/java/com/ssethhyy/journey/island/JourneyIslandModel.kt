@@ -99,10 +99,12 @@ object JourneyIsland {
         target: TrackingTarget?,
         status: TrackingStatus?,
         disruptions: List<Disruption>,
+        /** Next-step rows the expanded view shows for a tracked journey. */
+        journeySteps: Int = 0,
     ): IslandPayload {
         if (!settings.islandEnabled) return IslandPayload(items = emptyList())
         val items = buildList {
-            if (settings.islandTracking && target != null) add(trackingItem(settings, target, status))
+            if (settings.islandTracking && target != null) add(trackingItem(settings, target, status, journeySteps))
             if (settings.islandDisruptions) {
                 val shown = filterDisruptions(disruptions, settings.islandMinSeverity)
                 if (shown.isNotEmpty()) add(disruptionsItem(settings, shown))
@@ -111,7 +113,9 @@ object JourneyIsland {
         return IslandPayload(items = items)
     }
 
-    fun trackingItem(settings: AppSettings, target: TrackingTarget, status: TrackingStatus?): IslandItemPayload {
+    const val MAX_STEPS_SHOWN = 3
+
+    fun trackingItem(settings: AppSettings, target: TrackingTarget, status: TrackingStatus?, journeySteps: Int = 0): IslandItemPayload {
         val mode = status?.mode ?: (target as? TrackingTarget.Service)?.mode
         val iconId = Icons.mode(mode, settings.islandIconStyle)
         // Pictograms are multi-colour (tone none); monochrome glyphs take the island accent.
@@ -137,7 +141,7 @@ object JourneyIsland {
                 iconId = iconId,
                 tone = iconTone,
             ),
-            expanded = IslandExpandedPayload(heightDp = 220),
+            expanded = IslandExpandedPayload(heightDp = 220 + if (journeySteps > 0) 34 + 58 * minOf(journeySteps, MAX_STEPS_SHOWN) else 0),
             interactions = IslandInteractionsPayload(onLongPress = IslandAction(IslandActionType.OPEN_APP)),
         )
     }

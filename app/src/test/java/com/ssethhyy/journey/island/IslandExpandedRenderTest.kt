@@ -76,4 +76,23 @@ class IslandExpandedRenderTest {
             scopeLabel = "On your stops",
         ),
     )
+
+    @Test
+    fun journeyExpandedWithNextSteps() {
+        val now = Instant.now()
+        val steps = listOf(
+            com.ssethhyy.journey.tracking.JourneyStep(com.ssethhyy.journey.tracking.StepKind.WALK, null, "Walk 350 m to Westgarth Station", "About 5 min", now, current = true),
+            com.ssethhyy.journey.tracking.JourneyStep(com.ssethhyy.journey.tracking.StepKind.RIDE, TransportMode.TRAIN, "Hurstbridge to Flinders Street", "From Westgarth · Platform 1 · get off at Parliament 6:42 PM", now.plusSeconds(360), current = false),
+            com.ssethhyy.journey.tracking.JourneyStep(com.ssethhyy.journey.tracking.StepKind.ARRIVE, null, "Arrive at Work", "", now.plusSeconds(1500), current = false),
+        )
+        render(
+            "island_expanded_journey",
+            JourneyIsland.ITEM_TRACKING,
+            ExpandedState(
+                target = TrackingTarget.Trip("j1", "Home", "Work"),
+                status = TrackingStatus("Walk to Westgarth Station · Hurstbridge in 6 min", "Platform 1 · towards Flinders Street", "6 min", 0.2f, true, false, TransportMode.TRAIN, now),
+                steps = steps,
+            ),
+        )
+    }
 }

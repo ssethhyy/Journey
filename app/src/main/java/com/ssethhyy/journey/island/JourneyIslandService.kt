@@ -7,6 +7,7 @@
 
 package com.ssethhyy.journey.island
 
+import com.ssethhyy.journey.tracking.JourneySteps
 import android.content.Context
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -164,14 +165,23 @@ class JourneyIslandService : ComposeIslandProviderService() {
         }
     }
 
+    /** How many next-step rows the expanded journey view will show, so its height can be asked for up front. */
+    private fun journeyStepCount(target: TrackingTarget?): Int = (target as? TrackingTarget.Trip)?.let { trip ->
+        applicationContext.appContainer.journeyRepository.journey(trip.journeyId)?.let { JourneySteps.upcoming(it, trip.toName, Instant.now()).size }
+    } ?: 0
+
     private fun publish(snapshot: Snapshot) {
         val host = host ?: return
         val context = applicationContext
-        val payload = JourneyIsland.payload(snapshot.settings, snapshot.target, snapshot.status, snapshot.disruptions)
+        val payload = JourneyIsland.payload(snapshot.settings, snapshot.target, snapshot.status, snapshot.disruptions, journeyStepCount(snapshot.target))
         val shownDisruptions = JourneyIsland.filterDisruptions(snapshot.disruptions, snapshot.settings.islandMinSeverity)
+        val steps = (snapshot.target as? TrackingTarget.Trip)?.let { trip ->
+            applicationContext.appContainer.journeyRepository.journey(trip.journeyId)?.let { JourneySteps.upcoming(it, trip.toName, Instant.now()) }
+        }.orEmpty()
         expandedState.value = ExpandedState(
             target = snapshot.target,
             status = snapshot.status,
+            steps = steps,
             disruptions = shownDisruptions,
             scopeLabel = if (snapshot.settings.islandDisruptionScope == IslandDisruptionScope.FAVOURITES) "On your stops" else "Across the network",
             iconStyle = snapshot.settings.islandIconStyle,

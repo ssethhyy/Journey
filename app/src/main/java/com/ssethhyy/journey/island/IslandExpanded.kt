@@ -8,6 +8,9 @@
 
 package com.ssethhyy.journey.island
 
+import com.ssethhyy.journey.utils.TimeFormatter
+import com.ssethhyy.journey.tracking.StepKind
+import com.ssethhyy.journey.tracking.JourneyStep
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -63,6 +66,8 @@ data class ExpandedState(
     val disruptions: List<Disruption> = emptyList(),
     val scopeLabel: String = "",
     val iconStyle: IslandIconStyle = IslandIconStyle.PICTOGRAM,
+    /** For a tracked journey, the steps still ahead. */
+    val steps: List<JourneyStep> = emptyList(),
 )
 
 private val TextPrimary = Color(0xFFF4F4F6)
@@ -131,10 +136,10 @@ private fun TrackingExpanded(state: ExpandedState, accent: Color, powerSave: Boo
             Text(
                 // The big countdown sits beside the title, so services show just the line;
                 // journeys keep their step-by-step instruction ("Walk to …", "On …").
-                if (target is TrackingTarget.Service || status == null) JourneyIsland.trackingLabel(target) else status.title,
+                // With the step list below, a journey's header just names where it is going.
+                if (target is TrackingTarget.Service || status == null || state.steps.isNotEmpty()) JourneyIsland.trackingLabel(target) else status.title,
                 color = TextPrimary,
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.SemiBold,
+                style = MaterialTheme.typography.titleMediumEmphasized,
                 maxLines = 2,
                 overflow = TextOverflow.Ellipsis,
             )
@@ -148,12 +153,12 @@ private fun TrackingExpanded(state: ExpandedState, accent: Color, powerSave: Boo
         }
         Spacer(Modifier.width(8.dp))
         Column(horizontalAlignment = Alignment.End) {
-            Text(status?.chip ?: "…", color = accent, fontSize = 22.sp, fontWeight = FontWeight.Bold, maxLines = 1)
+            Text(status?.chip ?: "…", color = accent, style = MaterialTheme.typography.headlineMediumEmphasized, maxLines = 1)
             if (status?.isLive == true) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Box(Modifier.size(6.dp).background(Color(0xFF6DD58C), CircleShape))
                     Spacer(Modifier.width(4.dp))
-                    Text("Live", color = TextSecondary, fontSize = 11.sp)
+                    Text("Live", color = TextSecondary, style = MaterialTheme.typography.labelSmall)
                 }
             }
         }
@@ -164,6 +169,10 @@ private fun TrackingExpanded(state: ExpandedState, accent: Color, powerSave: Boo
         LinearProgressIndicator(progress = { progress }, modifier = Modifier.fillMaxWidth(), color = accent, trackColor = CardColor)
     } else {
         LinearWavyProgressIndicator(progress = { progress }, modifier = Modifier.fillMaxWidth(), color = accent, trackColor = CardColor)
+    }
+    if (state.steps.isNotEmpty()) {
+        Spacer(Modifier.height(14.dp))
+        JourneyStepsList(state.steps.take(JourneyIsland.MAX_STEPS_SHOWN), accent)
     }
     Spacer(Modifier.height(14.dp))
     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -193,8 +202,7 @@ private fun DisruptionsExpanded(state: ExpandedState, onOpen: () -> Unit) {
                         else -> "${list.size} service updates"
                     },
                     color = TextPrimary,
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.SemiBold,
+                    style = MaterialTheme.typography.titleMediumEmphasized,
                 )
                 Text(state.scopeLabel, color = TextSecondary, style = MaterialTheme.typography.bodySmall)
             }
@@ -221,8 +229,7 @@ private fun DisruptionsExpanded(state: ExpandedState, onOpen: () -> Unit) {
                     Text(
                         (d.type ?: JourneyIsland.severityLabel(d.severity)).uppercase(),
                         color = Color(JourneyIsland.severityColor(d.severity)),
-                        fontSize = 10.sp,
-                        fontWeight = FontWeight.Bold,
+                        style = MaterialTheme.typography.labelSmallEmphasized,
                         maxLines = 1,
                     )
                     Text(d.title, color = TextPrimary, style = MaterialTheme.typography.bodySmall, maxLines = 2, overflow = TextOverflow.Ellipsis)
@@ -231,7 +238,7 @@ private fun DisruptionsExpanded(state: ExpandedState, onOpen: () -> Unit) {
         }
         if (list.size > 4) {
             Spacer(Modifier.height(8.dp))
-            Text("+${list.size - 4} more · tap to see all", color = TextSecondary, fontSize = 12.sp)
+            Text("+${list.size - 4} more · tap to see all", color = TextSecondary, style = MaterialTheme.typography.labelMedium)
         }
     }
 }
@@ -246,6 +253,61 @@ private fun PillButton(text: String, background: Color, content: Color, modifier
             .clickable(onClick = onClick),
         contentAlignment = Alignment.Center,
     ) {
-        Text(text, color = content, fontWeight = FontWeight.SemiBold, fontSize = 14.sp, maxLines = 1)
+        Text(text, color = content, style = MaterialTheme.typography.labelLargeEmphasized, maxLines = 1)
+    }
+}
+
+/** "Next" steps of a tracked journey: a small timeline with the step in progress highlighted. */
+@Composable
+private fun JourneyStepsList(steps: List<JourneyStep>, accent: Color) {
+    Column(
+        Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(20.dp))
+            .background(CardColor)
+            .padding(horizontal = 12.dp, vertical = 10.dp),
+        verticalArrangement = Arrangement.spacedBy(10.dp),
+    ) {
+        Text("Next steps", color = TextSecondary, style = MaterialTheme.typography.labelMediumEmphasized)
+        steps.forEach { step ->
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                val mode = step.mode
+                if (step.kind == StepKind.RIDE && mode != null) {
+                    Image(painterResource(mode.pictogramRes), contentDescription = mode.label, modifier = Modifier.size(28.dp))
+                } else {
+                    Box(
+                        Modifier.size(28.dp).background(if (step.current) accent else Color(0xFF2C2C30), CircleShape),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        Icon(
+                            if (step.kind == StepKind.ARRIVE) Sym.LocationOn else Sym.DirectionsWalk,
+                            contentDescription = null,
+                            tint = if (step.current) Color.Black else TextPrimary,
+                            modifier = Modifier.size(16.dp),
+                        )
+                    }
+                }
+                Spacer(Modifier.width(10.dp))
+                Column(Modifier.weight(1f)) {
+                    Text(
+                        step.title,
+                        color = if (step.current) accent else TextPrimary,
+                        style = if (step.current) MaterialTheme.typography.titleSmallEmphasized else MaterialTheme.typography.titleSmall,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                    if (step.detail.isNotBlank()) {
+                        Text(step.detail, color = TextSecondary, style = MaterialTheme.typography.bodySmall, maxLines = 2, overflow = TextOverflow.Ellipsis)
+                    }
+                }
+                Spacer(Modifier.width(8.dp))
+                Text(
+                    if (step.current) "Now" else TimeFormatter.clock(step.time),
+                    color = if (step.current) accent else TextSecondary,
+                    style = MaterialTheme.typography.labelLargeEmphasized,
+                    maxLines = 1,
+                )
+            }
+        }
     }
 }

@@ -357,8 +357,9 @@ fun MapScreen(isActive: Boolean, modifier: Modifier = Modifier) {
             }
         }
 
-        // Right-side map controls.
-        Column(
+        // Right-side map controls. With a roll result at the top and a stop preview at the bottom there is no room
+        // for them in between, and the roulette card has its own actions, so they step aside.
+        if (roulette is RouletteState.Idle || state.selected == null) Column(
             Modifier
                 .align(Alignment.BottomEnd)
                 .windowInsetsPadding(WindowInsets.navigationBars)

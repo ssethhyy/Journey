@@ -74,6 +74,10 @@ data class AppSettings(
     val departuresPerStop: Int = 3,
     val autoRefresh: Boolean = true,
     val nearbyRadiusMeters: Int = 1000,
+    /** Show the closest stops on For You. */
+    val forYouNearby: Boolean = true,
+    /** How many nearby stops For You shows. */
+    val forYouNearbyCount: Int = 3,
     val nearbyModes: Set<TransportMode> = TransportMode.entries.toSet(),
     val mapModes: Set<TransportMode> = TransportMode.entries.toSet(),
     val mapFollowsTheme: Boolean = true,
@@ -112,6 +116,8 @@ class SettingsRepository(context: Context) {
         val DEPARTURES_PER_STOP = intPreferencesKey("departures_per_stop")
         val AUTO_REFRESH = booleanPreferencesKey("auto_refresh")
         val NEARBY_RADIUS = intPreferencesKey("nearby_radius")
+        val FOR_YOU_NEARBY = booleanPreferencesKey("for_you_nearby")
+        val FOR_YOU_NEARBY_COUNT = intPreferencesKey("for_you_nearby_count")
         val NEARBY_MODES = stringSetPreferencesKey("nearby_modes")
         val MAP_MODES = stringSetPreferencesKey("map_modes")
         val MAP_FOLLOWS_THEME = booleanPreferencesKey("map_follows_theme")
@@ -147,6 +153,8 @@ class SettingsRepository(context: Context) {
             departuresPerStop = (p[Keys.DEPARTURES_PER_STOP] ?: 3).coerceIn(1, 6),
             autoRefresh = p[Keys.AUTO_REFRESH] ?: true,
             nearbyRadiusMeters = (p[Keys.NEARBY_RADIUS] ?: 1000).coerceIn(250, 3000),
+            forYouNearby = p[Keys.FOR_YOU_NEARBY] ?: true,
+            forYouNearbyCount = (p[Keys.FOR_YOU_NEARBY_COUNT] ?: 3).coerceIn(1, 8),
             nearbyModes = p[Keys.NEARBY_MODES]?.toModes() ?: TransportMode.entries.toSet(),
             mapModes = p[Keys.MAP_MODES]?.toModes() ?: TransportMode.entries.toSet(),
             mapFollowsTheme = p[Keys.MAP_FOLLOWS_THEME] ?: true,
@@ -195,6 +203,8 @@ class SettingsRepository(context: Context) {
     suspend fun setDeparturesPerStop(count: Int) = store.edit { it[Keys.DEPARTURES_PER_STOP] = count.coerceIn(1, 6) }
     suspend fun setAutoRefresh(enabled: Boolean) = store.edit { it[Keys.AUTO_REFRESH] = enabled }
     suspend fun setNearbyRadius(meters: Int) = store.edit { it[Keys.NEARBY_RADIUS] = meters.coerceIn(250, 3000) }
+    suspend fun setForYouNearby(enabled: Boolean) = store.edit { it[Keys.FOR_YOU_NEARBY] = enabled }
+    suspend fun setForYouNearbyCount(count: Int) = store.edit { it[Keys.FOR_YOU_NEARBY_COUNT] = count.coerceIn(1, 8) }
     suspend fun setNearbyModes(modes: Set<TransportMode>) = store.edit { it[Keys.NEARBY_MODES] = modes.map { m -> m.name }.toSet() }
     suspend fun setMapModes(modes: Set<TransportMode>) = store.edit { it[Keys.MAP_MODES] = modes.map { m -> m.name }.toSet() }
     suspend fun setMapFollowsTheme(enabled: Boolean) = store.edit { it[Keys.MAP_FOLLOWS_THEME] = enabled }

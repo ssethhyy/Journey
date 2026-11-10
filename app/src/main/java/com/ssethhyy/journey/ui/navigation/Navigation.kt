@@ -128,6 +128,12 @@ class Navigator(
         container.requestPlan(PlanRequest(to, from))
     }
 
+    /** Returns to the home screen and switches to [tab]. */
+    fun goToTab(tab: HomeTab) {
+        while (backStack.size > 1) backStack.removeAt(backStack.lastIndex)
+        selectTab(tab)
+    }
+
     /** Returns to the home screen, switches to the map tab and flies to the stop. */
     fun showOnMap(stop: Stop) {
         while (backStack.size > 1) backStack.removeAt(backStack.lastIndex)

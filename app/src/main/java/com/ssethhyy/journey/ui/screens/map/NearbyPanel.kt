@@ -197,7 +197,7 @@ fun NearbyPanel(
 }
 
 @Composable
-private fun NearbyStopRow(stop: Stop, board: LoadState<DepartureBoard>?, now: Instant, display: TimeDisplay, onClick: () -> Unit) {
+internal fun NearbyStopRow(stop: Stop, board: LoadState<DepartureBoard>?, now: Instant, display: TimeDisplay, onClick: () -> Unit) {
     val next = board?.dataOrNull?.departures?.firstOrNull { it.bestTime?.isAfter(now.minusSeconds(60)) == true && !it.isCancelled }
     Row(
         Modifier

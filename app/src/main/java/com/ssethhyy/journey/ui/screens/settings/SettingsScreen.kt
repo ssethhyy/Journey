@@ -274,8 +274,26 @@ fun SettingsScreen() {
             }
 
             item(key = "nearby") {
-                SectionLabel("Nearby stops on the map")
+                SectionLabel("Nearby stops")
                 RoundedCardContainer {
+                    IconToggleItem(
+                        icon = Sym.ForYou,
+                        title = "Show on For You",
+                        description = "The closest stops and their next departures",
+                        isChecked = settings.forYouNearby,
+                        onCheckedChange = { vm.update { setForYouNearby(it) } },
+                    )
+                    if (settings.forYouNearby) {
+                        SliderItem(
+                            icon = Sym.FormatListNumbered,
+                            title = "Stops on For You",
+                            value = settings.forYouNearbyCount,
+                            range = 1..8,
+                            step = 1,
+                            valueLabel = { "$it" },
+                            onValueChangeFinished = { vm.update { setForYouNearbyCount(it) } },
+                        )
+                    }
                     SliderItem(
                         icon = Sym.NearMe,
                         title = "Search radius",

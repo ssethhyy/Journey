@@ -114,6 +114,16 @@ fun FavouritesScreen(onAddFromNearby: () -> Unit, onAddFromSearch: () -> Unit) {
     var renaming by remember { mutableStateOf<FavouriteStop?>(null) }
     var askingName by rememberSaveable { mutableStateOf(false) }
     var editingPlace by remember { mutableStateOf<Pair<PlaceKind, SavedPlace?>?>(null) }
+    // Shared with the Map tab's Nearby panel (same key), so both show the same stops.
+    val nearbyVm = appViewModel(key = "map_nearby") { com.ssethhyy.journey.ui.screens.nearby.NearbyViewModel(it) }
+    val nearby by nearbyVm.state.collectAsStateWithLifecycle()
+    val showNearby = state.isLoaded && state.settings.forYouNearby
+    androidx.compose.runtime.LaunchedEffect(showNearby) {
+        if (showNearby && nearby.stops !is LoadState.Success) nearbyVm.load()
+    }
+    val enableLocation = com.ssethhyy.journey.ui.components.rememberLocationEnabler(onUnavailable = { nearbyVm.load(force = true) }) {
+        nearbyVm.load(force = true)
+    }
     val commutesVm = appViewModel(key = "commutes") { CommutesViewModel(it) }
     val commutes by commutesVm.state.collectAsStateWithLifecycle()
     // null = closed, Pair(null, _) = new commute, Pair(commute, _) = editing
@@ -130,6 +140,9 @@ fun FavouritesScreen(onAddFromNearby: () -> Unit, onAddFromSearch: () -> Unit) {
 
     AutoRefreshEffect(enabled = state.settings.autoRefresh && state.favourites.isNotEmpty()) { vm.refresh(force = true) }
     AutoRefreshEffect(enabled = commutes.cards.isNotEmpty(), intervalMs = 60_000) { commutesVm.refresh() }
+    AutoRefreshEffect(enabled = showNearby && state.settings.autoRefresh) {
+        nearbyVm.loadBoards(nearby.stops.dataOrNull.orEmpty().take(state.settings.forYouNearbyCount), force = true)
+    }
 
     val onRemove: (FavouriteStop) -> Unit = { fav ->
         vm.remove(fav.key)
@@ -157,6 +170,7 @@ fun FavouritesScreen(onAddFromNearby: () -> Unit, onAddFromSearch: () -> Unit) {
             onRefresh = {
                 vm.refresh(force = true, userInitiated = true)
                 commutesVm.refresh()
+                if (showNearby) nearbyVm.load(force = true)
             },
             topInset = innerPadding.calculateTopPadding(),
             modifier = Modifier.fillMaxSize(),
@@ -195,6 +209,16 @@ fun FavouritesScreen(onAddFromNearby: () -> Unit, onAddFromSearch: () -> Unit) {
                         )
                     }
                     commutesSection(commutes, now, commuteActions)
+                    if (showNearby) {
+                        nearbySection(
+                            state = nearby,
+                            count = state.settings.forYouNearbyCount,
+                            now = now,
+                            onOpenStop = navigator::openStop,
+                            onOpenMap = { navigator.goToTab(com.ssethhyy.journey.ui.navigation.HomeTab.MAP) },
+                            onEnableLocation = enableLocation,
+                        )
+                    }
                     if (state.favourites.isEmpty()) {
                         item(key = "empty") { EmptyFavourites(onAddFromNearby, onAddFromSearch) }
                         return@LazyColumn

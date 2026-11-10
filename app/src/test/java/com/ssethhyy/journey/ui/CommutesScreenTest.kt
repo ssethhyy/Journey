@@ -77,4 +77,16 @@ class CommutesScreenTest {
         rule.waitUntil(20_000) { has("No commutes yet") }
         snap("commutes_empty")
     }
+
+    @Test
+    fun forYouShowsTheClosestStops() {
+        runBlocking {
+            rule.activity.appContainer.commuteRepository.clear()
+            rule.activity.appContainer.settingsRepository.setForYouNearby(true)
+        }
+        rule.waitUntil(20_000) { has("Near you") }
+        rule.waitUntil(20_000) { has("Flinders Street", substring = true) }
+        assertTrue("location help is offered without permission", has("Allow location to see stops near you"))
+        snap("for_you_nearby")
+    }
 }

@@ -6,21 +6,28 @@ All notable changes to Journey are documented here. The format follows
 
 ## [Unreleased]
 
+## [1.2.0] - 2026-11-12
+
+> **Before you update:** from this release Journey is signed with its own release key. Android won't install it over
+> 1.1.0 or earlier, so uninstall the old version first. That clears your favourites, places, commutes and myki data on
+> the phone; export your favourites first from *Settings → Data* if you want to keep them. Later updates install
+> straight over the top.
+
 ### Added
-- **Full-screen alert to get off.** While a planned journey is tracked, Journey fills the screen when it's time to get off, like an alarm, even over the lock screen. It names the stop in large type and says what to do: *Press the stop button* on trams and buses, *Get ready, your stop is next* on trains, with the line, arrival time and platform. It fires once per ride, either when your phone's location is near the stop or when the service is about to arrive (100 seconds ahead for trains, 70 for trams and buses), whichever comes first. It never rings. It vibrates only if vibration is on in *Settings → Stop alerts* and your phone isn't on silent; on silent it just shows the alert. Turn it off, change vibration, allow full-screen alerts (Android 14+ asks) or preview it in *Settings → Stop alerts*.
-- **Explore a journey on the map.** Tap the map on a journey's page to open it on the Map tab, drawn full size over a map you can move and zoom. A floating panel lists each leg. Tap one to zoom to that part of the route and see where to get on and off (with platforms), how many stops it is and how long it takes, plus buttons to open those stops' pages. *Whole route* zooms back out, and Back returns to the journey page. Tapping a stop marker still opens its preview as usual.
-- **Stops on a journey's page open their stop page.** Tap where you get on or off in the timeline to see all of that stop's routes and times.
+- **Full-screen alert to get off.** While a planned journey is tracked, Journey fills the screen when it's time to get off, like an alarm, even over the lock screen. It names the stop in large type and says what to do: *Press the stop button* on trams and buses, or *Get ready, your stop is next* on trains, with the line, arrival time and platform. It fires once per ride, when your phone is near the stop or the service is about to arrive, whichever comes first. It never rings; it vibrates only if vibration is on and your phone isn't on silent. Turn it off, change vibration, allow full-screen alerts (Android 14+ asks) or preview it in *Settings → Stop alerts*.
+- **Favourite just the lines you use.** Tapping the star on a stop with more than one line or direction lets you keep *All lines and directions* (as before), or pick only some, such as *Frankston to City*. For You and the widget then show only those departures, with the chosen lines under the stop's name. Change them later from the favourite's menu with *Choose lines*.
+- **Explore a journey on the map.** Tap the map on a journey's page to open it full size on the Map tab, where you can move and zoom. A floating panel lists each leg; tap one to zoom to it and see where to get on and off (with platforms), how many stops and how long, with buttons to open those stops' pages. *Whole route* zooms back out, and Back returns to the journey.
+- **Stops on a journey's page open their stop page** when you tap where you get on or off.
 - **Change dots on journey maps** mark each place you switch between walking, trains, trams and buses.
-- **Favourite just the lines you use.** Tapping the star on a stop with more than one line or direction opens a picker: keep *All lines and directions* (as before), or choose *Only some* and pick lines and directions such as *Frankston to City*. The favourite then shows only those departures on For You and in the widget, with the chosen lines under its name. Stops with a single line and direction are added straight away. Change a favourite's lines later from its menu with *Choose lines*.
 
 ### Changed
-- **Blur behind the status bar and the bottom bar on every page.** In the bottom bar style the whole app now shares one progressive blur at each edge: behind the clock and icons at the top, and behind the floating bar at the bottom, including pages such as Settings and stop pages that had none before. The bottom blur fades away while the bar hides as you scroll down, and returns with it.
-- **The journey page's map is fixed.** It no longer drags or zooms, so it doesn't fight the page's scrolling; tap it (it says *Explore*) for the full map. Train legs are named by line, as in *Frankston line to Frankston*.
-- **Your location stays in the middle of the visible map.** Centring on you, or on a stop, now allows for the filters at the top and the Nearby panel and bottom bar, and opening, expanding or closing the Nearby panel keeps you centred until you drag the map yourself.
-- Release builds are signed with your own release key when `release.storeFile`, `release.storePassword`, `release.keyAlias` and `release.keyPassword` are set in `local.properties`. Without them (a fresh clone, CI) they still fall back to the debug key.
+- **Blur behind the status bar and the bottom bar on every page** in the bottom bar style, including Settings and stop pages. The bottom blur fades away while the bar hides as you scroll, and comes back with it.
+- **The journey page's map is fixed in place**, so it no longer fights the page's scrolling; tap it (*Explore*) for the full map. Train legs are named by line, as in *Frankston line to Frankston*.
+- **Your location stays in the middle of the visible map**, above the Nearby panel and below the filters, and stays centred as the panel opens, expands or closes, until you move the map yourself.
+- For developers: release builds are signed with your own key when the `release.*` settings are in `local.properties`, and fall back to the debug key without them.
 
 ### Fixed
-- Zooming the map out too far to load stops now hides the old stop markers instead of leaving a stale cluster on screen.
+- Zooming the map out too far to load stops hides the old stop markers instead of leaving a stale cluster on screen.
 
 ## [1.1.0] - 2026-11-10
 
@@ -78,6 +85,7 @@ Everything since 1.0.0, including all the changes tried out in the beta builds.
 - Release builds now keep the Material Symbols and myki artwork (they were being removed by resource shrinking, which broke icons and the island's alert icon).
 - Bottom-sheet forms lift above the keyboard instead of being covered by it.
 
-[Unreleased]: https://github.com/ssethhyy/Journey/compare/v1.1.0...HEAD
+[Unreleased]: https://github.com/ssethhyy/Journey/compare/v1.2.0...HEAD
+[1.2.0]: https://github.com/ssethhyy/Journey/compare/v1.1.0...v1.2.0
 [1.1.0]: https://github.com/ssethhyy/Journey/compare/v1.0.0...v1.1.0
 [1.0.0]: https://github.com/ssethhyy/Journey/releases/tag/v1.0.0

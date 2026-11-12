@@ -83,6 +83,8 @@ object FavouriteChoices {
                     .map { d ->
                         FavouriteLine(route.id, route.badgeLabel, d.directionId, (d.directionName ?: d.destination)?.takeIf { it.isNotBlank() })
                     }
+                    // Two direction ids with the same name read as duplicates, so keep one.
+                    .distinctBy { it.directionName ?: it.directionId.toString() }
                     .sortedBy { it.directionName }
                     // A line with no upcoming departures can still be chosen as a whole.
                     .ifEmpty { listOf(FavouriteLine(route.id, route.badgeLabel)) }

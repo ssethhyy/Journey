@@ -6,6 +6,8 @@
 
 package com.ssethhyy.journey.ui.screens.map
 
+import com.mapbox.maps.plugin.gestures.gestures
+import com.mapbox.maps.EdgeInsets
 import com.ssethhyy.journey.ui.components.Sym
 import android.Manifest
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -145,14 +147,41 @@ fun MapScreen(isActive: Boolean, modifier: Modifier = Modifier) {
     var nearbyLoaded by rememberSaveable { mutableStateOf(false) }
     var locationEnabled by remember { mutableStateOf(vm.hasLocationPermission()) }
 
+    // The part of the map not covered by the filters at the top or the panel and toolbar at the bottom, kept up
+    // to date below. Centring with this padding puts a point in the middle of what you can actually see.
+    var visiblePadding by remember { mutableStateOf(EdgeInsets(0.0, 0.0, 0.0, 0.0)) }
+    // True after centring on you, until you drag the map yourself: while true, panels opening or closing re-centre.
+    var followingUser by remember { mutableStateOf(false) }
+
     fun flyTo(lat: Double, lon: Double, zoom: Double = 15.5) {
         viewportState.flyTo(
-            CameraOptions.Builder().center(Point.fromLngLat(lon, lat)).zoom(zoom).build(),
+            CameraOptions.Builder().center(Point.fromLngLat(lon, lat)).zoom(zoom).padding(visiblePadding).build(),
             MapAnimationOptions.mapAnimationOptions { duration(1_200) },
         )
     }
 
+    fun centreOnUser(location: com.ssethhyy.journey.data.location.LatLng) {
+        followingUser = true
+        flyTo(location.latitude, location.longitude)
+    }
+
     val locating by vm.locating.collectAsStateWithLifecycle()
+    // A planned journey opened full size from its page: drawn over the map with a panel of its legs.
+    val journeyRequest by container.journeyMap.collectAsStateWithLifecycle()
+    val journey = remember(journeyRequest) { journeyRequest?.let { container.journeyRepository.journey(it.journeyId) } }
+    var selectedLeg by remember(journeyRequest) { mutableStateOf<Int?>(null) }
+    var journeyPanelHeightPx by remember { mutableIntStateOf(0) }
+    val openLegStop = com.ssethhyy.journey.ui.components.rememberLegStopOpener()
+    LaunchedEffect(journeyRequest, journey) {
+        // An old journey the planner no longer has can't be drawn.
+        if (journeyRequest != null && journey == null) container.closeJourneyMap()
+        if (journey != null) hasCenteredOnUser = true
+    }
+    androidx.activity.compose.BackHandler(enabled = isActive && journeyRequest != null) {
+        val request = journeyRequest ?: return@BackHandler
+        container.closeJourneyMap()
+        navigator.openJourney(request.journeyId, request.fromName, request.toName)
+    }
     val rouletteVm = appViewModel(key = "stop_roulette") { StopRouletteViewModel(it) }
     val roulette by rouletteVm.state.collectAsStateWithLifecycle()
     val rollStop = {
@@ -171,7 +200,7 @@ fun MapScreen(isActive: Boolean, modifier: Modifier = Modifier) {
         locationEnabled = true
         vm.locateUser(
             onFailed = { android.widget.Toast.makeText(context, "Couldn't find your location. Try again outside or near a window.", android.widget.Toast.LENGTH_LONG).show() },
-        ) { flyTo(it.latitude, it.longitude) }
+        ) { centreOnUser(it) }
         nearbyVm.load(force = true)
     }
 
@@ -183,7 +212,7 @@ fun MapScreen(isActive: Boolean, modifier: Modifier = Modifier) {
         }
         if (isActive && !hasCenteredOnUser && locationEnabled) {
             hasCenteredOnUser = true
-            vm.locateUser { flyTo(it.latitude, it.longitude) }
+            vm.locateUser { centreOnUser(it) }
         }
     }
 
@@ -201,11 +230,29 @@ fun MapScreen(isActive: Boolean, modifier: Modifier = Modifier) {
     var previewHeightPx by remember { mutableIntStateOf(0) }
     var nearbyHeightPx by remember { mutableIntStateOf(0) }
     val density = LocalDensity.current
-    val nearbyVisible = showNearby && state.selected == null
+    val nearbyVisible = showNearby && state.selected == null && journey == null
+    val journeyPanelVisible = journey != null && state.selected == null
     val previewClearance = when {
         state.selected != null -> with(density) { previewHeightPx.toDp() } + 4.dp
+        journeyPanelVisible -> with(density) { journeyPanelHeightPx.toDp() } + 4.dp
         nearbyVisible -> with(density) { nearbyHeightPx.toDp() } + 4.dp
         else -> 0.dp
+    }
+
+    val statusTopPx = WindowInsets.statusBars.getTop(density)
+    val navBottomPx = WindowInsets.navigationBars.getBottom(density)
+    val bottomCoveredPx = navBottomPx + with(density) { (ToolbarClearance + previewClearance).toPx() }
+    val topCoveredPx = statusTopPx + with(density) { 72.dp.toPx() }
+    LaunchedEffect(bottomCoveredPx, topCoveredPx) {
+        visiblePadding = EdgeInsets(topCoveredPx.toDouble(), 0.0, bottomCoveredPx.toDouble(), 0.0)
+        // Opening, expanding or closing the Nearby panel keeps you in the middle of the uncovered map.
+        val here = state.userLocation
+        if (followingUser && here != null && journey == null && state.selected == null) {
+            viewportState.easeTo(
+                CameraOptions.Builder().center(Point.fromLngLat(here.longitude, here.latitude)).padding(visiblePadding).build(),
+                MapAnimationOptions.mapAnimationOptions { duration(450) },
+            )
+        }
     }
 
     BoxWithConstraints(modifier.fillMaxSize()) {
@@ -274,6 +321,23 @@ fun MapScreen(isActive: Boolean, modifier: Modifier = Modifier) {
                     }
                 },
             ) {
+                journey?.let { j ->
+                    com.ssethhyy.journey.ui.components.JourneyRouteLayers(
+                        j,
+                        darkMap = state.settings.mapFollowsTheme && darkTheme,
+                        highlight = selectedLeg?.let(j.legs::getOrNull),
+                    )
+                }
+                MapEffect(Unit) { mapView ->
+                    // Dragging the map yourself stops it following you when panels change size.
+                    mapView.gestures.addOnMoveListener(object : com.mapbox.maps.plugin.gestures.OnMoveListener {
+                        override fun onMoveBegin(detector: com.mapbox.android.gestures.MoveGestureDetector) {
+                            followingUser = false
+                        }
+                        override fun onMove(detector: com.mapbox.android.gestures.MoveGestureDetector) = false
+                        override fun onMoveEnd(detector: com.mapbox.android.gestures.MoveGestureDetector) = Unit
+                    })
+                }
                 MapEffect(locationEnabled) { mapView ->
                     mapView.location.updateSettings {
                         enabled = locationEnabled
@@ -400,6 +464,51 @@ fun MapScreen(isActive: Boolean, modifier: Modifier = Modifier) {
                 loading = locating,
                 onClick = enableLocation,
             )
+        }
+
+        // Fit the whole journey, or the chosen leg, into the part of the map the panels leave visible.
+        val statusTop = WindowInsets.statusBars.getTop(density)
+        val navBottom = WindowInsets.navigationBars.getBottom(density)
+        LaunchedEffect(journey, selectedLeg, journeyPanelHeightPx, isActive) {
+            val j = journey ?: return@LaunchedEffect
+            if (!isActive) return@LaunchedEffect
+            val drawable = com.ssethhyy.journey.ui.components.JourneyGeometry.drawable(j)
+            val points = selectedLeg?.let { j.legs.getOrNull(it) }?.let(com.ssethhyy.journey.ui.components.JourneyGeometry::points)?.takeIf { it.size > 1 }
+                ?: com.ssethhyy.journey.ui.components.JourneyGeometry.allPoints(drawable)
+            if (points.size < 2) return@LaunchedEffect
+            val px = { dp: androidx.compose.ui.unit.Dp -> with(density) { dp.toPx() }.toDouble() }
+            val padding = EdgeInsets(
+                statusTop + px(132.dp),
+                px(40.dp),
+                navBottom + px(ToolbarClearance) + journeyPanelHeightPx + px(24.dp),
+                px(40.dp),
+            )
+            val camera = viewportState.cameraForCoordinates(points, CameraOptions.Builder().build(), padding, 17.0, null)
+            viewportState.flyTo(camera, MapAnimationOptions.mapAnimationOptions { duration(900) })
+        }
+
+        // A planned journey's legs, while exploring it on the map (the stop preview takes over when a stop is tapped).
+        AnimatedVisibility(
+            visible = journeyPanelVisible,
+            enter = slideInVertically { it / 2 } + fadeIn(),
+            exit = slideOutVertically { it / 2 } + fadeOut(),
+            modifier = Modifier
+                .align(Alignment.BottomCenter)
+                .windowInsetsPadding(WindowInsets.navigationBars)
+                .padding(start = 12.dp, end = 12.dp, bottom = ToolbarClearance - 8.dp)
+                .onSizeChanged { journeyPanelHeightPx = it.height },
+        ) {
+            val request = journeyRequest
+            journey?.let { j ->
+                JourneyMapPanel(
+                    journey = j,
+                    destination = request?.toName.orEmpty(),
+                    selected = selectedLeg,
+                    onSelect = { selectedLeg = it },
+                    onOpenStop = openLegStop,
+                    onClose = container::closeJourneyMap,
+                )
+            }
         }
 
         // Floating Nearby panel above the toolbar (hidden while a stop preview is showing).

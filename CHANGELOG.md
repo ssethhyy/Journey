@@ -7,9 +7,14 @@ All notable changes to Journey are documented here. The format follows
 ## [Unreleased]
 
 ### Added
+- **Explore a journey on the map.** Tap the map on a journey's page to open it on the Map tab, drawn full size over a map you can move and zoom. A floating panel lists each leg. Tap one to zoom to that part of the route and see where to get on and off (with platforms), how many stops it is and how long it takes, plus buttons to open those stops' pages. *Whole route* zooms back out, and Back returns to the journey page. Tapping a stop marker still opens its preview as usual.
+- **Stops on a journey's page open their stop page.** Tap where you get on or off in the timeline to see all of that stop's routes and times.
+- **Change dots on journey maps** mark each place you switch between walking, trains, trams and buses.
 - **Favourite just the lines you use.** Tapping the star on a stop with more than one line or direction opens a picker: keep *All lines and directions* (as before), or choose *Only some* and pick lines and directions such as *Frankston to City*. The favourite then shows only those departures on For You and in the widget, with the chosen lines under its name. Stops with a single line and direction are added straight away. Change a favourite's lines later from its menu with *Choose lines*.
 
 ### Changed
+- **The journey page's map is fixed.** It no longer drags or zooms, so it doesn't fight the page's scrolling; tap it (it says *Explore*) for the full map. Train legs are named by line, as in *Frankston line to Frankston*.
+- **Your location stays in the middle of the visible map.** Centring on you, or on a stop, now allows for the filters at the top and the Nearby panel and bottom bar, and opening, expanding or closing the Nearby panel keeps you centred until you drag the map yourself.
 - Release builds are signed with your own release key when `release.storeFile`, `release.storePassword`, `release.keyAlias` and `release.keyPassword` are set in `local.properties`. Without them (a fresh clone, CI) they still fall back to the debug key.
 
 ## [1.1.0] - 2026-11-10

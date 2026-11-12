@@ -184,6 +184,13 @@ fun MapScreen(isActive: Boolean, modifier: Modifier = Modifier) {
     }
     val rouletteVm = appViewModel(key = "stop_roulette") { StopRouletteViewModel(it) }
     val roulette by rouletteVm.state.collectAsStateWithLifecycle()
+    // Opening a journey clears whatever was on the map before (a stop preview, a dice roll) so its panel shows.
+    LaunchedEffect(journeyRequest) {
+        if (journeyRequest != null) {
+            vm.select(null)
+            rouletteVm.dismiss()
+        }
+    }
     val rollStop = {
         rouletteVm.roll { stop ->
             vm.focusStop(stop)
@@ -349,8 +356,9 @@ fun MapScreen(isActive: Boolean, modifier: Modifier = Modifier) {
                 }
 
                 val selectedKey = state.selected?.key
-                val annotations = remember(state.stops, selectedKey) {
-                    state.stops.map { stop ->
+                val annotations = remember(state.stops, selectedKey, state.zoomedOutTooFar) {
+                    // Zoomed out too far to load stops: hide the ones from before rather than leave a stale cluster.
+                    (if (state.zoomedOutTooFar) emptyList() else state.stops).map { stop ->
                         val isSelected = stop.key == selectedKey
                         CircleAnnotationOptions()
                             .withPoint(Point.fromLngLat(stop.longitude, stop.latitude))
@@ -477,12 +485,11 @@ fun MapScreen(isActive: Boolean, modifier: Modifier = Modifier) {
                 ?: com.ssethhyy.journey.ui.components.JourneyGeometry.allPoints(drawable)
             if (points.size < 2) return@LaunchedEffect
             val px = { dp: androidx.compose.ui.unit.Dp -> with(density) { dp.toPx() }.toDouble() }
-            val padding = EdgeInsets(
-                statusTop + px(132.dp),
-                px(40.dp),
-                navBottom + px(ToolbarClearance) + journeyPanelHeightPx + px(24.dp),
-                px(40.dp),
-            )
+            // Never let the panels leave less than a third of the screen for the route, or Mapbox can't fit it at all.
+            val screenHeight = with(density) { heightDp.dp.toPx() }.toDouble()
+            val top = statusTop + px(84.dp)
+            val bottom = (navBottom + px(ToolbarClearance) + journeyPanelHeightPx + px(16.dp)).coerceAtMost(screenHeight * 0.66 - top)
+            val padding = EdgeInsets(top, px(40.dp), bottom, px(40.dp))
             val camera = viewportState.cameraForCoordinates(points, CameraOptions.Builder().build(), padding, 17.0, null)
             viewportState.flyTo(camera, MapAnimationOptions.mapAnimationOptions { duration(900) })
         }

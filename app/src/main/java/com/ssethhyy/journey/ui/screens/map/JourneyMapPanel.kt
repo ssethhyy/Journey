@@ -123,7 +123,7 @@ fun JourneyMapPanel(
             LaunchedEffect(selected) { selected?.let { listState.animateScrollToItem(it) } }
             LazyColumn(
                 state = listState,
-                modifier = Modifier.heightIn(max = 420.dp),
+                modifier = Modifier.heightIn(max = if (selected == null) 280.dp else 380.dp),
                 contentPadding = PaddingValues(start = 8.dp, end = 8.dp, top = 8.dp),
                 verticalArrangement = Arrangement.spacedBy(4.dp),
             ) {

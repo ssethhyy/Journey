@@ -17,6 +17,9 @@ All notable changes to Journey are documented here. The format follows
 - **Your location stays in the middle of the visible map.** Centring on you, or on a stop, now allows for the filters at the top and the Nearby panel and bottom bar, and opening, expanding or closing the Nearby panel keeps you centred until you drag the map yourself.
 - Release builds are signed with your own release key when `release.storeFile`, `release.storePassword`, `release.keyAlias` and `release.keyPassword` are set in `local.properties`. Without them (a fresh clone, CI) they still fall back to the debug key.
 
+### Fixed
+- Zooming the map out too far to load stops now hides the old stop markers instead of leaving a stale cluster on screen.
+
 ## [1.1.0] - 2026-11-10
 
 Everything since 1.0.0, including all the changes tried out in the beta builds.

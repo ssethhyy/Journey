@@ -39,6 +39,12 @@ import kotlinx.coroutines.launch
 data class MapFocusRequest(val stop: Stop, val id: Long = System.nanoTime())
 
 /** A request for the Plan tab to plan a trip to [to] (optionally from [from]). */
+data class FavouritePickerRequest(
+    val stop: com.ssethhyy.journey.data.model.Stop,
+    val current: List<com.ssethhyy.journey.data.repository.FavouriteLine>,
+    val editing: Boolean,
+)
+
 data class PlanRequest(val to: PlanLocation, val from: PlanLocation? = null, val id: Long = System.nanoTime())
 
 class AppContainer(
@@ -87,6 +93,34 @@ class AppContainer(
 
     /** A destination the Plan tab should pick up (e.g. a saved place tapped on Favourites). */
     val planRequest: StateFlow<PlanRequest?> = _planRequest.asStateFlow()
+
+    private val _favouritePicker = MutableStateFlow<FavouritePickerRequest?>(null)
+
+    /** A stop waiting for the user to choose which of its lines and directions to favourite. */
+    val favouritePicker: StateFlow<FavouritePickerRequest?> = _favouritePicker.asStateFlow()
+
+    /**
+     * The star button everywhere: removes a favourite straight away, or asks which lines and directions to add
+     * (the picker adds the stop directly when there is nothing to choose between).
+     */
+    fun toggleFavourite(stop: com.ssethhyy.journey.data.model.Stop) {
+        appScope.launch {
+            if (favouritesRepository.isFavourite(stop.key)) {
+                favouritesRepository.remove(stop.key)
+            } else {
+                _favouritePicker.value = FavouritePickerRequest(stop, current = emptyList(), editing = false)
+            }
+        }
+    }
+
+    /** Change which lines and directions an existing favourite shows. */
+    fun editFavouriteLines(favourite: com.ssethhyy.journey.data.repository.FavouriteStop) {
+        _favouritePicker.value = FavouritePickerRequest(favourite.toStop(), current = favourite.lines, editing = true)
+    }
+
+    fun dismissFavouritePicker() {
+        _favouritePicker.value = null
+    }
 
     fun requestPlan(request: PlanRequest) {
         _planRequest.value = request

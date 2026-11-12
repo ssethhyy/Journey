@@ -159,7 +159,7 @@ class MapViewModel(private val container: AppContainer) : ViewModel() {
         }
     }
 
-    fun toggleFavourite(stop: Stop) = viewModelScope.launch { container.favouritesRepository.toggle(stop) }
+    fun toggleFavourite(stop: Stop) = viewModelScope.launch { container.toggleFavourite(stop) }
 
     private val _locating = MutableStateFlow(false)
     /** True while waiting for a location fix after the user asked for one. */

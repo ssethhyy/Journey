@@ -117,7 +117,8 @@ class FavouritesViewModel(private val container: AppContainer) : ViewModel() {
                 launch {
                     if (boards.value[fav.key] == null) boards.update { it + (fav.key to LoadState.Loading) }
                     val result = requestLimiter.withPermit {
-                        loadCatching { repo.departures(fav.mode, fav.stopId, maxResults = perStop + 2, force = force) }
+                        // A favourite limited to some lines needs a longer look ahead to still fill its rows.
+                        loadCatching { repo.departures(fav.mode, fav.stopId, maxResults = if (fav.showsEverything) perStop + 2 else 12, force = force) }
                     }
                     // Keep showing stale data if a background refresh fails.
                     boards.update { current ->

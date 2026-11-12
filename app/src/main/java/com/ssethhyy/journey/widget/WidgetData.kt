@@ -115,8 +115,9 @@ object WidgetSnapshotBuilder {
             favourites.map { fav ->
                 async {
                     val upcoming = runCatching {
-                        container.ptvRepository.departures(fav.mode, fav.stopId, maxResults = 4, force = true)
+                        container.ptvRepository.departures(fav.mode, fav.stopId, maxResults = if (fav.showsEverything) 4 else 12, force = true)
                             .departures
+                            .let(fav::filter)
                             .filter { !it.isCancelled && it.bestTime?.isAfter(now.minusSeconds(30)) == true }
                     }.onFailure { failure = it }.getOrNull().orEmpty()
                     val next = upcoming.firstOrNull()

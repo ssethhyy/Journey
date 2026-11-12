@@ -117,5 +117,5 @@ class StopDetailViewModel(private val container: AppContainer, initialStop: Stop
         loadBoard(force = false)
     }
 
-    fun toggleFavourite() = viewModelScope.launch { container.favouritesRepository.toggle(local.value.stop) }
+    fun toggleFavourite() = container.toggleFavourite(local.value.stop)
 }

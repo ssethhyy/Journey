@@ -6,6 +6,7 @@
 
 package com.ssethhyy.journey.ui.screens.favourites
 
+import com.ssethhyy.journey.appContainer
 import com.ssethhyy.journey.ui.components.Sym
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.ExperimentalFoundationApi
@@ -399,6 +400,7 @@ private fun FavouriteStopCard(
     modifier: Modifier = Modifier,
 ) {
     val view = LocalView.current
+    val container = androidx.compose.ui.platform.LocalContext.current.appContainer
     var menuOpen by remember { mutableStateOf(false) }
     Surface(
         modifier = modifier.fillMaxWidth(),
@@ -429,7 +431,7 @@ private fun FavouriteStopCard(
                     Text(favourite.displayName, style = MaterialTheme.typography.titleMedium, maxLines = 2, overflow = TextOverflow.Ellipsis)
                     val subtitle = listOfNotNull(
                         favourite.nickname?.let { favourite.name },
-                        favourite.suburb,
+                        favourite.linesSummary ?: favourite.suburb,
                     ).joinToString(" · ")
                     if (subtitle.isNotBlank()) {
                         Text(subtitle, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1, overflow = TextOverflow.Ellipsis)
@@ -441,6 +443,10 @@ private fun FavouriteStopCard(
                         DropdownMenuItem(text = { Text("Rename") }, leadingIcon = { Icon(Sym.Edit, null) }, onClick = {
                             menuOpen = false
                             onRename()
+                        })
+                        DropdownMenuItem(text = { Text("Choose lines") }, leadingIcon = { Icon(Sym.Route, null) }, onClick = {
+                            menuOpen = false
+                            container.editFavouriteLines(favourite)
                         })
                         if (canMoveUp) {
                             DropdownMenuItem(text = { Text("Move up") }, leadingIcon = { Icon(Sym.ArrowUpward, null) }, onClick = {
@@ -476,11 +482,12 @@ private fun FavouriteStopCard(
                     null, LoadState.Loading -> DepartureSkeleton(rows = departuresToShow.coerceAtMost(3))
                     is LoadState.Error -> InlineError(board.error.message ?: "Couldn't load departures", onRetry)
                     is LoadState.Success -> {
-                        val upcoming = board.data.departures.filter { d -> d.bestTime?.let { it.isAfter(now.minusSeconds(60)) } ?: false }
+                        // Only the lines and directions this favourite was saved with (all of them by default).
+                        val upcoming = favourite.filter(board.data.departures).filter { d -> d.bestTime?.let { it.isAfter(now.minusSeconds(60)) } ?: false }
                             .take(departuresToShow)
                         if (upcoming.isEmpty()) {
                             Text(
-                                "No upcoming departures",
+                                if (favourite.showsEverything) "No upcoming departures" else "No upcoming departures on your chosen lines",
                                 style = MaterialTheme.typography.bodyMedium,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 modifier = Modifier.padding(16.dp),

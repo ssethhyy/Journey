@@ -129,7 +129,7 @@ class SearchViewModel(private val container: AppContainer) : ViewModel() {
 
     fun clearRecent() = viewModelScope.launch { container.settingsRepository.clearRecentSearches() }
 
-    fun toggleFavourite(stop: Stop) = viewModelScope.launch { container.favouritesRepository.toggle(stop) }
+    fun toggleFavourite(stop: Stop) = viewModelScope.launch { container.toggleFavourite(stop) }
 
     fun retry() {
         viewModelScope.launch { search(_query.value.trim(), _modes.value) }

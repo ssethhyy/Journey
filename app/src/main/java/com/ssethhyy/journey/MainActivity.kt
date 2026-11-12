@@ -264,6 +264,8 @@ fun JourneyRoot(
             if (barStyle == BarStyle.BOTTOM_BAR) {
                 AppChromeHost(chrome, Modifier.align(Alignment.BottomCenter))
             }
+            // Which lines and directions to favourite, whichever screen the star was tapped on.
+            com.ssethhyy.journey.ui.screens.favourites.FavouritePickerHost()
         }
     }
 }

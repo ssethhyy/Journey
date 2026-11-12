@@ -145,7 +145,7 @@ class NearbyViewModel(private val container: AppContainer) : ViewModel() {
 
     fun toggleFilter(mode: TransportMode) = filter.update { if (mode in it) it - mode else it + mode }
 
-    fun toggleFavourite(stop: Stop) = viewModelScope.launch { container.favouritesRepository.toggle(stop) }
+    fun toggleFavourite(stop: Stop) = viewModelScope.launch { container.toggleFavourite(stop) }
 
     companion object {
         const val BOARD_PRELOAD = 8

@@ -6,6 +6,9 @@ All notable changes to Journey are documented here. The format follows
 
 ## [Unreleased]
 
+### Added
+- **Favourite just the lines you use.** Tapping the star on a stop with more than one line or direction opens a picker: keep *All lines and directions* (as before), or choose *Only some* and pick lines and directions such as *Frankston to City*. The favourite then shows only those departures on For You and in the widget, with the chosen lines under its name. Stops with a single line and direction are added straight away. Change a favourite's lines later from its menu with *Choose lines*.
+
 ### Changed
 - Release builds are signed with your own release key when `release.storeFile`, `release.storePassword`, `release.keyAlias` and `release.keyPassword` are set in `local.properties`. Without them (a fresh clone, CI) they still fall back to the debug key.
 

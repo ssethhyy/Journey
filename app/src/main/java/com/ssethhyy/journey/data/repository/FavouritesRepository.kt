@@ -12,6 +12,7 @@ import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
+import com.ssethhyy.journey.data.model.Departure
 import com.ssethhyy.journey.data.model.Stop
 import com.ssethhyy.journey.data.model.TransportMode
 import kotlinx.coroutines.flow.Flow
@@ -20,6 +21,23 @@ import kotlinx.coroutines.flow.map
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.builtins.ListSerializer
 import kotlinx.serialization.json.Json
+
+/** One line (and optionally one direction) a favourite is limited to. */
+@Serializable
+data class FavouriteLine(
+    val routeId: Int,
+    /** "Frankston", "96", "246" as shown on route badges. */
+    val routeLabel: String,
+    /** Null means both directions of the line. */
+    val directionId: Int? = null,
+    val directionName: String? = null,
+) {
+    fun matches(departure: Departure): Boolean =
+        departure.route?.id == routeId && (directionId == null || departure.directionId == directionId)
+
+    /** "Frankston to City", or just "Frankston" for both directions. */
+    val label: String get() = listOfNotNull(routeLabel, directionName?.let { "to $it" }).joinToString(" ")
+}
 
 @Serializable
 data class FavouriteStop(
@@ -31,10 +49,21 @@ data class FavouriteStop(
     val longitude: Double = 0.0,
     val nickname: String? = null,
     val addedAtEpochMs: Long = 0,
+    /** The lines and directions to show. Empty means every departure from the stop. */
+    val lines: List<FavouriteLine> = emptyList(),
 ) {
     val mode: TransportMode get() = TransportMode.fromRouteType(routeType)
     val key: String get() = Stop.stopKey(mode, stopId)
     val displayName: String get() = nickname?.takeIf { it.isNotBlank() } ?: name
+
+    val showsEverything: Boolean get() = lines.isEmpty()
+
+    /** Departures this favourite cares about. */
+    fun filter(departures: List<Departure>): List<Departure> =
+        if (lines.isEmpty()) departures else departures.filter { d -> lines.any { it.matches(d) } }
+
+    /** "Frankston to City · 96" for a favourite limited to some lines, null when it shows everything. */
+    val linesSummary: String? get() = lines.takeIf { it.isNotEmpty() }?.joinToString(" · ") { it.label }
 
     fun toStop(): Stop = Stop(
         id = stopId,
@@ -46,7 +75,7 @@ data class FavouriteStop(
     )
 
     companion object {
-        fun from(stop: Stop, now: Long = System.currentTimeMillis()) = FavouriteStop(
+        fun from(stop: Stop, now: Long = System.currentTimeMillis(), lines: List<FavouriteLine> = emptyList()) = FavouriteStop(
             stopId = stop.id,
             routeType = stop.mode.routeType,
             name = stop.name,
@@ -54,6 +83,7 @@ data class FavouriteStop(
             latitude = stop.latitude,
             longitude = stop.longitude,
             addedAtEpochMs = now,
+            lines = lines,
         )
     }
 }
@@ -74,6 +104,9 @@ object FavouritesCodec {
         if (list.any { it.key == item.key }) list else list + item
 
     fun remove(list: List<FavouriteStop>, key: String): List<FavouriteStop> = list.filterNot { it.key == key }
+
+    fun setLines(list: List<FavouriteStop>, key: String, lines: List<FavouriteLine>): List<FavouriteStop> =
+        list.map { if (it.key == key) it.copy(lines = lines.distinctBy { l -> l.routeId to l.directionId }) else it }
 
     fun rename(list: List<FavouriteStop>, key: String, nickname: String?): List<FavouriteStop> =
         list.map { if (it.key == key) it.copy(nickname = nickname?.trim()?.takeIf { n -> n.isNotEmpty() }) else it }
@@ -111,7 +144,13 @@ class FavouritesRepository(context: Context) {
         }
     }
 
-    suspend fun add(stop: Stop) = update { FavouritesCodec.add(it, FavouriteStop.from(stop)) }
+    suspend fun add(stop: Stop, lines: List<FavouriteLine> = emptyList()) = update { list ->
+        if (list.any { it.key == stop.key }) FavouritesCodec.setLines(list, stop.key, lines) else FavouritesCodec.add(list, FavouriteStop.from(stop, lines = lines))
+    }
+
+    suspend fun setLines(stopKey: String, lines: List<FavouriteLine>) = update { FavouritesCodec.setLines(it, stopKey, lines) }
+
+    suspend fun isFavourite(stopKey: String): Boolean = favourites.first().any { it.key == stopKey }
 
     suspend fun remove(stopKey: String) = update { FavouritesCodec.remove(it, stopKey) }
 

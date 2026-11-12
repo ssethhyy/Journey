@@ -122,7 +122,7 @@ class AddFavouriteViewModel(private val container: AppContainer) : ViewModel() {
         _results.value = loadCatching { container.ptvRepository.search(term).stops }
     }
 
-    fun toggle(stop: Stop) = viewModelScope.launch { container.favouritesRepository.toggle(stop) }
+    fun toggle(stop: Stop) = viewModelScope.launch { container.toggleFavourite(stop) }
 }
 
 private enum class AddSource(val label: String) { NEARBY("Nearby"), SEARCH("Search") }

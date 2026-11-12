@@ -152,7 +152,8 @@ fun HomeScreen(requestedTab: HomeTab?, onTabRequestHandled: () -> Unit) {
     val blurAvailable = rememberBlurAvailable()
     val navInset = WindowInsets.navigationBars.getBottom(density)
     val blurRadius by animateFloatAsState(
-        targetValue = if (blurAvailable && showBars) with(density) { 18.dp.toPx() } else 0f,
+        // The bottom-bar style blurs every page from the app root (appEdgeBlur); only the top pill style needs this.
+        targetValue = if (blurAvailable && showBars && !usesBottomBar()) with(density) { 18.dp.toPx() } else 0f,
         animationSpec = tween(350),
         label = "nav_blur",
     )

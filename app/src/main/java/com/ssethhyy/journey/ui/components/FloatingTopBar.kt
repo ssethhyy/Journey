@@ -9,6 +9,7 @@
 
 package com.ssethhyy.journey.ui.components
 
+import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
@@ -224,6 +225,8 @@ private fun TopPillBar(
  */
 @Composable
 fun Modifier.floatingBarBlur(topInset: Dp): Modifier {
+    // In the bottom-bar style the whole app gets one status bar blur (appEdgeBlur), so pages don't add their own.
+    if (usesBottomBar()) return this
     val density = LocalDensity.current
     val available = rememberBlurAvailable()
     val reach = topInset + 28.dp
@@ -293,4 +296,43 @@ fun PullRefreshHaptics(state: androidx.compose.material3.pulltorefresh.PullToRef
             .distinctUntilChanged()
             .collect { ready -> if (ready && !refreshing) HapticUtil.performRefreshReadyHaptic(view) }
     }
+}
+
+/**
+ * Bottom-bar style: progressive blur for every page at once, behind the status bar at the top and behind the
+ * floating bar at the bottom. The bottom one fades away while the bar is hidden (scrolling down a list) and comes
+ * back with it.
+ */
+@Composable
+fun Modifier.appEdgeBlur(barVisible: Boolean): Modifier {
+    val density = LocalDensity.current
+    val available = rememberBlurAvailable()
+    val statusTop = WindowInsets.statusBars.getTop(density).toFloat()
+    val navBottom = WindowInsets.navigationBars.getBottom(density).toFloat()
+    // Only a little past the status bar, so overlays that sit just below it (the map's filter chips) stay sharp.
+    val topReach = statusTop + with(density) { 8.dp.toPx() }
+    val bottomReach = navBottom + with(density) { 104.dp.toPx() }
+    val topRadius = if (available) with(density) { 24.dp.toPx() } else 0f
+    val bottomRadius by androidx.compose.animation.core.animateFloatAsState(
+        targetValue = if (available && barVisible) with(density) { 18.dp.toPx() } else 0f,
+        animationSpec = androidx.compose.animation.core.tween(350),
+        label = "nav_blur",
+    )
+    val tint = MaterialTheme.colorScheme.surface
+    return this
+        .progressiveBlur(bottomRadius, bottomReach, BlurDirection.BOTTOM)
+        .progressiveBlur(topRadius, topReach, BlurDirection.TOP)
+        .drawWithContent {
+            drawContent()
+            val strength = if (available) 0.55f else 0.85f
+            drawRect(
+                Brush.verticalGradient(
+                    0f to tint.copy(alpha = strength),
+                    (statusTop / topReach).coerceIn(0f, 1f) to tint.copy(alpha = strength * 0.6f),
+                    1f to Color.Transparent,
+                    endY = topReach,
+                ),
+                size = Size(size.width, topReach),
+            )
+        }
 }

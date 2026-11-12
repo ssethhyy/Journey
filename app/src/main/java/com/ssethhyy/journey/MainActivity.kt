@@ -6,6 +6,7 @@
 
 package com.ssethhyy.journey
 
+import com.ssethhyy.journey.ui.components.appEdgeBlur
 import androidx.compose.ui.Alignment
 import androidx.compose.foundation.layout.Box
 import com.ssethhyy.journey.ui.components.LocalBarStyle
@@ -229,6 +230,16 @@ fun JourneyRoot(
                 backStack = backStack,
                 modifier = Modifier
                     .fillMaxSize()
+                    .then(
+                        if (barStyle == BarStyle.BOTTOM_BAR) {
+                            val barVisible = when (val spec = chrome.current) {
+                                is com.ssethhyy.journey.ui.components.ChromeSpec.Tabs -> spec.visible
+                                is com.ssethhyy.journey.ui.components.ChromeSpec.Page -> true
+                                null -> false
+                            }
+                            Modifier.appEdgeBlur(barVisible)
+                        } else Modifier,
+                    )
                     .background(MaterialTheme.colorScheme.surface),
                 onBack = { navigator.back() },
                 entryDecorators = listOf(

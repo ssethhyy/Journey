@@ -383,6 +383,53 @@ fun SettingsScreen() {
                 }
             }
 
+            item(key = "stop_alerts") {
+                SectionLabel("Stop alerts")
+                RoundedCardContainer {
+                    IconToggleItem(
+                        icon = Sym.NotificationsActive,
+                        title = "Full-screen alert to get off",
+                        description = "While a journey is tracked, fills the screen when it's time to get off, from your location and the service's arrival time",
+                        isChecked = settings.stopAlerts,
+                        onCheckedChange = { vm.update { setStopAlerts(it) } },
+                    )
+                    if (settings.stopAlerts) {
+                        IconToggleItem(
+                            icon = Sym.Vibration,
+                            title = "Vibrate",
+                            description = "Never rings. Follows your phone: no vibration when it's on silent",
+                            isChecked = settings.stopAlertVibrate,
+                            onCheckedChange = { vm.update { setStopAlertVibrate(it) } },
+                        )
+                        if (!com.ssethhyy.journey.tracking.StopAlertNotifier.canShowFullScreen(context)) {
+                            ActionItem(
+                                icon = Sym.Warning,
+                                title = "Allow full-screen alerts",
+                                description = "Android needs your OK before an app can fill the screen",
+                                onClick = { runCatching { context.startActivity(com.ssethhyy.journey.tracking.StopAlertNotifier.fullScreenSettingsIntent(context)) } },
+                            )
+                        }
+                        ActionItem(
+                            icon = Sym.Visibility,
+                            title = "Preview the alert",
+                            showChevron = false,
+                            onClick = {
+                                val sample = com.ssethhyy.journey.tracking.StopAlert(
+                                    key = "preview",
+                                    stopName = "Flinders Street Station",
+                                    mode = com.ssethhyy.journey.data.model.TransportMode.TRAIN,
+                                    instruction = com.ssethhyy.journey.tracking.StopAlertLogic.instruction(com.ssethhyy.journey.data.model.TransportMode.TRAIN),
+                                    detail = "Platform 6",
+                                    arrival = java.time.Instant.now().plusSeconds(90),
+                                    routeLabel = "Frankston line",
+                                )
+                                com.ssethhyy.journey.tracking.StopAlertNotifier.show(context, sample, vibrate = settings.stopAlertVibrate)
+                            },
+                        )
+                    }
+                }
+            }
+
             item(key = "game") {
                 SectionLabel("Game")
                 RoundedCardContainer {

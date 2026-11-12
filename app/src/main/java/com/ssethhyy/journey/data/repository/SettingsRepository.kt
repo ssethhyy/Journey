@@ -86,6 +86,10 @@ data class AppSettings(
     val gameSkipNearby: Boolean = true,
     val gameChallenges: Boolean = true,
     val gameRollAnimation: Boolean = true,
+    /** Full-screen "get off here" alert while a journey is tracked. */
+    val stopAlerts: Boolean = true,
+    /** Whether that alert vibrates (never on silent). It never rings. */
+    val stopAlertVibrate: Boolean = true,
     val nearbyModes: Set<TransportMode> = TransportMode.entries.toSet(),
     val mapModes: Set<TransportMode> = TransportMode.entries.toSet(),
     val mapFollowsTheme: Boolean = true,
@@ -132,6 +136,8 @@ class SettingsRepository(context: Context) {
         val GAME_SKIP_NEARBY = booleanPreferencesKey("game_skip_nearby")
         val GAME_CHALLENGES = booleanPreferencesKey("game_challenges")
         val GAME_ANIMATION = booleanPreferencesKey("game_animation")
+        val STOP_ALERTS = booleanPreferencesKey("stop_alerts")
+        val STOP_ALERT_VIBRATE = booleanPreferencesKey("stop_alert_vibrate")
         val NEARBY_MODES = stringSetPreferencesKey("nearby_modes")
         val MAP_MODES = stringSetPreferencesKey("map_modes")
         val MAP_FOLLOWS_THEME = booleanPreferencesKey("map_follows_theme")
@@ -175,6 +181,8 @@ class SettingsRepository(context: Context) {
             gameSkipNearby = p[Keys.GAME_SKIP_NEARBY] ?: true,
             gameChallenges = p[Keys.GAME_CHALLENGES] ?: true,
             gameRollAnimation = p[Keys.GAME_ANIMATION] ?: true,
+            stopAlerts = p[Keys.STOP_ALERTS] ?: true,
+            stopAlertVibrate = p[Keys.STOP_ALERT_VIBRATE] ?: true,
             nearbyModes = p[Keys.NEARBY_MODES]?.toModes() ?: TransportMode.entries.toSet(),
             mapModes = p[Keys.MAP_MODES]?.toModes() ?: TransportMode.entries.toSet(),
             mapFollowsTheme = p[Keys.MAP_FOLLOWS_THEME] ?: true,
@@ -231,6 +239,8 @@ class SettingsRepository(context: Context) {
     suspend fun setGameSkipNearby(enabled: Boolean) = store.edit { it[Keys.GAME_SKIP_NEARBY] = enabled }
     suspend fun setGameChallenges(enabled: Boolean) = store.edit { it[Keys.GAME_CHALLENGES] = enabled }
     suspend fun setGameRollAnimation(enabled: Boolean) = store.edit { it[Keys.GAME_ANIMATION] = enabled }
+    suspend fun setStopAlerts(enabled: Boolean) = store.edit { it[Keys.STOP_ALERTS] = enabled }
+    suspend fun setStopAlertVibrate(enabled: Boolean) = store.edit { it[Keys.STOP_ALERT_VIBRATE] = enabled }
     suspend fun setNearbyModes(modes: Set<TransportMode>) = store.edit { it[Keys.NEARBY_MODES] = modes.map { m -> m.name }.toSet() }
     suspend fun setMapModes(modes: Set<TransportMode>) = store.edit { it[Keys.MAP_MODES] = modes.map { m -> m.name }.toSet() }
     suspend fun setMapFollowsTheme(enabled: Boolean) = store.edit { it[Keys.MAP_FOLLOWS_THEME] = enabled }

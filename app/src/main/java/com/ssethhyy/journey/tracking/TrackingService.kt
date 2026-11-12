@@ -98,7 +98,14 @@ class TrackingService : Service() {
         val placeholder = TrackingStatus("Tracking…", "Getting live times", "…", 0f, false, false, null, Instant.now())
         val notification = buildNotification(target, placeholder)
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
-            startForeground(NOTIFICATION_ID, notification, ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE)
+            // A tracked journey also uses location (for the "get off here" alert) when location is allowed.
+            val type = if (target is TrackingTarget.Trip && appContainer.locationProvider.hasPermission()) {
+                ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE or ServiceInfo.FOREGROUND_SERVICE_TYPE_LOCATION
+            } else {
+                ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE
+            }
+            runCatching { startForeground(NOTIFICATION_ID, notification, type) }
+                .onFailure { startForeground(NOTIFICATION_ID, notification, ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE) }
         } else {
             startForeground(NOTIFICATION_ID, notification)
         }
@@ -115,6 +122,7 @@ class TrackingService : Service() {
         var lastFetch = Instant.EPOCH
         var departure: com.ssethhyy.journey.data.model.Departure? = null
         var lastCrowdAlert: Occupancy? = null
+        val stopAlertsShown = mutableSetOf<String>()
         var journey = (target as? TrackingTarget.Trip)?.let { container.journeyRepository.journey(it.journeyId) }
 
         while (scope.isActive) {
@@ -132,6 +140,8 @@ class TrackingService : Service() {
                         .onSuccess { refreshed -> if (refreshed != null) journey = refreshed }
                 }
             }
+            // "Get off here": once per ride, when you're close to the stop or it's about to arrive.
+            if (target is TrackingTarget.Trip) journey?.let { j -> checkStopAlert(j, now, stopAlertsShown) }
             val status = when (target) {
                 is TrackingTarget.Service -> TrackingLogic.serviceStatus(target, departure, startedAt, now)
                 is TrackingTarget.Trip -> journey?.let { TrackingLogic.journeyStatus(it, target.toName, now) }
@@ -152,6 +162,19 @@ class TrackingService : Service() {
             delay(15_000)
         }
         stopTracking()
+    }
+
+    private suspend fun checkStopAlert(journey: com.ssethhyy.journey.data.planner.Journey, now: Instant, shown: MutableSet<String>) {
+        val container = appContainer
+        val settings = container.settingsRepository.current()
+        if (!settings.stopAlerts) return
+        // Only look up the location while a ride is under way, since that's the only time it matters.
+        val riding = journey.legs.any { it.kind == com.ssethhyy.journey.data.planner.LegKind.TRANSIT && !now.isBefore(it.start) && !now.isAfter(it.end.plusSeconds(120)) }
+        if (!riding) return
+        val here = runCatching { container.locationProvider.currentLocation() }.getOrNull()
+        val alert = StopAlertLogic.due(journey, here, now, shown) ?: return
+        shown += alert.key
+        StopAlertNotifier.show(this, alert, vibrate = settings.stopAlertVibrate)
     }
 
     /** Alerts once when the tracked service reaches the user's crowding level, again only if it gets worse. */

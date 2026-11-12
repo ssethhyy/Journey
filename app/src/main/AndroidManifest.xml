@@ -13,6 +13,10 @@
     <uses-permission android:name="android.permission.POST_PROMOTED_NOTIFICATIONS" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SPECIAL_USE" />
+    <!-- Location while a tracked journey runs in the background, for the "get off here" alert. -->
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_LOCATION" />
+    <!-- The "get off here" alert opens full screen, like an alarm. -->
+    <uses-permission android:name="android.permission.USE_FULL_SCREEN_INTENT" />
 
     <!-- Package visibility for the Essentials island host (approval status, launching it). -->
     <queries>
@@ -91,10 +95,20 @@
             android:label="@string/island_label"
             android:targetActivity=".MainActivity" />
 
+        <activity
+            android:name=".tracking.StopAlertActivity"
+            android:exported="false"
+            android:excludeFromRecents="true"
+            android:launchMode="singleTask"
+            android:taskAffinity=""
+            android:showWhenLocked="true"
+            android:turnScreenOn="true"
+            android:theme="@style/Theme.Journey" />
+
         <service
             android:name=".tracking.TrackingService"
             android:exported="false"
-            android:foregroundServiceType="specialUse">
+            android:foregroundServiceType="specialUse|location">
             <property
                 android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
                 android:value="Live countdown for a public transport service the user chose to track" />

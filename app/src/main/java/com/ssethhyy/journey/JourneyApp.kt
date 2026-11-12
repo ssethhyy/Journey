@@ -39,6 +39,8 @@ import kotlinx.coroutines.launch
 data class MapFocusRequest(val stop: Stop, val id: Long = System.nanoTime())
 
 /** A request for the Plan tab to plan a trip to [to] (optionally from [from]). */
+data class JourneyMapRequest(val journeyId: String, val fromName: String, val toName: String)
+
 data class FavouritePickerRequest(
     val stop: com.ssethhyy.journey.data.model.Stop,
     val current: List<com.ssethhyy.journey.data.repository.FavouriteLine>,
@@ -93,6 +95,19 @@ class AppContainer(
 
     /** A destination the Plan tab should pick up (e.g. a saved place tapped on Favourites). */
     val planRequest: StateFlow<PlanRequest?> = _planRequest.asStateFlow()
+
+    private val _journeyMap = MutableStateFlow<JourneyMapRequest?>(null)
+
+    /** A planned journey to show full size on the Map tab. */
+    val journeyMap: StateFlow<JourneyMapRequest?> = _journeyMap.asStateFlow()
+
+    fun showJourneyOnMap(request: JourneyMapRequest) {
+        _journeyMap.value = request
+    }
+
+    fun closeJourneyMap() {
+        _journeyMap.value = null
+    }
 
     private val _favouritePicker = MutableStateFlow<FavouritePickerRequest?>(null)
 

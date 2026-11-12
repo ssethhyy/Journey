@@ -6,6 +6,16 @@
 
 package com.ssethhyy.journey.ui.screens.plan
 
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.Row
+import androidx.compose.material3.Surface
+import androidx.compose.foundation.clickable
+import com.mapbox.maps.plugin.gestures.gestures
+import com.mapbox.maps.extension.compose.MapEffect
+import com.ssethhyy.journey.ui.components.hapticClick
+import com.ssethhyy.journey.ui.components.JourneyRouteLayers
+import com.ssethhyy.journey.ui.components.JourneyGeometry
 import androidx.compose.ui.graphics.toArgb
 import com.mapbox.maps.plugin.annotation.generated.CircleAnnotationOptions
 import com.mapbox.maps.plugin.annotation.generated.PolylineAnnotationOptions
@@ -100,6 +110,7 @@ fun JourneyDetailScreen(key: JourneyDetailKey) {
     var updatedAt by remember { mutableStateOf<java.time.Instant?>(java.time.Instant.now()) }
     var refreshing by remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
+    val openLegStop = com.ssethhyy.journey.ui.components.rememberLegStopOpener()
     val refresh: () -> Unit = {
         if (!refreshing) {
             scope.launch {
@@ -161,7 +172,7 @@ fun JourneyDetailScreen(key: JourneyDetailKey) {
             contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = padding.calculateTopPadding(), bottom = pageBottomInset(104.dp)),
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
-            item(key = "map") { JourneyMap(journey) }
+            item(key = "map") { JourneyMap(journey, onOpen = { navigator.showJourneyOnMap(key.journeyId, key.fromName, key.toName) }) }
             item(key = "live") { LiveStatusRow(updatedAt = updatedAt, refreshing = refreshing, onRefresh = refresh) }
             item(key = "chips") {
                 val chipColors = AssistChipDefaults.assistChipColors(containerColor = MaterialTheme.colorScheme.surfaceContainerHigh)
@@ -190,7 +201,11 @@ fun JourneyDetailScreen(key: JourneyDetailKey) {
             item(key = "timeline") {
                 RoundedCardContainer(spacing = 0.dp) {
                     Box(Modifier.padding(vertical = 12.dp)) {
-                        JourneyTimeline(journey, destinationName = key.toName)
+                        JourneyTimeline(
+                            journey,
+                            destinationName = key.toName,
+                            onStopClick = { leg, boarding -> openLegStop(leg, boarding) },
+                        )
                     }
                 }
             }
@@ -206,76 +221,72 @@ fun JourneyDetailScreen(key: JourneyDetailKey) {
     }
 }
 
+/**
+ * A fixed preview of the route: it can't be dragged or zoomed, so it never fights the page's scrolling. Tap it to
+ * explore the journey full size on the Map tab.
+ */
 @Composable
-private fun JourneyMap(journey: Journey) {
+private fun JourneyMap(journey: Journey, onOpen: () -> Unit) {
     val container = LocalContext.current.appContainer
     val settings = container.settingsRepository.settings.collectAsStateWithLifecycle(initialValue = null).value ?: return
     val token = settings.mapboxTokenOverride.ifBlank { stringResource(R.string.mapbox_access_token) }
     if (!token.startsWith("pk.") || !container.mapRenderingEnabled) return
-    val dark = isAppInDarkTheme(settings.themeMode)
-    val legs = journey.legs.filter { it.path.size > 1 }
-    val all = legs.flatMap { it.path }.map { Point.fromLngLat(it.longitude, it.latitude) }
+    val dark = isAppInDarkTheme(settings.themeMode) && settings.mapFollowsTheme
+    val all = remember(journey) { JourneyGeometry.allPoints(JourneyGeometry.drawable(journey)) }
     if (all.size < 2) return
     val viewport = rememberMapViewportState()
     LaunchedEffect(journey.id) {
         val camera = viewport.cameraForCoordinates(all, CameraOptions.Builder().build(), EdgeInsets(56.0, 56.0, 56.0, 56.0), null, null)
         viewport.setCameraOptions(camera)
     }
-    val walkColor = MaterialTheme.colorScheme.outline
-    MapboxMap(
-        modifier = Modifier
+    Box(
+        Modifier
             .fillMaxWidth()
             .height(260.dp)
             .clip(RoundedCornerShape(28.dp)),
-        mapViewportState = viewport,
-        compass = {},
-        scaleBar = {},
-        style = {
-            MapboxStandardStyle {
-                lightPreset = if (dark && settings.mapFollowsTheme) LightPresetValue.NIGHT else LightPresetValue.DAY
-                show3dObjects = BooleanValue(false)
-            }
-        },
     ) {
-        // One line per leg in its mode's colour (train blue, tram green, bus orange, V/Line purple, walking white),
-        // each starting where the previous one ended so the route reads as one joined line. A thin dark border on
-        // every leg keeps light colours, white walking especially, visible on the day map.
-        val segments = legs.mapIndexed { index, leg ->
-            val points = leg.path.map { Point.fromLngLat(it.longitude, it.latitude) }
-            val joined = legs.getOrNull(index - 1)?.path?.lastOrNull()?.let { listOf(Point.fromLngLat(it.longitude, it.latitude)) + points } ?: points
-            leg to joined
-        }
-        // Emissive, so Mapbox Standard's night lighting doesn't dim the colours to near black.
-        val lineState = remember { PolylineAnnotationGroupState().apply { lineEmissiveStrength = 1.0; lineJoin = LineJoin.ROUND } }
-        PolylineAnnotationGroup(
-            annotations = segments.map { (leg, points) ->
-                PolylineAnnotationOptions()
-                    .withPoints(points)
-                    .withLineColor(leg.mapColor().toArgb())
-                    .withLineWidth(if (leg.kind == LegKind.WALK) 4.0 else 6.0)
-                    .withLineBorderColor(Color.Black.copy(alpha = if (dark && settings.mapFollowsTheme) 0.6f else 0.35f).toArgb())
-                    .withLineBorderWidth(1.5)
+        MapboxMap(
+            modifier = Modifier.fillMaxSize(),
+            mapViewportState = viewport,
+            compass = {},
+            scaleBar = {},
+            style = {
+                MapboxStandardStyle {
+                    lightPreset = if (dark) LightPresetValue.NIGHT else LightPresetValue.DAY
+                    show3dObjects = BooleanValue(false)
+                }
             },
-            polylineAnnotationGroupState = lineState,
+        ) {
+            MapEffect(Unit) { mapView ->
+                mapView.gestures.updateSettings {
+                    scrollEnabled = false
+                    pinchToZoomEnabled = false
+                    rotateEnabled = false
+                    pitchEnabled = false
+                    doubleTapToZoomInEnabled = false
+                    doubleTouchToZoomOutEnabled = false
+                    quickZoomEnabled = false
+                }
+            }
+            JourneyRouteLayers(journey, darkMap = dark)
+        }
+        // The map's own touch handling would swallow taps, so a clear layer on top takes them instead.
+        Box(
+            Modifier
+                .matchParentSize()
+                .clickable(onClickLabel = "Open the journey on the map", onClick = hapticClick(onOpen)),
         )
-        val start = all.first()
-        val end = all.last()
-        val circleState = remember { CircleAnnotationGroupState().apply { circleEmissiveStrength = 1.0 } }
-        CircleAnnotationGroup(
-            annotations = listOf(
-                CircleAnnotationOptions().withPoint(start).withCircleRadius(7.0).withCircleColor(Color.White.toArgb())
-                    .withCircleStrokeColor(Color(0xFF1B6EF3).toArgb()).withCircleStrokeWidth(4.0),
-                CircleAnnotationOptions().withPoint(end).withCircleRadius(8.0).withCircleColor(Color(0xFFD93025).toArgb())
-                    .withCircleStrokeColor(Color.White.toArgb()).withCircleStrokeWidth(3.0),
-            ),
-            circleAnnotationGroupState = circleState,
-        )
+        Surface(
+            shape = RoundedCornerShape(16.dp),
+            color = MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.92f),
+            modifier = Modifier.align(Alignment.TopEnd).padding(10.dp),
+        ) {
+            Row(Modifier.padding(horizontal = 10.dp, vertical = 6.dp), verticalAlignment = Alignment.CenterVertically) {
+                Icon(Sym.Map, null, Modifier.size(16.dp))
+                Spacer(Modifier.width(6.dp))
+                Text("Explore", style = MaterialTheme.typography.labelLarge)
+            }
+        }
     }
 }
 
-/** The colour a leg is drawn in on the journey map: its PTV mode colour, white for walking. */
-private fun com.ssethhyy.journey.data.planner.JourneyLeg.mapColor(): Color = when {
-    kind == LegKind.WALK -> Color.White
-    mode != null -> com.ssethhyy.journey.ui.theme.ModeColors.of(mode)
-    else -> badgeColor()
-}

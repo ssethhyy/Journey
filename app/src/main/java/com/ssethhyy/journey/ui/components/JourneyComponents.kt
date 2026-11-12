@@ -184,12 +184,18 @@ fun formatDuration(minutes: Long): String = when {
 
 /** Leg-by-leg breakdown of a journey. */
 @Composable
-fun JourneyTimeline(journey: Journey, destinationName: String, modifier: Modifier = Modifier) {
+fun JourneyTimeline(
+    journey: Journey,
+    destinationName: String,
+    modifier: Modifier = Modifier,
+    /** Tapping a stop: the leg, and true for where you get on (false for where you get off). */
+    onStopClick: ((JourneyLeg, Boolean) -> Unit)? = null,
+) {
     Column(modifier.fillMaxWidth()) {
         journey.legs.forEachIndexed { index, leg ->
             when (leg.kind) {
                 LegKind.WALK -> WalkLegRow(leg, isLast = index == journey.legs.lastIndex, destinationName = destinationName)
-                else -> TransitLegBlock(leg)
+                else -> TransitLegBlock(leg, onStopClick)
             }
         }
         StopPoint(time = journey.end, title = destinationName.ifBlank { "Arrive" }, subtitle = "Arrive", color = MaterialTheme.colorScheme.primary, isEnd = true)
@@ -232,7 +238,7 @@ private fun WalkLegRow(leg: JourneyLeg, isLast: Boolean, destinationName: String
 }
 
 @Composable
-private fun TransitLegBlock(leg: JourneyLeg) {
+private fun TransitLegBlock(leg: JourneyLeg, onStopClick: ((JourneyLeg, Boolean) -> Unit)?) {
     val view = LocalView.current
     var showStops by rememberSaveable(leg.start.epochSecond, leg.label) { mutableStateOf(false) }
     val lineColor = leg.badgeColor()
@@ -243,6 +249,7 @@ private fun TransitLegBlock(leg: JourneyLeg) {
         color = lineColor,
         delayMinutes = leg.departureDelayMinutes,
         realTime = leg.realTime,
+        onClick = onStopClick?.let { { it(leg, true) } },
     )
     Row(
         Modifier
@@ -310,6 +317,7 @@ private fun TransitLegBlock(leg: JourneyLeg) {
         title = leg.toName,
         subtitle = leg.arrivalPlatform?.let { "Platform $it" } ?: "Get off",
         color = lineColor,
+        onClick = onStopClick?.let { { it(leg, false) } },
     )
 }
 
@@ -322,10 +330,20 @@ private fun StopPoint(
     isEnd: Boolean = false,
     delayMinutes: Long? = null,
     realTime: Boolean = false,
+    onClick: (() -> Unit)? = null,
 ) {
+    val view = LocalView.current
     Row(
         Modifier
             .fillMaxWidth()
+            .then(
+                if (onClick != null) {
+                    Modifier.clickable(onClickLabel = "Open $title") {
+                        HapticUtil.performUIHaptic(view)
+                        onClick()
+                    }
+                } else Modifier,
+            )
             .padding(horizontal = 16.dp, vertical = 4.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
@@ -354,6 +372,7 @@ private fun StopPoint(
             Text(title, style = MaterialTheme.typography.titleSmall, maxLines = 2, overflow = TextOverflow.Ellipsis)
             if (subtitle != null) Text(subtitle, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
+        if (onClick != null) Icon(Sym.ChevronRight, null, tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(20.dp))
     }
 }
 

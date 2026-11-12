@@ -128,6 +128,16 @@ class Navigator(
         container.requestPlan(PlanRequest(to, from))
     }
 
+    /**
+     * Opens a planned journey full size on the Map tab, with its legs to explore. The Map tab lives on the home
+     * screen, so the journey page is closed here; Back on the map reopens it.
+     */
+    fun showJourneyOnMap(journeyId: String, fromName: String, toName: String) {
+        container.showJourneyOnMap(com.ssethhyy.journey.JourneyMapRequest(journeyId, fromName, toName))
+        while (backStack.size > 1) backStack.removeAt(backStack.lastIndex)
+        selectTab(HomeTab.MAP)
+    }
+
     /** Returns to the home screen and switches to [tab]. */
     fun goToTab(tab: HomeTab) {
         while (backStack.size > 1) backStack.removeAt(backStack.lastIndex)

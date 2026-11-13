@@ -113,6 +113,7 @@ class MainActivity : ComponentActivity() {
             settingsLoaded = true
         }
         splashScreen.setKeepOnScreenCondition { !settingsLoaded && SystemClock.uptimeMillis() - splashStart < 800 }
+        showUpdateIfAsked(intent)
         setupExitAnimation(splashScreen)
 
         setContent {
@@ -136,8 +137,30 @@ class MainActivity : ComponentActivity() {
         }
     }
 
+    override fun onStart() {
+        super.onStart()
+        // Look for a newer Journey each time the app is opened (at most every few hours), never in the background.
+        val container = appContainer
+        container.appScope.launch {
+            val settings = container.settingsRepository.current()
+            if (settings.updateChecks) container.updateManager.checkOnOpen(settings.updatePrereleases)
+        }
+    }
+
+    /** The "update available" notification opens the update sheet. */
+    private fun showUpdateIfAsked(intent: Intent?) {
+        if (intent?.getBooleanExtra(com.ssethhyy.journey.data.update.UpdateManager.EXTRA_SHOW_UPDATE, false) != true) return
+        val container = appContainer
+        container.appScope.launch {
+            val manager = container.updateManager
+            val update = manager.available.value ?: runCatching { manager.check(container.settingsRepository.current().updatePrereleases) }.getOrNull()
+            manager.showPrompt(update)
+        }
+    }
+
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
+        showUpdateIfAsked(intent)
         stopFromIntent(intent)?.let { widgetStop.value = it }
         if (isIslandSettingsIntent(intent)) openIsland.value = true
         mykiCardFromIntent(intent)?.let { openMykiCard.value = it }
@@ -277,6 +300,8 @@ fun JourneyRoot(
             }
             // Which lines and directions to favourite, whichever screen the star was tapped on.
             com.ssethhyy.journey.ui.screens.favourites.FavouritePickerHost()
+            // What's new in an available update, with the button to install it.
+            com.ssethhyy.journey.ui.screens.settings.UpdateSheetHost()
         }
     }
 }

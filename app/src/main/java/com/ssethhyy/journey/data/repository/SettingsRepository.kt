@@ -92,6 +92,10 @@ data class AppSettings(
     val stopAlertVibrate: Boolean = true,
     /** Where place search and the Map tab are limited to. */
     val searchRegion: com.ssethhyy.journey.data.planner.SearchRegion = com.ssethhyy.journey.data.planner.SearchRegion.VICTORIA,
+    /** Look for a newer Journey on GitHub when the app opens. */
+    val updateChecks: Boolean = true,
+    /** Offer pre-releases (betas) as well as full releases. */
+    val updatePrereleases: Boolean = false,
     val nearbyModes: Set<TransportMode> = TransportMode.entries.toSet(),
     val mapModes: Set<TransportMode> = TransportMode.entries.toSet(),
     val mapFollowsTheme: Boolean = true,
@@ -141,6 +145,8 @@ class SettingsRepository(context: Context) {
         val STOP_ALERTS = booleanPreferencesKey("stop_alerts")
         val STOP_ALERT_VIBRATE = booleanPreferencesKey("stop_alert_vibrate")
         val SEARCH_REGION = stringPreferencesKey("search_region")
+        val UPDATE_CHECKS = booleanPreferencesKey("update_checks")
+        val UPDATE_PRERELEASES = booleanPreferencesKey("update_prereleases")
         val NEARBY_MODES = stringSetPreferencesKey("nearby_modes")
         val MAP_MODES = stringSetPreferencesKey("map_modes")
         val MAP_FOLLOWS_THEME = booleanPreferencesKey("map_follows_theme")
@@ -187,6 +193,8 @@ class SettingsRepository(context: Context) {
             stopAlerts = p[Keys.STOP_ALERTS] ?: true,
             stopAlertVibrate = p[Keys.STOP_ALERT_VIBRATE] ?: true,
             searchRegion = p[Keys.SEARCH_REGION].enumOr(com.ssethhyy.journey.data.planner.SearchRegion.VICTORIA),
+            updateChecks = p[Keys.UPDATE_CHECKS] ?: true,
+            updatePrereleases = p[Keys.UPDATE_PRERELEASES] ?: false,
             nearbyModes = p[Keys.NEARBY_MODES]?.toModes() ?: TransportMode.entries.toSet(),
             mapModes = p[Keys.MAP_MODES]?.toModes() ?: TransportMode.entries.toSet(),
             mapFollowsTheme = p[Keys.MAP_FOLLOWS_THEME] ?: true,
@@ -246,6 +254,8 @@ class SettingsRepository(context: Context) {
     suspend fun setStopAlerts(enabled: Boolean) = store.edit { it[Keys.STOP_ALERTS] = enabled }
     suspend fun setStopAlertVibrate(enabled: Boolean) = store.edit { it[Keys.STOP_ALERT_VIBRATE] = enabled }
     suspend fun setSearchRegion(region: com.ssethhyy.journey.data.planner.SearchRegion) = store.edit { it[Keys.SEARCH_REGION] = region.name }
+    suspend fun setUpdateChecks(enabled: Boolean) = store.edit { it[Keys.UPDATE_CHECKS] = enabled }
+    suspend fun setUpdatePrereleases(enabled: Boolean) = store.edit { it[Keys.UPDATE_PRERELEASES] = enabled }
     suspend fun setNearbyModes(modes: Set<TransportMode>) = store.edit { it[Keys.NEARBY_MODES] = modes.map { m -> m.name }.toSet() }
     suspend fun setMapModes(modes: Set<TransportMode>) = store.edit { it[Keys.MAP_MODES] = modes.map { m -> m.name }.toSet() }
     suspend fun setMapFollowsTheme(enabled: Boolean) = store.edit { it[Keys.MAP_FOLLOWS_THEME] = enabled }

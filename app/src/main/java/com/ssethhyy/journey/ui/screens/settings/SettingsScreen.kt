@@ -391,6 +391,22 @@ fun SettingsScreen() {
                 }
             }
 
+            item(key = "updates") {
+                SectionLabel("Updates")
+                var checking by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf(false) }
+                val updateScope = androidx.compose.runtime.rememberCoroutineScope()
+                RoundedCornerUpdates(
+                    settings = settings,
+                    checking = checking,
+                    onCheck = {
+                        checking = true
+                        checkForUpdatesNow(context, updateScope, settings.updatePrereleases) { checking = false }
+                    },
+                    onToggleChecks = { vm.update { setUpdateChecks(it) } },
+                    onTogglePrereleases = { vm.update { setUpdatePrereleases(it) } },
+                )
+            }
+
             item(key = "stop_alerts") {
                 SectionLabel("Stop alerts")
                 RoundedCardContainer {
@@ -798,6 +814,39 @@ private fun NameField(current: String, onSave: (String) -> Unit) {
             modifier = Modifier
                 .weight(1f)
                 .onFocusChanged { if (!it.isFocused && text != current) onSave(text) },
+        )
+    }
+}
+
+@Composable
+private fun RoundedCornerUpdates(
+    settings: AppSettings,
+    checking: Boolean,
+    onCheck: () -> Unit,
+    onToggleChecks: (Boolean) -> Unit,
+    onTogglePrereleases: (Boolean) -> Unit,
+) {
+    RoundedCardContainer {
+        ActionItem(
+            icon = Sym.Download,
+            title = if (checking) "Checking…" else "Check for updates",
+            description = "You have Journey ${BuildConfig.VERSION_NAME}",
+            showChevron = false,
+            onClick = { if (!checking) onCheck() },
+        )
+        IconToggleItem(
+            icon = Sym.NotificationsActive,
+            title = "Check when Journey opens",
+            description = "Looks on GitHub at most every few hours and notifies you about a new version. Never checks in the background",
+            isChecked = settings.updateChecks,
+            onCheckedChange = onToggleChecks,
+        )
+        IconToggleItem(
+            icon = Sym.Info,
+            title = "Include pre-releases",
+            description = "Also offer beta versions that may be less polished",
+            isChecked = settings.updatePrereleases,
+            onCheckedChange = onTogglePrereleases,
         )
     }
 }

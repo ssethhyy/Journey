@@ -47,6 +47,7 @@ class TestJourneyApp : JourneyApp() {
             mapRenderingEnabled = false,
             plannerBaseUrl = baseUrl,
             crowdingBaseUrl = baseUrl,
+            githubBaseUrl = baseUrl,
             openDataKeyOverride = "test-open-data-key",
         )
 

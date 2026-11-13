@@ -7,6 +7,7 @@ All notable changes to Journey are documented here. The format follows
 ## [Unreleased]
 
 ### Added
+- **Updates from inside the app.** Journey checks GitHub for a newer version when you open it (at most every few hours, never in the background, so it costs no battery) and sends a notification when one is available. Tapping it, or *Settings → Updates → Check for updates*, opens a card with the new version's notes. *Install update* downloads it straight into the app (no browser) and opens Android's own *Update Journey?* prompt. Android asks once to let Journey install updates. Turn the check off, or include pre-releases, in *Settings → Updates*.
 - **Search stays in Victoria.** Place search on the Plan tab only returns places in Victoria (plus a little over the border, such as Albury), ranked from where you are or from Melbourne, so a search can no longer land overseas or in another state. The Map tab won't pan or zoom out beyond Victoria either. For interstate trips, switch *Settings → Map → Search and map area* to *Australia*. Stop and line search was already Victoria-only.
 
 ### Changed

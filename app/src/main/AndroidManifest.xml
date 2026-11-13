@@ -17,6 +17,8 @@
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_LOCATION" />
     <!-- The "get off here" alert opens full screen, like an alarm. -->
     <uses-permission android:name="android.permission.USE_FULL_SCREEN_INTENT" />
+    <!-- Installing Journey updates downloaded from GitHub (Android asks the user first). -->
+    <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />
 
     <!-- Package visibility for the Essentials island host (approval status, launching it). -->
     <queries>
@@ -104,6 +106,10 @@
             android:showWhenLocked="true"
             android:turnScreenOn="true"
             android:theme="@style/Theme.Journey" />
+
+        <receiver
+            android:name=".data.update.InstallResultReceiver"
+            android:exported="false" />
 
         <service
             android:name=".tracking.TrackingService"

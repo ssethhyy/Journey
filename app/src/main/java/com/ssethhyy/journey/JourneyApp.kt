@@ -56,6 +56,7 @@ class AppContainer(
     /** False where no GPU surface exists (Robolectric), so the map shows its placeholder. */
     val mapRenderingEnabled: Boolean = true,
     plannerBaseUrl: String = PlannerApi.DEFAULT_BASE_URL,
+    githubBaseUrl: String = com.ssethhyy.journey.data.update.GitHubReleasesApi.DEFAULT_BASE_URL,
     crowdingBaseUrl: String = com.ssethhyy.journey.data.crowding.CrowdingApi.DEFAULT_BASE_URL,
     /** A fixed Open Data key (tests); otherwise Settings, then the key built into the app. */
     openDataKeyOverride: String? = null,
@@ -80,6 +81,11 @@ class AppContainer(
     )
     val placesRepository = PlacesRepository(context)
     val commuteRepository = com.ssethhyy.journey.data.commute.CommuteRepository(context)
+    val updateManager = com.ssethhyy.journey.data.update.UpdateManager(
+        context,
+        com.ssethhyy.journey.data.update.GitHubReleasesApi(baseUrl = githubBaseUrl),
+        installedVersion = BuildConfig.VERSION_NAME,
+    )
     val mykiRepository = com.ssethhyy.journey.data.myki.MykiRepository(context)
     val fareConfigRepository = com.ssethhyy.journey.data.fare.FareConfigRepository(context)
     val journeyRepository = JourneyRepository(PlannerApi(plannerBaseUrl))

@@ -93,6 +93,9 @@ data class GeocodeResult(
     val latitude: Double,
     val longitude: Double,
     val type: String,
+    /** State or territory, such as "Victoria", when the planner knows it. */
+    val state: String? = null,
+    val country: String? = null,
 )
 
 object JourneyMapper {
@@ -177,6 +180,8 @@ object JourneyMapper {
             dto.name
         }
         return GeocodeResult(
+            state = dto.areas.firstOrNull { it.adminLevel == 4.0 }?.name,
+            country = dto.areas.firstOrNull { it.adminLevel == 2.0 }?.name,
             name = name,
             subtitle = locality,
             latitude = dto.lat,

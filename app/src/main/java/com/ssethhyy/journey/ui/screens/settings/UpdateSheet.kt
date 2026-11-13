@@ -80,7 +80,13 @@ private fun UpdateSheet(update: AvailableUpdate, onDismiss: () -> Unit) {
                 Icon(Sym.Download, null, Modifier.size(28.dp))
                 Spacer(Modifier.width(14.dp))
                 Column(Modifier.weight(1f)) {
-                    Text(update.title, style = MaterialTheme.typography.titleLargeEmphasized)
+                    // Release titles can be long ("Release v1.2.0: Full-screen arrival alerts, …"), so keep them compact.
+                    Text(
+                        update.title,
+                        style = if (update.title.length > 28) MaterialTheme.typography.titleMediumEmphasized else MaterialTheme.typography.titleLargeEmphasized,
+                        maxLines = 3,
+                        overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
+                    )
                     Text(
                         listOfNotNull(
                             "You have ${BuildConfig.VERSION_NAME}",
@@ -96,7 +102,8 @@ private fun UpdateSheet(update: AvailableUpdate, onDismiss: () -> Unit) {
         Column(
             Modifier
                 .fillMaxWidth()
-                .heightIn(max = 380.dp)
+                // Shorter while a download or a permission note is showing, so the buttons below always fit.
+                .heightIn(max = if (install is InstallState.Idle) 340.dp else 180.dp)
                 .verticalScroll(rememberScrollState()),
         ) {
             if (update.notes.isBlank()) {
@@ -119,7 +126,10 @@ private fun UpdateSheet(update: AvailableUpdate, onDismiss: () -> Unit) {
                 Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
                     Text("Allow Journey to install updates", style = MaterialTheme.typography.titleSmallEmphasized)
                     Text("Android asks once before an app can install its own updates. Turn on Allow from this source, then come back and tap Install update again.", style = MaterialTheme.typography.bodySmall)
-                    TextButton(onClick = { runCatching { context.startActivity(manager.installPermissionIntent()) } }) { Text("Open settings") }
+                    TextButton(
+                        onClick = { runCatching { context.startActivity(manager.installPermissionIntent()) } },
+                        colors = androidx.compose.material3.ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.onTertiaryContainer),
+                    ) { Text("Open settings") }
                 }
             }
             is InstallState.Failed -> Text(state.message, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.error)

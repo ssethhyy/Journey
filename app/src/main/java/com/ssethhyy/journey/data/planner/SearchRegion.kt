@@ -21,6 +21,15 @@ enum class SearchRegion(
     fun contains(latitude: Double, longitude: Double): Boolean =
         latitude in south..north && longitude in west..east
 
+    /**
+     * Whether a search result belongs here. The box alone would let in towns just over the border (it's a
+     * rectangle), so the state or country the planner reports is checked too when it's known.
+     */
+    fun allows(result: GeocodeResult): Boolean = contains(result.latitude, result.longitude) && when (this) {
+        VICTORIA -> result.state == null || result.state.equals("Victoria", ignoreCase = true)
+        AUSTRALIA -> result.country == null || result.country.equals("Australia", ignoreCase = true)
+    }
+
     /** Melbourne, where results are ranked from when no location is known. */
     val searchBias: GeoPoint get() = GeoPoint(-37.8136, 144.9631)
 }

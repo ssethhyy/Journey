@@ -87,7 +87,7 @@ class JourneyRepository(private val api: PlannerApi) {
         return geocodeCache.getOrLoad(key) {
             api.geocode(clean, bias.latitude, bias.longitude)
                 .map(JourneyMapper::geocode)
-                .filter { region.contains(it.latitude, it.longitude) }
+                .filter(region::allows)
                 .distinctBy { "${it.name}|${"%.4f,%.4f".format(it.latitude, it.longitude)}" }
         }
     }

@@ -28,3 +28,17 @@ class SearchRegionTest {
         assertFalse("Bali", aus.contains(-8.4095, 115.1889))
     }
 }
+
+class SearchRegionStateTest {
+    private fun place(name: String, lat: Double, lon: Double, state: String?, country: String? = "Australia") =
+        com.ssethhyy.journey.data.planner.GeocodeResult(name, null, lat, lon, "PLACE", state, country)
+
+    @org.junit.Test
+    fun theReportedStateKeepsOutTownsJustOverTheBorder() {
+        val vic = SearchRegion.VICTORIA
+        org.junit.Assert.assertTrue(vic.allows(place("Bondi Sands", -37.84, 144.94, "Victoria")))
+        org.junit.Assert.assertFalse(vic.allows(place("Bondi", -35.9, 146.3, "New South Wales")))
+        org.junit.Assert.assertTrue("unknown state falls back to the box", vic.allows(place("Somewhere", -37.5, 145.0, null)))
+        org.junit.Assert.assertTrue(SearchRegion.AUSTRALIA.allows(place("Bondi Beach", -33.89, 151.27, "New South Wales")))
+    }
+}

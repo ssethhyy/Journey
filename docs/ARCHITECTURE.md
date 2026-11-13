@@ -15,7 +15,12 @@ A guided tour of how Journey is put together, for contributors. For setup and ke
 - [Fares](#fares)
 - [myki](#myki)
 - [Live vehicle tracking](#live-vehicle-tracking)
+- [Journeys on maps](#journeys-on-maps)
+- [Favourites, commutes and nearby](#favourites-commutes-and-nearby)
+- [Crowding](#crowding)
 - [Tracking notification and widget](#tracking-notification-and-widget)
+- [Stop alerts](#stop-alerts)
+- [In-app updates](#in-app-updates)
 - [Essentials island provider](#essentials-island-provider)
 - [UI system](#ui-system)
 - [Testing](#testing)
@@ -101,6 +106,19 @@ A client for [Transitous](https://transitous.org) (MOTIS `/api/v1/plan` and `/ge
 `Journey` / `JourneyLeg` with decoded polylines. `JourneyRepository` remembers the request each journey came from
 so the detail screen can **re-plan** it for live updates.
 
+Place search is limited by `SearchRegion` (Victoria by default, or Australia, chosen in *Settings → Map*): results
+are ranked from the user's location or Melbourne, and dropped unless they fall inside the region's box **and** the
+state or country the geocoder reports matches. The Map tab's camera is bounded to the same box.
+
+### Transport Victoria Open Data (`data.crowding`)
+
+Optional GTFS Realtime vehicle-position feeds, read with a free key in the `KeyID` header and parsed by a small
+hand-written protobuf reader (`GtfsRealtime`). See [Crowding](#crowding).
+
+### GitHub Releases (`data.update`)
+
+The public GitHub API, read without a key, for the in-app updater. See [In-app updates](#in-app-updates).
+
 ## Persistence
 
 Everything is stored with Jetpack DataStore (JSON in preferences): settings, favourites, places, mykis and trip
@@ -152,12 +170,65 @@ The trip screen requests a run's stopping pattern with `expand=All`, which inclu
   their expiry) are ignored. The pattern refreshes every 10 s, with the route line fetched only once.
 - Not every service shares its position, so the screen degrades to timetable and live-prediction times.
 
+## Journeys on maps
+
+`JourneyMapLayers` draws a planned journey the same way everywhere: one polyline per leg in its PTV mode colour
+(walking white), each joined to the previous leg's end, a ringed dot at every change (`JourneyGeometry.changePoints`),
+and start and end markers. All of it uses annotation groups with **emissive strength 1** so Mapbox Standard's night
+lighting doesn't darken the colours.
+
+- The journey page's map is fixed (gestures off) and opens the full view when tapped.
+- `Navigator.showJourneyOnMap` hands a `JourneyMapRequest` to the Map tab, which draws the route over the main map
+  and shows `JourneyMapPanel`. Choosing a leg fits the camera to it, using padding for the panels at the top and
+  bottom (never leaving less than a third of the screen).
+- Planner stops don't carry PTV stop ids, so `PtvRepository.findStop` (in `StopFinder`) matches the name and position
+  against nearby PTV stops to open a stop page from a leg.
+- Every map outside the Map tab is created with a `TextureView`: a `SurfaceView` can't be drawn through the app-wide
+  edge blur.
+
+## Favourites, commutes and nearby
+
+- A `FavouriteStop` may carry `lines` (route and optional direction). Empty means every departure, as before. The
+  star button calls `AppContainer.toggleFavourite`, which removes a favourite or opens `FavouritePickerHost` (drawn at
+  the app root) to choose lines; `FavouriteChoices` builds the options from the stop's departures.
+- `data.commute` learns commutes from planned trips (`CommuteLogic`: two separate occasions make a commute, with the
+  usual hour when trips agree) and stores the user's own. `CommutesViewModel` plans each for "leave now" and picks a
+  backup after the main trip.
+- *Near you* on For You shares the Map tab's `NearbyViewModel`, so the location is looked up once.
+
+## Crowding
+
+`CrowdingRepository` caches each feed for 30 s and matches the run's vehicle (PTV's carriage numbers or fleet number)
+to the feed's vehicle or carriage ids, falling back to the nearest vehicle within 250 m. `CrowdingAlertPolicy`
+decides when a tracked service has become busy enough to notify (once, and again only if it gets worse).
+`AirConditioningCheck` reports what the fleet data and service alerts say; PTV publishes no live air conditioning
+status.
+
 ## Tracking notification and widget
 
 - `tracking.TrackingManager` polls the service or journey being tracked and exposes a status (title, detail,
   countdown chip, progress). `TrackingService` is a foreground service that posts the live notification
   (`ProgressStyle` on Android 16) and `TrackingUi` shows the in-app banner.
 - `widget` is a Jetpack Glance widget with responsive layouts, refreshed by WorkManager and the manual refresh button.
+
+## Stop alerts
+
+While a journey is tracked, `TrackingService` asks `StopAlertLogic.due` every loop whether a ride is about to end:
+within 100 s (trains) or 70 s (trams and buses) of arriving, or within a set distance of the stop by the phone's
+location, once per ride. The service declares the `location` foreground type for journeys so it can read the location
+in the background. `StopAlertNotifier` posts a silent high-priority notification with a full-screen intent
+(`StopAlertActivity`, shown over the lock screen) and vibrates only if the setting is on and the ringer isn't silent
+(`StopAlertVibration`). It never plays a sound.
+
+## In-app updates
+
+`UpdateManager.checkOnOpen` runs from `MainActivity.onStart` when enabled, at most every four hours, and asks
+`GitHubReleasesApi` for the repository's releases. `UpdateLogic.newest` compares versions semver-style (a pre-release
+sorts below its release) and returns the newest release with an `.apk` asset, skipping drafts and, unless asked,
+pre-releases. A new version is notified once. `UpdateSheetHost` shows the notes through `MarkdownText`; installing
+downloads the APK into the cache with progress and streams it into a `PackageInstaller` session, whose result
+(`InstallResultReceiver`) launches Android's confirmation. `REQUEST_INSTALL_PACKAGES` is declared, and the user grants
+"install unknown apps" once.
 
 ## Essentials island provider
 
@@ -181,9 +252,12 @@ only at meaningful moments (`TrackingPeekPolicy`). `IslandHostSimulatorTest` pla
     between the two. Pages give it a title, a back action, an optional main action (`pageFab`) and small icon actions.
   - **Top pill (classic).** `ReusableTopAppBar` draws a floating title pill at the top of each page, and the toolbar
     shows only on the three tabs. This is the original code path and is kept intact.
-  - Either way content scrolls under the bars with an AGSL progressive blur (`progressiveBlur`, `floatingBarBlur`),
-    which is skipped below Android 13 or in power-saving mode. In the bottom bar style only the status bar area is
-    blurred at the top.
+  - Either way content scrolls under the bars with an AGSL progressive blur (`progressiveBlur`), skipped below
+    Android 13 or in power-saving mode. In the bottom bar style one `appEdgeBlur` around the whole navigation stack
+    blurs the status bar area and the area behind the bar (fading out while the bar is hidden); in the top pill style
+    each page uses `floatingBarBlur`.
+- **Type:** `buildTypography` sets Google Sans Flex's optical size, width, weight, slant and roundness (always fully
+  rounded) per role, including Material 3 Expressive's emphasized styles. The widget draws with the same font.
 - **Sheets:** `StandardBottomSheet(scrollable = true)` for forms (opens full height, scrolls, lifts above the keyboard).
 
 ## Testing
@@ -203,5 +277,8 @@ No test needs a device, the internet or real keys.
 - Dependency versions are in [`gradle/libs.versions.toml`](../gradle/libs.versions.toml). `compileSdk` is 37 with minor API
   level 1 (the island SDK needs it), `minSdk` 26, and the Java toolchain is 25.
 - The Essentials island SDK modules are vendored in `third_party/` and included as Gradle projects.
-- Release builds use R8 and resource shrinking and are signed with the **debug key** so they install locally. Use a
-  real signing config (kept out of Git) to publish.
+- Keys and signing come from `.env` (see `.env.template`), then environment variables, then the old
+  `local.properties` names. `app/build.gradle.kts` turns them into `BuildConfig` fields, a resource value for the
+  Mapbox token and a `release` signing config.
+- Release builds use R8 and resource shrinking. They're signed with the release keystore from `.env`, or with the
+  debug key when none is set. Debug builds use the `.dev` application id suffix.

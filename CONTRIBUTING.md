@@ -81,6 +81,13 @@ are in the [README](README.md#api-keys-bring-your-own).
 **You do not need keys to run the tests** or to work on logic, fares, UI layout or docs. Tests use a local fake
 server. Only live data and the map need real keys.
 
+Your keys used to live in `local.properties`. They now live in `.env` (the old names in `local.properties` still
+work as a fallback, so an existing setup keeps building), and `local.properties` only needs `sdk.dir`. Environment
+variables with the same names as in `.env.template` work too, which is how CI would provide them.
+
+Debug builds install as `com.ssethhyy.journey.dev`, next to any release build on your phone, so you can test
+without replacing the copy you use.
+
 **Never commit keys.** `.env` is git-ignored. Before every commit, check `git status` and `git diff
 --staged` for anything that looks like a key. If you accidentally push one, **revoke it immediately** and tell
 us (see [SECURITY.md](SECURITY.md)).

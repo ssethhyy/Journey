@@ -36,6 +36,7 @@ Live departures, journey planning, a live map, myki balance and trip tracking fo
 - [Getting started](#getting-started)
 - [API keys (bring your own)](#api-keys-bring-your-own)
 - [Building and testing](#building-and-testing)
+- [Releases and updates](#releases-and-updates)
 - [Project structure](#project-structure)
 - [How it works](#how-it-works)
 - [Privacy](#privacy)
@@ -47,24 +48,31 @@ Live departures, journey planning, a live map, myki balance and trip tracking fo
 
 ### 🏠 For You
 - A greeting with today's date, then your favourite stops with **live departures** grouped by mode (trains, trams, buses).
+- **Favourite just the lines you use:** keep every departure from a stop, or pick lines and directions such as *Frankston to City*.
 - Saved places (Home, Work and your own) one tap away from planning a trip.
 - **Commutes:** the trips you make most (learned from your planning, or added by you) with when to leave, a backup if you miss it, and one-tap tracking or planning.
+- **Near you:** the closest stops and their next departures (turn it off or choose how many in Settings).
 - Network status at a glance, mode filters, pull to refresh and auto refresh.
 - A **Profile** with stats from the trips you log, and an avatar that morphs between Material 3 Expressive shapes.
 
 ### 🧭 Plan
 - Door-to-door journeys from your current location (or any place) to anywhere, depart now or at a time you choose.
 - **Live updates:** journeys re-plan in the background so delays show as they happen.
-- Journey detail with a route map, walking legs, platforms and delays.
+- Journey detail with a route map coloured by mode (train blue, tram green, bus orange, walking white), a dot at each change, walking legs, platforms and delays. Tap a stop to open its page.
+- **Explore a journey on the map:** tap the journey's map for a full-size view on the Map tab with a panel of legs. Tap a leg to zoom to it and see where to get on and off, how many stops and how long.
 - **Track a journey or a single service:** a live notification (Android 16 live updates style) and an in-app banner.
+- **Full-screen alert to get off:** while a journey is tracked, an alarm-style screen names your stop when it's time to get off (from your location and the service's arrival). It never rings, and only vibrates when your phone isn't on silent.
+- **Search stays in Victoria** (or Australia, if you choose), so a search never lands overseas.
 
 ### 🗺️ Map
-- Full-screen edge-to-edge Mapbox map of stops for every mode, a stop preview and a floating *Nearby* panel.
-- Search stops, routes and lines.
+- Full-screen edge-to-edge Mapbox map of stops for every mode, a stop preview and a floating *Nearby* panel that keeps you centred in the part of the map you can see.
+- Search stops, routes and lines, and *Plan a trip here* from any stop.
+- **Stop roulette** (from MelbourneTrainGame): roll a random station within a radius, with an optional travel challenge.
 
 ### 🚆 Live vehicle tracking
 - Open any service to see a **map with its route, stops and the vehicle moving in real time**.
 - A live status card ("Between Alphington and Fairfield") with the **scheduled and predicted time**, and a stop list shortened around you and the vehicle, with the vehicle's icon on the line.
+- **Crowding** (optional, with a free Transport Victoria Open Data key): how busy the service is, how full each carriage is where reported, and alerts when a tracked service gets busy. Air conditioning notes come from the fleet data and service alerts.
 
 ### 💳 myki
 - Keep your mykis in a wallet-style stack, with a **default myki**. Hold a card to your phone to read its number over **NFC** (experimental, you can always type it).
@@ -73,9 +81,10 @@ Live departures, journey planning, a live map, myki balance and trip tracking fo
 - **Low-balance notifications** when a card drops below an amount you choose.
 
 ### 🧩 More
-- **Home screen widget** (Jetpack Glance): favourites with live times, a refresh button and a last-updated time, responsive to its size.
-- **[Essentials](https://github.com/sameerasw/essentials) island provider:** live tracking and a disruptions alert (coloured by severity) on the Dynamic Island-style overlay.
-- **Design:** Material 3 Expressive, dynamic colour, a floating navigation bar that follows you onto every page (back button, page name and an action), progressive blur under the status bar, Material Symbols Rounded, optional pitch-black dark theme and haptics. Prefer the original floating title pill? Switch in *Settings → Appearance → Navigation bar*.
+- **Home screen widget** (Jetpack Glance): favourites with live times in expressive Google Sans Flex type, a refresh button and a last-updated time.
+- **[Essentials](https://github.com/sameerasw/essentials) island provider:** live tracking, your next journey steps and a disruptions alert (coloured by severity) on the Dynamic Island-style overlay.
+- **Updates from inside the app:** Journey checks GitHub when you open it (at most every few hours), notifies you about a new version, shows what's new and installs it without a browser. Pre-releases are optional.
+- **Design:** Material 3 Expressive with fully rounded Google Sans Flex type, dynamic colour, a floating navigation bar that follows you onto every page (back button, page name and an action), progressive blur behind the status bar and the bar, Material Symbols Rounded, optional pitch-black dark theme and modern haptics. Prefer the original floating title pill? Switch in *Settings → Appearance → Navigation bar*.
 
 ## Requirements
 
@@ -85,7 +94,7 @@ Live departures, journey planning, a live map, myki balance and trip tracking fo
 | **Android Studio** | A recent stable release that supports Android Gradle Plugin 9.4. |
 | **JDK** | 25. Gradle downloads a matching toolchain for you through the Foojay resolver. |
 | **Android SDK** | Platform **37.1** (compile SDK 37, minor API level 1) and build tools. Android Studio's SDK Manager installs them. |
-| **Keys** | A free PTV Timetable API key and a Mapbox public token. See [below](#api-keys-bring-your-own). |
+| **Keys** | A free PTV Timetable API key and a Mapbox public token (plus an optional Transport Victoria Open Data key for crowding). See [below](#api-keys-bring-your-own). |
 
 ## Getting started
 
@@ -156,13 +165,17 @@ someone else, or for trying different keys without rebuilding.
 ./gradlew :app:assembleDebug            # debug APK  -> app/build/outputs/apk/debug/
 ./gradlew :app:installDebug             # build and install
 ./gradlew :app:testDebugUnitTest        # all unit and UI tests (no keys or network needed)
-./gradlew :app:assembleRelease          # optimised release APK (signed with the debug key, see below)
+./gradlew :app:assembleRelease          # optimised release APK (see "Signing release builds" below)
 ```
 
 - Tests use [Robolectric](https://robolectric.org) with native graphics and a local mock server, so they are
   deterministic and need no device. Screenshot tests write PNGs to `app/build/screenshots/`.
-- The release build is **signed with the debug key** so it installs locally for testing. Replace the signing config
-  in `app/build.gradle.kts` with your own (kept out of Git) before publishing anything.
+- Debug builds install as **`com.ssethhyy.journey.dev`**, next to a release build, so testing never replaces (or
+  wipes) the copy you use every day.
+- **Signing release builds:** set `RELEASE_STORE_FILE`, `RELEASE_STORE_PASSWORD`, `RELEASE_KEY_ALIAS` and
+  `RELEASE_KEY_PASSWORD` in `.env` to sign with your own keystore (create one with `keytool`, see `.env.template`).
+  Without them release builds are signed with the debug key. Keep the keystore outside the project and back it up:
+  without it you can't publish updates that install over earlier versions.
 - Release builds keep their icons through [`app/src/main/res/raw/keep.xml`](app/src/main/res/raw/keep.xml). Do not
   remove it: Material Symbols are loaded by name, which the resource shrinker can't see.
 
@@ -179,6 +192,23 @@ someone else, or for trying different keys without rebuilding.
 | Dates and times look an hour off | Journey shows Melbourne time. Check your device's time zone setting if you're elsewhere. |
 </details>
 
+## Releases and updates
+
+Releases are published on [GitHub Releases](https://github.com/ssethhyy/Journey/releases) with the APK attached and
+notes from [`docs/releases/`](docs/releases). The app checks the same page when it opens (at most every four hours,
+never in the background), notifies you once about each new version, and installs it from inside the app through
+Android's own install prompt. Android asks once to allow Journey to install apps. Turn checks off, or include
+pre-releases, in *Settings → Updates*.
+
+To publish a release that existing installs pick up:
+
+1. Raise `versionCode` and set `versionName` in `app/build.gradle.kts` (for example `1.2.1-beta.1` for a beta).
+2. Move the changelog's *Unreleased* entries into a new version section and add the notes to `docs/releases/`.
+3. Build with your release key in `.env` (`./gradlew :app:assembleRelease`). Updates only install over a build
+   signed with the same key.
+4. Create a GitHub release tagged `vX.Y.Z` (tick *pre-release* for betas) and attach
+   `app/build/outputs/apk/release/app-release.apk`.
+
 ## Project structure
 
 ```text
@@ -187,14 +217,18 @@ Journey/
 │   └── src/main/java/com/ssethhyy/journey/
 │       ├── data/
 │       │   ├── api/               PTV Timetable API client (HMAC-signed), DTOs and mappers
+│       │   ├── commute/           Commutes: learned and saved trips
+│       │   ├── crowding/          GTFS Realtime crowding feed, carriage matching and alerts
 │       │   ├── fare/              Fare engine, fare table and discount rules
+│       │   ├── game/              Stop roulette (MelbourneTrainGame)
 │       │   ├── location/          Location provider
 │       │   ├── model/             Domain models (stops, departures, patterns, trip progress)
 │       │   ├── myki/              Cards, trip ledger, NFC reader, low-balance alerts, profile stats
 │       │   ├── planner/           Journey planner (Transitous / MOTIS) client and models
-│       │   └── repository/        Settings, favourites, places and PTV repositories
+│       │   ├── repository/        Settings, favourites, places, PTV repository and stop matching
+│       │   └── update/            GitHub release checks and in-app installs
 │       ├── island/                Essentials island provider (payloads, icons, expanded views)
-│       ├── tracking/              Live tracking manager and foreground service
+│       ├── tracking/              Live tracking, journey steps, stop alerts and crowding alerts
 │       ├── ui/
 │       │   ├── components/        Floating bars, timeline, symbols, progressive blur
 │       │   ├── navigation/        Navigation 3 keys and the navigator
@@ -204,7 +238,7 @@ Journey/
 │       └── utils/                 Formatters, haptics, geo maths
 ├── third_party/essentials-island/ Vendored Essentials Island SDK (MIT, unmodified)
 ├── art/                           Source art: pictograms, launcher icon, icon and card guides
-├── docs/                          Architecture notes and screenshots
+├── docs/                          Architecture notes, release notes (docs/releases) and screenshots
 ├── .github/                       Issue and PR templates, CI, Dependabot
 ├── .env.template                  Template for your own keys (copy to .env)
 └── gradle/libs.versions.toml      Dependency versions
@@ -224,8 +258,10 @@ provider and the testing approach in more detail.
 
 - **No account, no analytics, no ads, no trackers.**
 - Your favourites, places, mykis, trips and settings stay **on your device**.
-- The app talks only to PTV (departures), Transitous (journeys) and Mapbox (map tiles). Your location is used on
-  the device for *nearby* and planning, and sent to those services only as the coordinates of the request.
+- The app talks only to PTV (departures), Transitous (journeys), Mapbox (map tiles), Transport Victoria Open Data
+  (crowding, only if you add a key) and GitHub (checking for updates when the app opens, if turned on). Your location
+  is used on the device for *nearby*, planning and stop alerts, and sent to those services only as the coordinates of
+  a request.
 - Journey reads a myki's **card number** over NFC. A myki's balance and trips are locked on the card, so balances
   are entered by you and updated by the trips you log.
 
@@ -238,6 +274,9 @@ provider and the testing approach in more detail.
   after each 1 January. The weekly cap and regional **V/Line** fares aren't modelled (V/Line asks for an amount).
   Public holidays are a hand-kept list for 2026 and 2027.
 - A trip between two Zone 2 stops that passes through Zone 1 is charged as Zone 2 unless you change the zone.
+- **Crowding** depends on what Victoria's feed reports. Many services have no crowding data, and live air
+  conditioning faults aren't published at all.
+- **Stop alerts** work for tracked journeys, not single services (Journey doesn't know where you get off).
 - Journey is a client for third-party services, so it depends on their availability and terms.
 
 ## Contributing

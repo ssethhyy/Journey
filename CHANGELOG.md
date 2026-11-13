@@ -6,15 +6,21 @@ All notable changes to Journey are documented here. The format follows
 
 ## [Unreleased]
 
-### Added
-- **Updates from inside the app.** Journey checks GitHub for a newer version when you open it (at most every few hours, never in the background, so it costs no battery) and sends a notification when one is available. Tapping it, or *Settings → Updates → Check for updates*, opens a card with the new version's notes. *Install update* downloads it straight into the app (no browser) and opens Android's own *Update Journey?* prompt. Android asks once to let Journey install updates. Turn the check off, or include pre-releases, in *Settings → Updates*.
-- **Search stays in Victoria.** Place search on the Plan tab only returns places in Victoria, checked against the state the planner reports as well as the map area (so towns just over the border are left out), ranked from where you are or from Melbourne, so a search can no longer land overseas or in another state. The Map tab won't pan or zoom out beyond Victoria either. For interstate trips, switch *Settings → Map → Search and map area* to *Australia*. Stop and line search was already Victoria-only.
+## [1.2.1-beta.1] - 2026-11-13
 
-### Changed
-- For developers: **API keys and release signing now live in a `.env` file** at the project root instead of `local.properties`. Copy the new [`.env.template`](.env.template) to `.env` and fill in `PTV_DEV_ID`, `PTV_API_KEY`, `MAPBOX_ACCESS_TOKEN`, `VIC_OPENDATA_KEY` and, optionally, the `RELEASE_*` signing values. `.env` is git-ignored, so nobody who clones the repo gets your keys. Environment variables with the same names work too (handy for CI), and the old `local.properties` names still work as a fallback. `local.properties.example` is gone.
+A pre-release of 1.2.1. It installs straight over 1.2.0, keeping your data. From this version on, Journey can update
+itself: turn on *Settings → Updates → Include pre-releases* to be offered future betas too.
+
+### Added
+- **Updates from inside the app.** Journey checks GitHub for a newer version when you open it (at most every few hours, never in the background, so it costs no battery) and notifies you once when one is available. Tapping the notification, or *Settings → Updates → Check for updates*, opens a card with the new version's notes. *Install update* downloads it straight into the app, with no browser, and opens Android's own *Update Journey?* prompt. Android asks once to let Journey install updates. Turn checking off, or include pre-releases, in *Settings → Updates*.
+- **Search stays in Victoria.** Place search on the Plan tab only returns places in Victoria. Each result is checked against the state the planner reports as well as the map area, so towns just over the border are left out, and results are ranked from where you are or from Melbourne. The Map tab won't pan or zoom out beyond Victoria either. For interstate trips, switch *Settings → Map → Search and map area* to *Australia*.
 
 ### Fixed
-- **Maps outside the Map tab show again.** The journey, trip and route maps had gone blank since 1.2.0's app-wide edge blur, because they drew on a surface the blur can't pass through. They now draw the same way as the Map tab.
+- **Maps outside the Map tab show again.** The journey, trip and route maps had gone blank in 1.2.0, because they drew on a kind of surface the new edge blur can't pass through. They now draw the same way as the Map tab.
+
+### Changed
+- For developers: **API keys and release signing now live in a `.env` file** at the project root instead of `local.properties`. Copy the new `.env.template` to `.env` and fill in `PTV_DEV_ID`, `PTV_API_KEY`, `MAPBOX_ACCESS_TOKEN`, `VIC_OPENDATA_KEY` and, optionally, the `RELEASE_*` signing values. `.env` is git-ignored, so nobody who clones the repo gets your keys. Environment variables with the same names also work (handy for CI), and the old `local.properties` names still work as a fallback. `local.properties.example` has been removed.
+- For developers: the README, contributing guide, security policy and architecture guide cover the new features, the `.env` setup, signing release builds and how to publish a release the in-app updater picks up.
 
 ## [1.2.0] - 2026-11-12
 
@@ -95,7 +101,8 @@ Everything since 1.0.0, including all the changes tried out in the beta builds.
 - Release builds now keep the Material Symbols and myki artwork (they were being removed by resource shrinking, which broke icons and the island's alert icon).
 - Bottom-sheet forms lift above the keyboard instead of being covered by it.
 
-[Unreleased]: https://github.com/ssethhyy/Journey/compare/v1.2.0...HEAD
+[Unreleased]: https://github.com/ssethhyy/Journey/compare/v1.2.1-beta.1...HEAD
+[1.2.1-beta.1]: https://github.com/ssethhyy/Journey/compare/v1.2.0...v1.2.1-beta.1
 [1.2.0]: https://github.com/ssethhyy/Journey/compare/v1.1.0...v1.2.0
 [1.1.0]: https://github.com/ssethhyy/Journey/compare/v1.0.0...v1.1.0
 [1.0.0]: https://github.com/ssethhyy/Journey/releases/tag/v1.0.0

@@ -28,6 +28,13 @@ You can expect an acknowledgement within about a week and a status update after 
 volunteers, so please allow time to investigate, fix and release before sharing the details publicly. We are happy
 to credit you in the changelog if you'd like.
 
+## In-app updates
+
+Journey's updater only reads releases of `ssethhyy/Journey` from the GitHub API over HTTPS and downloads the APK
+attached to a release into the app's private storage. Android's package installer then checks that the update is
+signed with the same key as the installed app and asks the user to confirm. An APK signed with any other key is
+refused, so a tampered download can't replace Journey. Checks happen only when the app is opened.
+
 ## What's in scope
 
 - Anything that could expose a user's **API keys**, location, favourites, myki numbers or trip history.
@@ -46,6 +53,8 @@ is git-ignored. A few things worth knowing:
 - Keys placed in `.env` are compiled into the app you build, so **don't share or publish APKs built
   with your own keys**. Anyone with the APK can extract them.
 - Use a **public** Mapbox token (`pk.…`), never a secret one (`sk.…`).
+- Your **release keystore** and its passwords (the `RELEASE_*` values in `.env`) prove updates come from you. Keep the
+  `.jks` file outside the project, never commit it, and back it up.
 - Keys entered in the app under *Settings → API access* are stored privately on the device.
 
 ### If you committed a key by accident

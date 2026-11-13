@@ -124,7 +124,10 @@ fun TripMap(
 
     val routeColor = mode.color
     Box(modifier.fillMaxWidth().height(MapHeight).clip(shape)) {
+        val mapDensity = androidx.compose.ui.platform.LocalDensity.current
         MapboxMap(
+            // TextureView, like the Map tab: a SurfaceView can't be drawn through the app-wide edge blur and shows blank.
+            composeMapInitOptions = androidx.compose.runtime.remember(mapDensity) { com.mapbox.maps.extension.compose.ComposeMapInitOptions(mapDensity.density, textureView = true) },
             modifier = Modifier.fillMaxSize(),
             mapViewportState = viewport,
             compass = {},

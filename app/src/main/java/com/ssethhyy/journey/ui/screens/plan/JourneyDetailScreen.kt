@@ -245,7 +245,10 @@ private fun JourneyMap(journey: Journey, onOpen: () -> Unit) {
             .height(260.dp)
             .clip(RoundedCornerShape(28.dp)),
     ) {
+        val mapDensity = androidx.compose.ui.platform.LocalDensity.current
         MapboxMap(
+            // TextureView, like the Map tab: a SurfaceView can't be drawn through the app-wide edge blur and shows blank.
+            composeMapInitOptions = androidx.compose.runtime.remember(mapDensity) { com.mapbox.maps.extension.compose.ComposeMapInitOptions(mapDensity.density, textureView = true) },
             modifier = Modifier.fillMaxSize(),
             mapViewportState = viewport,
             compass = {},

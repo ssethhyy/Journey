@@ -210,7 +210,10 @@ private fun RouteMapPreview(paths: List<List<Pair<Double, Double>>>, color: andr
             viewport.setCameraOptions(camera)
         }
     }
+    val mapDensity = androidx.compose.ui.platform.LocalDensity.current
     MapboxMap(
+        // TextureView, like the Map tab: a SurfaceView can't be drawn through the app-wide edge blur and shows blank.
+        composeMapInitOptions = androidx.compose.runtime.remember(mapDensity) { com.mapbox.maps.extension.compose.ComposeMapInitOptions(mapDensity.density, textureView = true) },
         modifier = Modifier
             .fillMaxWidth()
             .height(240.dp)

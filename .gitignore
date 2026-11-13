@@ -14,6 +14,7 @@ signing.properties
 .env
 .env.*
 !.env.example
+!.env.template
 google-services.json
 service-account*.json
 credentials.json

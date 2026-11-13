@@ -705,7 +705,7 @@ private fun MissingTokenCard() {
         MessageState(
             icon = Sym.Map,
             title = "Map needs a Mapbox token",
-            message = "Add a public Mapbox token (starts with pk.) in Settings → API access, or set mapbox.accessToken in local.properties. Search still works without it.",
+            message = "Add a public Mapbox token (starts with pk.) in Settings → API access, or set MAPBOX_ACCESS_TOKEN in .env. Search still works without it.",
         )
     }
 }

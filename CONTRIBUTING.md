@@ -57,9 +57,9 @@ git clone https://github.com/ssethhyy/Journey.git
 cd Journey
 git remote add upstream https://github.com/ssethhyy/Journey.git
 
-# 2. Add your own keys (this file is git-ignored)
-cp local.properties.example local.properties
-# edit local.properties: ptv.devId, ptv.apiKey, mapbox.accessToken
+# 2. Add your own keys (.env is git-ignored)
+cp .env.template .env
+# edit .env: PTV_DEV_ID, PTV_API_KEY, MAPBOX_ACCESS_TOKEN
 
 # 3. Check the build and tests pass before you change anything
 ./gradlew :app:testDebugUnitTest
@@ -75,13 +75,13 @@ Journey ships **without** any credentials, so you need your own:
 - **Mapbox** (free tier): create a **public** token (`pk.…`) at
   [account.mapbox.com](https://account.mapbox.com/access-tokens/).
 
-Put them in `local.properties`, or paste them in the app under *Settings → API access*. Details and troubleshooting
+Put them in `.env`, or paste them in the app under *Settings → API access*. Details and troubleshooting
 are in the [README](README.md#api-keys-bring-your-own).
 
 **You do not need keys to run the tests** or to work on logic, fares, UI layout or docs. Tests use a local fake
 server. Only live data and the map need real keys.
 
-**Never commit keys.** `local.properties` is git-ignored. Before every commit, check `git status` and `git diff
+**Never commit keys.** `.env` is git-ignored. Before every commit, check `git status` and `git diff
 --staged` for anything that looks like a key. If you accidentally push one, **revoke it immediately** and tell
 us (see [SECURITY.md](SECURITY.md)).
 

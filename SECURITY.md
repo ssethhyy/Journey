@@ -40,10 +40,10 @@ Please report those to their owners.
 
 ## About API keys
 
-Journey is "bring your own keys": the repository contains **none**, and `local.properties` (where you keep yours)
+Journey is "bring your own keys": the repository contains **none**, and `.env` (where you keep yours)
 is git-ignored. A few things worth knowing:
 
-- Keys placed in `local.properties` are compiled into the app you build, so **don't share or publish APKs built
+- Keys placed in `.env` are compiled into the app you build, so **don't share or publish APKs built
   with your own keys**. Anyone with the APK can extract them.
 - Use a **public** Mapbox token (`pk.…`), never a secret one (`sk.…`).
 - Keys entered in the app under *Settings → API access* are stored privately on the device.

@@ -94,9 +94,9 @@ Live departures, journey planning, a live map, myki balance and trip tracking fo
 git clone https://github.com/ssethhyy/Journey.git
 cd Journey
 
-# 2. Add your keys (see the next section). local.properties is git-ignored.
-cp local.properties.example local.properties
-#    ...then edit local.properties
+# 2. Add your keys (see the next section). .env is git-ignored.
+cp .env.template .env
+#    ...then edit .env
 
 # 3. Build and install on a connected device or emulator
 ./gradlew :app:installDebug          # Windows: gradlew.bat :app:installDebug
@@ -114,24 +114,25 @@ This repository contains **no keys**. Journey needs two free credentials, and yo
 
 | Credential | Used for | Where to get it | Cost |
 |---|---|---|---|
-| `ptv.devId` and `ptv.apiKey` | Live departures, stops, routes, disruptions, fare zones, vehicle positions | Request a key from Public Transport Victoria on the [PTV Timetable API page](https://www.ptv.vic.gov.au/footer/data-and-reporting/datasets/ptv-timetable-api/). They email you a **developer ID** and an **API key**. | Free |
-| `vic.opendata.key` | *Optional.* Crowding: how busy a service and its carriages are, plus crowding alerts | Create a free account and key at [opendata.transport.vic.gov.au](https://opendata.transport.vic.gov.au) | Free |
-| `mapbox.accessToken` | The map tab, trip map and journey map | Create a **public** token (starts with `pk.`) at [account.mapbox.com](https://account.mapbox.com/access-tokens/) | Free tier |
+| `PTV_DEV_ID` and `PTV_API_KEY` | Live departures, stops, routes, disruptions, fare zones, vehicle positions | Request a key from Public Transport Victoria on the [PTV Timetable API page](https://www.ptv.vic.gov.au/footer/data-and-reporting/datasets/ptv-timetable-api/). They email you a **developer ID** and an **API key**. | Free |
+| `VIC_OPENDATA_KEY` | *Optional.* Crowding: how busy a service and its carriages are, plus crowding alerts | Create a free account and key at [opendata.transport.vic.gov.au](https://opendata.transport.vic.gov.au) | Free |
+| `MAPBOX_ACCESS_TOKEN` | The map tab, trip map and journey map | Create a **public** token (starts with `pk.`) at [account.mapbox.com](https://account.mapbox.com/access-tokens/) | Free tier |
 
 Journey's journey planner uses [Transitous](https://transitous.org), which needs **no key**.
 
-### Option 1: `local.properties` (recommended for development)
+### Option 1: `.env` (recommended for development)
 
-Copy [`local.properties.example`](local.properties.example) to `local.properties` in the project root and fill it in:
+Copy [`.env.template`](.env.template) to `.env` in the project root and fill it in:
 
 ```properties
-ptv.devId=1234567
-ptv.apiKey=xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
-mapbox.accessToken=pk.xxxxxxxx
+PTV_DEV_ID=1234567
+PTV_API_KEY=xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
+MAPBOX_ACCESS_TOKEN=pk.xxxxxxxx
 ```
 
 Gradle reads this file at build time and bakes the values into the app **you build on your machine**. The file is
-listed in [`.gitignore`](.gitignore), so it is never committed.
+listed in [`.gitignore`](.gitignore), so it is never committed. An environment variable with the same name (for
+example in CI) works too.
 
 ### Option 2: inside the app
 
@@ -205,7 +206,7 @@ Journey/
 ├── art/                           Source art: pictograms, launcher icon, icon and card guides
 ├── docs/                          Architecture notes and screenshots
 ├── .github/                       Issue and PR templates, CI, Dependabot
-├── local.properties.example       Template for your own keys
+├── .env.template                  Template for your own keys (copy to .env)
 └── gradle/libs.versions.toml      Dependency versions
 ```
 
@@ -246,7 +247,7 @@ feedback and tests. Please read **[CONTRIBUTING.md](CONTRIBUTING.md)** first. It
 guidelines, and what a good pull request looks like. A quick version:
 
 1. **Fork** the repo and create a branch (`feat/my-change` or `fix/my-bug`).
-2. Add **your own keys** to `local.properties` and make sure `./gradlew :app:testDebugUnitTest` passes.
+2. Add **your own keys** to `.env` and make sure `./gradlew :app:testDebugUnitTest` passes.
 3. Make a focused change with tests, following the [guidelines](CONTRIBUTING.md#code-and-design-guidelines).
 4. Open a **pull request** using the template, with screenshots for any UI change.
 

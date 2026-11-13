@@ -9,6 +9,9 @@ All notable changes to Journey are documented here. The format follows
 ### Added
 - **Search stays in Victoria.** Place search on the Plan tab only returns places in Victoria (plus a little over the border, such as Albury), ranked from where you are or from Melbourne, so a search can no longer land overseas or in another state. The Map tab won't pan or zoom out beyond Victoria either. For interstate trips, switch *Settings → Map → Search and map area* to *Australia*. Stop and line search was already Victoria-only.
 
+### Changed
+- For developers: **API keys and release signing now live in a `.env` file** at the project root instead of `local.properties`. Copy the new [`.env.template`](.env.template) to `.env` and fill in `PTV_DEV_ID`, `PTV_API_KEY`, `MAPBOX_ACCESS_TOKEN`, `VIC_OPENDATA_KEY` and, optionally, the `RELEASE_*` signing values. `.env` is git-ignored, so nobody who clones the repo gets your keys. Environment variables with the same names work too (handy for CI), and the old `local.properties` names still work as a fallback. `local.properties.example` is gone.
+
 ### Fixed
 - **Maps outside the Map tab show again.** The journey, trip and route maps had gone blank since 1.2.0's app-wide edge blur, because they drew on a surface the blur can't pass through. They now draw the same way as the Map tab.
 

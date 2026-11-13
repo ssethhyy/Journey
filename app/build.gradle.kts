@@ -6,17 +6,28 @@ plugins {
     alias(libs.plugins.kotlin.serialization)
 }
 
-// API credentials live in local.properties (never committed):
-//   ptv.devId=1234567
-//   ptv.apiKey=xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
-//   mapbox.accessToken=pk.xxxx
-//   vic.opendata.key=xxxx        (optional, enables crowding)
-// They can also be entered at runtime from Settings → API access.
+// API keys and the release signing details live in a .env file at the project root, which is never committed
+// (.gitignore). Copy .env.template to .env and fill in your own values; see the template for where to get each one.
+// A real environment variable with the same name (for example in CI) is used when .env doesn't set it, and the
+// old local.properties names still work so existing setups keep building.
+val dotEnv: Map<String, String> = rootProject.file(".env").takeIf { it.exists() }?.readLines().orEmpty()
+    .map { it.trim() }
+    .filter { it.isNotEmpty() && !it.startsWith("#") && it.contains('=') }
+    .associate { line ->
+        val key = line.substringBefore('=').removePrefix("export ").trim()
+        val value = line.substringAfter('=').trim().removeSurrounding("\"").removeSurrounding("'")
+        key to value
+    }
 val localProps = Properties().apply {
     val file = rootProject.file("local.properties")
     if (file.exists()) file.inputStream().use { load(it) }
 }
-fun localProp(key: String): String = localProps.getProperty(key, "").trim()
+
+/** A secret from .env, then the environment, then the legacy local.properties name. Empty if none is set. */
+fun secret(name: String, legacyName: String): String =
+    dotEnv[name]?.takeIf { it.isNotBlank() }
+        ?: System.getenv(name)?.takeIf { it.isNotBlank() }
+        ?: localProps.getProperty(legacyName, "").trim()
 
 android {
     namespace = "com.ssethhyy.journey"
@@ -36,24 +47,24 @@ android {
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 
-        buildConfigField("String", "PTV_DEV_ID", "\"${localProp("ptv.devId")}\"")
-        buildConfigField("String", "PTV_API_KEY", "\"${localProp("ptv.apiKey")}\"")
+        buildConfigField("String", "PTV_DEV_ID", "\"${secret("PTV_DEV_ID", "ptv.devId")}\"")
+        buildConfigField("String", "PTV_API_KEY", "\"${secret("PTV_API_KEY", "ptv.apiKey")}\"")
         // Optional: Transport Victoria Open Data key for the crowding feeds.
-        buildConfigField("String", "OPENDATA_KEY", "\"${localProp("vic.opendata.key")}\"")
-        resValue("string", "mapbox_access_token", localProp("mapbox.accessToken").ifEmpty { "YOUR_MAPBOX_ACCESS_TOKEN" })
+        buildConfigField("String", "OPENDATA_KEY", "\"${secret("VIC_OPENDATA_KEY", "vic.opendata.key")}\"")
+        resValue("string", "mapbox_access_token", secret("MAPBOX_ACCESS_TOKEN", "mapbox.accessToken").ifEmpty { "YOUR_MAPBOX_ACCESS_TOKEN" })
     }
 
-    // Your release key, from local.properties (git-ignored), so it never reaches the repository:
-    //   release.storeFile, release.storePassword, release.keyAlias, release.keyPassword
+    // Your release key, from .env (git-ignored), so it never reaches the repository:
+    //   RELEASE_STORE_FILE, RELEASE_STORE_PASSWORD, RELEASE_KEY_ALIAS, RELEASE_KEY_PASSWORD
     // Without them (for example in a fresh clone or CI) release builds fall back to the debug key.
-    val releaseStore = localProp("release.storeFile").takeIf { it.isNotEmpty() }?.let { file(it) }?.takeIf { it.exists() }
+    val releaseStore = secret("RELEASE_STORE_FILE", "release.storeFile").takeIf { it.isNotEmpty() }?.let { file(it) }?.takeIf { it.exists() }
     signingConfigs {
         if (releaseStore != null) {
             create("release") {
                 storeFile = releaseStore
-                storePassword = localProp("release.storePassword")
-                keyAlias = localProp("release.keyAlias")
-                keyPassword = localProp("release.keyPassword")
+                storePassword = secret("RELEASE_STORE_PASSWORD", "release.storePassword")
+                keyAlias = secret("RELEASE_KEY_ALIAS", "release.keyAlias")
+                keyPassword = secret("RELEASE_KEY_PASSWORD", "release.keyPassword")
             }
         }
     }

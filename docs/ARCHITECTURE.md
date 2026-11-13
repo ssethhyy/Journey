@@ -92,7 +92,7 @@ retry, and stale data when a refresh fails.
   messy. Both are covered by tests.
 - `PtvRepository` adds short-lived `TtlCache`s so screens don't hammer the API, and fetches fare zones
   (`stop_ticket`) for the fare engine.
-- The credentials come from `local.properties` at build time (baked into `BuildConfig`) or from *Settings → API access*,
+- The credentials come from `.env` at build time (baked into `BuildConfig`) or from *Settings → API access*,
   which wins when set.
 
 ### Journey planner (`data.planner`)

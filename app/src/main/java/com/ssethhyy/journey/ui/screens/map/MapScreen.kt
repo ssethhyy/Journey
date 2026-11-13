@@ -335,6 +335,21 @@ fun MapScreen(isActive: Boolean, modifier: Modifier = Modifier) {
                         highlight = selectedLeg?.let(j.legs::getOrNull),
                     )
                 }
+                MapEffect(state.settings.searchRegion) { mapView ->
+                    // The map stays within the chosen area (Victoria by default), so you can't wander overseas.
+                    val region = state.settings.searchRegion
+                    mapView.mapboxMap.setBounds(
+                        com.mapbox.maps.CameraBoundsOptions.Builder()
+                            .bounds(
+                                com.mapbox.maps.CoordinateBounds(
+                                    Point.fromLngLat(region.west, region.south),
+                                    Point.fromLngLat(region.east, region.north),
+                                ),
+                            )
+                            .minZoom(if (region == com.ssethhyy.journey.data.planner.SearchRegion.VICTORIA) 5.5 else 3.0)
+                            .build(),
+                    )
+                }
                 MapEffect(Unit) { mapView ->
                     // Dragging the map yourself stops it following you when panels change size.
                     mapView.gestures.addOnMoveListener(object : com.mapbox.maps.plugin.gestures.OnMoveListener {

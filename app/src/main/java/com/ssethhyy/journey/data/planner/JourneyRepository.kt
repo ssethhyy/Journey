@@ -77,13 +77,17 @@ class JourneyRepository(private val api: PlannerApi) {
 
     fun requestFor(id: String): PlanRequestParams? = requests[id]
 
-    suspend fun searchLocations(text: String, near: GeoPoint?): List<GeocodeResult> {
+    /** Places matching [text], only inside [region] (results from overseas or interstate are dropped). */
+    suspend fun searchLocations(text: String, near: GeoPoint?, region: SearchRegion = SearchRegion.VICTORIA): List<GeocodeResult> {
         val clean = text.trim()
         if (clean.length < 2) return emptyList()
-        val key = "${clean.lowercase()}|${near?.let { "%.2f,%.2f".format(it.latitude, it.longitude) }}"
+        // Ranked from where you are, or from Melbourne, so local places come first.
+        val bias = near?.takeIf { region.contains(it.latitude, it.longitude) } ?: region.searchBias
+        val key = "${clean.lowercase()}|${"%.2f,%.2f".format(bias.latitude, bias.longitude)}|${region.name}"
         return geocodeCache.getOrLoad(key) {
-            api.geocode(clean, near?.latitude, near?.longitude)
+            api.geocode(clean, bias.latitude, bias.longitude)
                 .map(JourneyMapper::geocode)
+                .filter { region.contains(it.latitude, it.longitude) }
                 .distinctBy { "${it.name}|${"%.4f,%.4f".format(it.latitude, it.longitude)}" }
         }
     }

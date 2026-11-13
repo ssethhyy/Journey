@@ -277,7 +277,7 @@ class LocationSearchViewModel(private val container: AppContainer) : ViewModel()
                     _results.value = null
                 } else {
                     _results.value = LoadState.Loading
-                    _results.value = loadCatching { container.journeyRepository.searchLocations(text, near) }
+                    _results.value = loadCatching { container.journeyRepository.searchLocations(text, near, container.settingsRepository.current().searchRegion) }
                 }
             }
         }

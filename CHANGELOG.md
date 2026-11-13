@@ -6,6 +6,12 @@ All notable changes to Journey are documented here. The format follows
 
 ## [Unreleased]
 
+### Added
+- **Search stays in Victoria.** Place search on the Plan tab only returns places in Victoria (plus a little over the border, such as Albury), ranked from where you are or from Melbourne, so a search can no longer land overseas or in another state. The Map tab won't pan or zoom out beyond Victoria either. For interstate trips, switch *Settings → Map → Search and map area* to *Australia*. Stop and line search was already Victoria-only.
+
+### Fixed
+- **Maps outside the Map tab show again.** The journey, trip and route maps had gone blank since 1.2.0's app-wide edge blur, because they drew on a surface the blur can't pass through. They now draw the same way as the Map tab.
+
 ## [1.2.0] - 2026-11-12
 
 > **Before you update:** from this release Journey is signed with its own release key. Android won't install it over

@@ -328,6 +328,14 @@ fun SettingsScreen() {
             item(key = "map") {
                 SectionLabel("Map")
                 RoundedCardContainer {
+                    ConfigPickerItem(
+                        icon = Sym.Search,
+                        title = "Search and map area",
+                        items = com.ssethhyy.journey.data.planner.SearchRegion.entries,
+                        selectedItem = settings.searchRegion,
+                        onItemSelected = { vm.update { setSearchRegion(it) } },
+                        labelProvider = { it.label },
+                    )
                     IconToggleItem(
                         icon = Sym.Map,
                         title = "Night map in dark theme",

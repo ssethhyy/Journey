@@ -48,6 +48,11 @@ All notable changes to Journey are documented here. The format follows
 - Your name, departures per stop and the Near you options moved from Settings into the widgets' own settings.
   Commutes can hide suggested commutes and the backup trip and limit how many show; Places can hide the Home and Work
   suggestions and the Add tile.
+- **Service updates on stop and line pages are quieter too.** Instead of a long list of every notice, a stop or line
+  page shows one collapsed line (for example *2 major disruptions · Buses replace trains…*) only when there's a closure,
+  suspension, buses replacing trains or a changed timetable. Tap it to see every alert, the important ones first.
+  *Settings → Service updates on stops and lines* chooses what counts (major only, major and delays, or everything)
+  and whether the card starts collapsed.
 - For developers: an optional `WEATHER_API_KEY` in `.env` (a free OpenWeatherMap key) is built into release builds for
   the default weather provider. Without it people choose Open-Meteo or paste their own key.
 

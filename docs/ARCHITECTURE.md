@@ -204,6 +204,13 @@ lighting doesn't darken the colours.
   backup after the main trip.
 - *Near you* on For You shares the Map tab's `NearbyViewModel`, so the location is looked up once.
 
+## Service updates on stop and line pages
+
+`serviceUpdates` (in `ui/components/ServiceUpdates.kt`) adds the card to the stop and line pages. `ServiceUpdateSplit`
+splits the alerts with `ForYouDisruptions.matchesLevel` at `AppSettings.stopDisruptionLevel` (major only by default):
+the card only appears when something matches, starts collapsed (`stopDisruptionsCollapsed`), and expanded lists the
+matching alerts and then the rest under *Other updates*.
+
 ## For You widgets
 
 - `ForYouLayout` (in `data.foryou`) holds the widget order, which widgets are collapsed, whether titles show, and each

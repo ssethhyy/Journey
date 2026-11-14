@@ -101,6 +101,10 @@ data class AppSettings(
     val mapFollowsTheme: Boolean = true,
     val map3dObjects: Boolean = true,
     val mapSatellite: Boolean = false,
+    /** Which alerts count as worth showing on stop and line pages; the rest wait behind the expanded list. */
+    val stopDisruptionLevel: com.ssethhyy.journey.data.foryou.DisruptionLevel = com.ssethhyy.journey.data.foryou.DisruptionLevel.MAJOR,
+    /** Whether the service updates on stop and line pages start collapsed. */
+    val stopDisruptionsCollapsed: Boolean = true,
     val ptvDevIdOverride: String = "",
     val ptvApiKeyOverride: String = "",
     val mapboxTokenOverride: String = "",
@@ -152,6 +156,8 @@ class SettingsRepository(context: Context) {
         val MAP_FOLLOWS_THEME = booleanPreferencesKey("map_follows_theme")
         val MAP_3D = booleanPreferencesKey("map_3d")
         val MAP_SATELLITE = booleanPreferencesKey("map_satellite")
+        val STOP_DISRUPTION_LEVEL = stringPreferencesKey("stop_disruption_level")
+        val STOP_DISRUPTIONS_COLLAPSED = booleanPreferencesKey("stop_disruptions_collapsed")
         val PTV_DEV_ID = stringPreferencesKey("ptv_dev_id")
         val PTV_API_KEY = stringPreferencesKey("ptv_api_key")
         val MAPBOX_TOKEN = stringPreferencesKey("mapbox_token")
@@ -200,6 +206,8 @@ class SettingsRepository(context: Context) {
             mapFollowsTheme = p[Keys.MAP_FOLLOWS_THEME] ?: true,
             map3dObjects = p[Keys.MAP_3D] ?: true,
             mapSatellite = p[Keys.MAP_SATELLITE] ?: false,
+            stopDisruptionLevel = p[Keys.STOP_DISRUPTION_LEVEL].enumOr(com.ssethhyy.journey.data.foryou.DisruptionLevel.MAJOR),
+            stopDisruptionsCollapsed = p[Keys.STOP_DISRUPTIONS_COLLAPSED] ?: true,
             ptvDevIdOverride = p[Keys.PTV_DEV_ID].orEmpty(),
             ptvApiKeyOverride = p[Keys.PTV_API_KEY].orEmpty(),
             mapboxTokenOverride = p[Keys.MAPBOX_TOKEN].orEmpty(),
@@ -261,6 +269,8 @@ class SettingsRepository(context: Context) {
     suspend fun setMapFollowsTheme(enabled: Boolean) = store.edit { it[Keys.MAP_FOLLOWS_THEME] = enabled }
     suspend fun setMap3d(enabled: Boolean) = store.edit { it[Keys.MAP_3D] = enabled }
     suspend fun setMapSatellite(enabled: Boolean) = store.edit { it[Keys.MAP_SATELLITE] = enabled }
+    suspend fun setStopDisruptionLevel(level: com.ssethhyy.journey.data.foryou.DisruptionLevel) = store.edit { it[Keys.STOP_DISRUPTION_LEVEL] = level.name }
+    suspend fun setStopDisruptionsCollapsed(enabled: Boolean) = store.edit { it[Keys.STOP_DISRUPTIONS_COLLAPSED] = enabled }
 
     suspend fun setPtvCredentials(devId: String, apiKey: String) = store.edit {
         it[Keys.PTV_DEV_ID] = devId.trim()

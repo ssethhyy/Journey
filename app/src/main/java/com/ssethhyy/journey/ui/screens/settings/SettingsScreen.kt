@@ -274,6 +274,28 @@ fun SettingsScreen() {
                 }
             }
 
+            item(key = "service_updates") {
+                SectionLabel("Service updates on stops and lines")
+                RoundedCardContainer {
+                    ConfigPickerItem(
+                        icon = Sym.Warning,
+                        title = "Show",
+                        items = com.ssethhyy.journey.data.foryou.DisruptionLevel.entries,
+                        selectedItem = settings.stopDisruptionLevel,
+                        onItemSelected = { vm.update { setStopDisruptionLevel(it) } },
+                        labelProvider = { it.label },
+                        description = settings.stopDisruptionLevel.detail + ". Expand the card to see every alert",
+                    )
+                    IconToggleItem(
+                        icon = Sym.ExpandLess,
+                        title = "Start collapsed",
+                        description = "One quiet line until you tap it",
+                        isChecked = settings.stopDisruptionsCollapsed,
+                        onCheckedChange = { vm.update { setStopDisruptionsCollapsed(it) } },
+                    )
+                }
+            }
+
             item(key = "nearby") {
                 SectionLabel("Nearby stops")
                 RoundedCardContainer {

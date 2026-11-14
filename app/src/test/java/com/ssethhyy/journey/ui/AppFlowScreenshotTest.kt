@@ -157,7 +157,6 @@ class AppFlowScreenshotTest {
 
         // Stop details.
         rule.onNodeWithText("Commute").performClick()
-        waitForText("Service updates")
         waitForText("Departures")
         snap("04_stop_detail")
 

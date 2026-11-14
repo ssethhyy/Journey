@@ -209,6 +209,7 @@ open class JourneyApp : Application() {
         container = createContainer()
         HapticUtil.initialize(this)
         keepWidgetInSync()
+        if (container.mapRenderingEnabled) limitMapCache()
 
         // Keep runtime-configurable values (haptics, Mapbox token override) in sync with settings.
         container.appScope.launch {
@@ -219,6 +220,20 @@ open class JourneyApp : Application() {
                     HapticUtil.isAppHapticsEnabled.value = haptics
                     if (token.isNotBlank()) MapboxOptions.accessToken = token
                 }
+        }
+    }
+
+    /**
+     * Map tiles and styles the map has loaded are kept on disk and reused instead of downloaded again (Mapbox's
+     * ambient cache, shared by every map in the app). The quota keeps it to a sensible size: plenty for the places you
+     * use, with the oldest tiles cleared first.
+     */
+    private fun limitMapCache() {
+        runCatching {
+            com.mapbox.common.TileStore.create().setOption(
+                com.mapbox.common.TileStoreOptions.DISK_QUOTA,
+                com.mapbox.bindgen.Value.valueOf(MAP_CACHE_BYTES),
+            )
         }
     }
 
@@ -237,6 +252,11 @@ open class JourneyApp : Application() {
 
     /** Overridden in tests to point the app at a fake PTV server. */
     protected open fun createContainer(): AppContainer = AppContainer(this)
+
+    private companion object {
+        /** 200 MB of map tiles: Melbourne and the trips you take, without filling the phone. */
+        const val MAP_CACHE_BYTES = 200L * 1024 * 1024
+    }
 }
 
 val Context.appContainer: AppContainer

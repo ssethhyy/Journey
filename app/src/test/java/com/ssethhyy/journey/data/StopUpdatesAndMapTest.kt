@@ -31,6 +31,15 @@ class StopUpdatesAndMapTest {
     }
 
     @Test
+    fun facilityClosuresAreNotMajor() {
+        val carPark = disruption(4, "Hurstbridge Line stations: Temporary car park closures and pedestrian access changes", "Planned Closure")
+        val lifts = disruption(5, "Lift closed at Flinders Street", "Service Information")
+        val replaced = disruption(6, "Buses replace trains; station car park closed", "Planned Works")
+        assertTrue(ServiceUpdateSplit.of(listOf(carPark, lifts), DisruptionLevel.MAJOR).important.isEmpty())
+        assertEquals(listOf(6L), ServiceUpdateSplit.of(listOf(carPark, replaced), DisruptionLevel.MAJOR).important.map { it.id })
+    }
+
+    @Test
     fun withNoMajorAlertsThereIsNothingImportant() {
         assertTrue(ServiceUpdateSplit.of(listOf(lift, delays), DisruptionLevel.MAJOR).important.isEmpty())
         assertEquals(2, ServiceUpdateSplit.of(listOf(lift, delays), DisruptionLevel.ALL).important.size)

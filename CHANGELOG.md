@@ -50,7 +50,8 @@ All notable changes to Journey are documented here. The format follows
   suggestions and the Add tile.
 - **Service updates on stop and line pages are quieter too.** Instead of a long list of every notice, a stop or line
   page shows one collapsed line (for example *2 major disruptions · Buses replace trains…*) only when there's a closure,
-  suspension, buses replacing trains or a changed timetable. Tap it to see every alert, the important ones first.
+  suspension, buses replacing trains or a changed timetable (station notices such as car park or lift closures don't
+  count, here or on For You). Tap it to see every alert, the important ones first.
   *Settings → Service updates on stops and lines* chooses what counts (major only, major and delays, or everything)
   and whether the card starts collapsed.
 - **The map shows stops by zoom level.** Zoomed right out you see V/Line stations across the state; closer in, train

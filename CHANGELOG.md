@@ -16,29 +16,35 @@ All notable changes to Journey are documented here. The format follows
     *Reset to the default layout* puts everything back.
   - Settings → *Customise For You* opens edit mode too.
 - **Weather on For You.** The Greeting widget now shows the temperature and an icon for the conditions, in the style
-  of the new header design: a big thin temperature, a bold greeting and today's date. After a few seconds it folds
-  into one line (temperature on the left, the date on the right) so you see more of the page; tap it to open it again.
-  In the Greeting settings you can turn the weather or the folding off, choose how long before it folds, Celsius or
-  Fahrenheit, show the conditions, feels-like and today's high and low, and pick the provider:
+  of the new header design: a big thin temperature with the weather icon at its feet, a bold greeting and today's
+  date. After a few seconds it collapses into a small bar so you see more of the page. Scrolling down collapses it
+  too, and scrolling up (even when the page is already at the top) or tapping the bar expands it again. Choose what
+  the collapsed bar shows: the weather on the left (the default), the time in the middle and the date on the right.
+  In the Greeting settings you can also turn the weather or collapsing off, choose how long before it collapses, how
+  big the temperature is (small to huge), Celsius or Fahrenheit, show the conditions, feels-like and today's high and
+  low, and pick the provider:
   - **OpenWeatherMap** (the default). Builds published on GitHub include a key, so it works straight away.
   - **WeatherAPI.com**, with your own free key.
   - **Open-Meteo**, which needs no key.
   The weather uses your last known location (or Melbourne) and is cached for 15 minutes.
-- **Titles on every widget**, small and simple, with an arrow to fold the widget away. Turn all titles on or off in
+- **Titles on every widget**, small and simple, with an arrow to collapse the widget. Turn all titles on or off in
   edit mode.
+- Everything on For You lines up: the greeting, titles, chips, places and cards share the same left and right edges,
+  and edit mode opens from an *Edit* pill at the top right.
 
 ### Changed
 - **Favourites come first**, straight under your places. Their settings cover departures per stop (moved from
   Settings), grouping by mode, the mode filters, hiding stops with nothing coming, the Add button, and the order of
   your favourites (drag the handles).
-- **Disruptions are quieter and only show what matters.** The Disruptions widget is folded by default to a single line
+- **Disruptions are quieter and only show what matters.** The Disruptions widget is collapsed by default to a single line
   in the page's own colours (for example *1 major disruption · Hurstbridge*), and only appears when there is a major
   disruption (a closure, suspension, buses replacing trains or a changed timetable) at one of your favourite stops or
   on one of your favourite lines. Its settings choose major only, major and delays, or everything; your stops and lines
   or the whole network; how many to list; and whether it hides when there are none.
 - **The greeting design** follows the new header: "Good morning, Seth" on one line (longer greetings step down in size)
   and "Today is the 14th of November 2026". Choose another date style, or turn the greeting or date off, in its
-  settings.
+  settings. There's no prompt asking for your name any more: until one is saved, tap the greeting to add it (or set it
+  in the Greeting settings).
 - Your name, departures per stop and the Near you options moved from Settings into the widgets' own settings.
   Commutes can hide suggested commutes and the backup trip and limit how many show; Places can hide the Home and Work
   suggestions and the Add tile.

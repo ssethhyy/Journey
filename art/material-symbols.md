@@ -132,4 +132,4 @@ falls back to the closest Material Icons glyph, so you can add them gradually.
   `rounded_thunderstorm_24px.xml`, `rounded_weather_snowy_24px.xml` — weather conditions
 - `rounded_drag_indicator_24px.xml`, `rounded_tune_24px.xml`, `rounded_do_not_disturb_on_24px.xml`,
   `rounded_title_24px.xml`, `rounded_dashboard_customize_24px.xml`, `rounded_bolt_24px.xml`,
-  `rounded_restart_alt_24px.xml` — For You edit mode
+  `rounded_restart_alt_24px.xml`, `rounded_today_24px.xml` — For You edit mode and the collapsed bar

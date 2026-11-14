@@ -206,7 +206,7 @@ lighting doesn't darken the colours.
 
 ## For You widgets
 
-- `ForYouLayout` (in `data.foryou`) holds the widget order, which widgets are folded, whether titles show, and each
+- `ForYouLayout` (in `data.foryou`) holds the widget order, which widgets are collapsed, whether titles show, and each
   widget's config. `ForYouRepository` stores it as one JSON document in its own DataStore; a document that can't be
   read falls back to the default. The first layout is written from the old settings, so Near you stays off for people
   who had turned it off. Settings other screens share (the name, departures per stop, nearby count) stay in
@@ -222,7 +222,10 @@ lighting doesn't darken the colours.
   major types, or titles that mention closures, replacement buses, suspensions or timetable changes) on the routes of
   favourite stops (only the chosen lines for a favourite limited to some) or naming a favourite stop.
 - `ForYouHeader` is the Greeting widget, drawn from `for-you-page-top`: the temperature is Google Sans Flex at weight
-  220, width 40 and optical size 144 (`FlexType.single`), and one animated value shrinks it into the folded line.
+  220, width 40 and optical size 144 (`FlexType.single`, sized by `WeatherSize`), and one animated value shrinks it
+  into the collapsed bar, moving the icon from the temperature's feet to its middle. The bar centres the time between
+  two equal-weight halves. A `NestedScrollConnection` on the list collapses the header after 24 dp of scrolling down
+  and expands it on scrolling up while it's on screen, including a pull at the top of the list.
 
 ## Crowding
 

@@ -39,6 +39,7 @@ object Sym {
     val DashboardCustomize: ImageVector @Composable get() = symbol("rounded_dashboard_customize")
     val Bolt: ImageVector @Composable get() = symbol("rounded_bolt")
     val RestartAlt: ImageVector @Composable get() = symbol("rounded_restart_alt")
+    val Today: ImageVector @Composable get() = symbol("rounded_today")
     val Search: ImageVector @Composable get() = symbol("rounded_search")
     val SearchOff: ImageVector @Composable get() = symbol("rounded_search_off")
     val Map: ImageVector @Composable get() = symbol("rounded_map")

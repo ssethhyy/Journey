@@ -176,11 +176,11 @@ fun WidgetSettingsSheet(
                     }
                 }
             }
-            // The greeting has no title, and the Disruptions card folds from its own header.
+            // The greeting has no title, and the Disruptions card collapses from its own header.
             if (widget != ForYouWidget.DISRUPTIONS && widget != ForYouWidget.GREETING && layout.showTitles) {
                 Group("Title") {
                     IconToggleItem(
-                        Sym.ExpandLess, "Folded", layout.isCollapsed(widget),
+                        Sym.ExpandLess, "Collapsed", layout.isCollapsed(widget),
                         { onLayout { it.toggleCollapsed(widget) } },
                         description = "Only the title shows until you tap it",
                     )
@@ -241,14 +241,25 @@ private fun GreetingSettings(
     Group("Weather") {
         IconToggleItem(Sym.WeatherPartlyCloudyDay, "Weather", g.showWeather, { v -> set { it.copy(showWeather = v) } }, description = "The temperature and an icon for the conditions")
         if (g.showWeather) {
-            IconToggleItem(Sym.ExpandLess, "Fold after a few seconds", g.collapses, { v -> set { it.copy(collapses = v) } },
-                description = "Shrinks to one line so you see more of the page. Tap it to open it again")
-            if (g.collapses) {
-                SliderItem(Sym.Schedule, "Fold after", g.collapseAfterSeconds, 3..20, 1, { "$it s" }, { v -> set { it.copy(collapseAfterSeconds = v) } })
-            }
+            ConfigPickerItem(
+                Sym.WeatherSunny, "Size", com.ssethhyy.journey.data.foryou.WeatherSize.entries, g.weatherSize,
+                { v -> set { it.copy(weatherSize = v) } }, { it.label },
+                description = "How big the temperature is while expanded",
+            )
             IconToggleItem(Sym.Info, "Conditions, feels like, high and low", g.showWeatherDetails, { v -> set { it.copy(showWeatherDetails = v) } })
             ConfigPickerItem(Sym.WeatherSunny, "Units", TemperatureUnit.entries, g.unit, { v -> set { it.copy(unit = v) } }, { "${it.label} (${it.symbol})" })
         }
+    }
+    Group("Collapsed bar") {
+        IconToggleItem(Sym.ExpandLess, "Collapse after a few seconds", g.collapses, { v -> set { it.copy(collapses = v) } },
+            description = "Shrinks to a small bar so you see more of the page. Scrolling down collapses it too; scroll up or tap it to expand it")
+        if (g.collapses) {
+            SliderItem(Sym.Schedule, "Collapse after", g.collapseAfterSeconds, 3..20, 1, { "$it s" }, { v -> set { it.copy(collapseAfterSeconds = v) } })
+        }
+        IconToggleItem(Sym.WeatherPartlyCloudyDay, "Weather", g.barWeather && g.showWeather, { v -> set { it.copy(barWeather = v) } },
+            description = "On the left", enabled = g.showWeather)
+        IconToggleItem(Sym.Schedule, "Time", g.barTime, { v -> set { it.copy(barTime = v) } }, description = "In the middle")
+        IconToggleItem(Sym.Today, "Date", g.barDate, { v -> set { it.copy(barDate = v) } }, description = "On the right")
     }
     if (g.showWeather) {
         Group("Weather provider") {
@@ -443,7 +454,7 @@ private fun DisruptionsSettings(layout: ForYouLayout, onLayout: ((ForYouLayout) 
         ConfigPickerItem(Sym.Star, "Affecting", DisruptionScope.entries, d.scope, { v -> onLayout { it.copy(disruptions = it.disruptions.copy(scope = v)) } }, { it.label })
     }
     Group("Display") {
-        IconToggleItem(Sym.ExpandLess, "Start folded", layout.isCollapsed(ForYouWidget.DISRUPTIONS), { onLayout { it.toggleCollapsed(ForYouWidget.DISRUPTIONS) } },
+        IconToggleItem(Sym.ExpandLess, "Start collapsed", layout.isCollapsed(ForYouWidget.DISRUPTIONS), { onLayout { it.toggleCollapsed(ForYouWidget.DISRUPTIONS) } },
             description = "Just a line saying how many, until you tap it")
         IconToggleItem(Sym.VisibilityOff, "Hide when there are none", d.hideWhenClear, { v -> onLayout { it.copy(disruptions = it.disruptions.copy(hideWhenClear = v)) } })
         SliderItem(Sym.Warning, "Most shown", d.maxShown, 1..10, 1, { "$it" }, { v -> onLayout { it.copy(disruptions = it.disruptions.copy(maxShown = v)) } })

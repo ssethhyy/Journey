@@ -57,7 +57,7 @@ class ForYouHeaderTest {
     fun drawsExpanded() = draw(expanded = true)
 
     @Test
-    fun drawsFolded() = draw(expanded = false)
+    fun drawsCollapsed() = draw(expanded = false)
 
     private fun draw(expanded: Boolean) {
         rule.setContent {
@@ -66,7 +66,6 @@ class ForYouHeaderTest {
                     ForYouHeader(
                         greeting = "Good morning, Seth",
                         date = "Today is the 14th of November 2026",
-                        compactDate = "14/11/26",
                         weather = LoadState.Success(rain),
                         unit = TemperatureUnit.CELSIUS,
                         showDetails = false,
@@ -75,20 +74,22 @@ class ForYouHeaderTest {
                         onEdit = {},
                         onSetUpWeather = {},
                         onRetryWeather = {},
+                        barTime = "9:30 am",
+                        barDate = "14/11/26",
                     )
                 }
             }
         }
         rule.onNodeWithContentDescription("21°, Light rain").assertExists()
-        rule.onNodeWithContentDescription("Edit For You").assertExists()
+        rule.onNodeWithText("Edit").assertExists()
         if (expanded) rule.onNodeWithText("Good morning, Seth").assertExists() else rule.onNodeWithText("14/11/26").assertExists()
         val bitmap = rule.onRoot().captureToImage().asAndroidBitmap()
-        File("build/screenshots").apply { mkdirs() }.resolve(if (expanded) "for_you_header.png" else "for_you_header_folded.png")
+        File("build/screenshots").apply { mkdirs() }.resolve(if (expanded) "for_you_header.png" else "for_you_header_collapsed.png")
             .outputStream().use { bitmap.compress(Bitmap.CompressFormat.PNG, 100, it) }
     }
 
     @Test
-    fun drawsTheDisruptionsCardFoldedAndOpen() {
+    fun drawsTheDisruptionsCardCollapsedAndOpen() {
         val line = com.ssethhyy.journey.data.model.Route(id = 8, mode = com.ssethhyy.journey.data.model.TransportMode.TRAIN, name = "Hurstbridge", number = "")
         val list = listOf(
             com.ssethhyy.journey.data.model.Disruption(

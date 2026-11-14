@@ -73,7 +73,7 @@ val ForYouWidget.icon: ImageVector
         ForYouWidget.SHORTCUTS -> Sym.Bolt
     }
 
-/** A simple widget title with an arrow showing, and changing, whether the widget is folded away. */
+/** A simple widget title with an arrow showing, and changing, whether the widget is collapsed. */
 @Composable
 fun WidgetTitle(
     text: String,
@@ -93,22 +93,22 @@ fun WidgetTitle(
                 HapticUtil.performUIHaptic(view)
                 onToggle()
             }
-            .semantics { stateDescription = if (collapsed) "Collapsed" else "Expanded" }
-            .padding(start = 8.dp, end = 4.dp),
+            .semantics { stateDescription = if (collapsed) "Collapsed" else "Expanded" },
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Text(text, style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.onSurface, modifier = Modifier.weight(1f))
         // Actions like "Add" only make sense while the widget is open.
         if (!collapsed) trailing?.invoke()
-        Box(Modifier.size(40.dp), contentAlignment = Alignment.Center) {
+        // The arrow's edge lines up with the cards' right edge.
+        Box(Modifier.size(width = 32.dp, height = 40.dp), contentAlignment = Alignment.CenterEnd) {
             Icon(Sym.ExpandMore, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.rotate(turn))
         }
     }
 }
 
 /**
- * Wraps a widget's content with its title (when titles are on) and folds it away when collapsed. Without titles
- * there's nothing to unfold it with, so the content always shows.
+ * Wraps a widget's content with its title (when titles are on) and hides it when collapsed. Without titles
+ * there's nothing to expand it with, so the content always shows.
  */
 @Composable
 fun CollapsibleWidget(
@@ -150,8 +150,8 @@ fun TitleAddButton(label: String, onClick: () -> Unit) {
 }
 
 /**
- * The Disruptions widget: a quiet card whose header is its title, folded by default. It names how many disruptions
- * match and what they affect; unfolded it lists them.
+ * The Disruptions widget: a quiet card whose header is its title, collapsed by default. It names how many disruptions
+ * match and what they affect; expanded it lists them.
  */
 @Composable
 fun DisruptionsWidget(

@@ -327,7 +327,7 @@ fun ForYouEditor(
 private fun EditorHeader(showTitles: Boolean, onShowTitles: (Boolean) -> Unit, onDone: () -> Unit) {
     val view = LocalView.current
     Column(Modifier.fillMaxWidth()) {
-        Row(Modifier.fillMaxWidth().padding(start = 8.dp), verticalAlignment = Alignment.CenterVertically) {
+        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
             Column(Modifier.weight(1f)) {
                 Text("Edit For You", style = MaterialTheme.typography.headlineSmallEmphasized)
                 Text(
@@ -347,7 +347,7 @@ private fun EditorHeader(showTitles: Boolean, onShowTitles: (Boolean) -> Unit, o
         Surface(shape = RoundedCornerShape(28.dp), color = MaterialTheme.colorScheme.surfaceContainerHigh) {
             ListItem(
                 headlineContent = { Text("Widget titles") },
-                supportingContent = { Text("A title over each widget, with an arrow to fold it away") },
+                supportingContent = { Text("A title over each widget, with an arrow to collapse it") },
                 leadingContent = { Icon(Sym.Title, null) },
                 trailingContent = {
                     Switch(checked = showTitles, onCheckedChange = {

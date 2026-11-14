@@ -174,7 +174,7 @@ class AppFlowScreenshotTest {
         rule.activity.onBackPressedDispatcher.onBackPressed()
         rule.waitForIdle()
 
-        // Disruptions from the Disruptions widget: unfold it, then see them all.
+        // Disruptions from the Disruptions widget: expand it, then see them all.
         rule.onAllNodes(androidx.compose.ui.test.SemanticsMatcher.keyIsDefined(androidx.compose.ui.semantics.SemanticsProperties.VerticalScrollAxisRange))
             .onFirst().performScrollToNode(androidx.compose.ui.test.hasText("major disruption", substring = true))
         rule.onNodeWithText("major disruption", substring = true).performClick()

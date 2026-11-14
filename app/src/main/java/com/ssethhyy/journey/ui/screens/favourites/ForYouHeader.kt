@@ -4,7 +4,7 @@
  * Description: The Greeting widget: a big thin temperature and weather icon, a greeting and today's date.
  *
  * Drawn from the for-you-page-top design: the temperature is Google Sans Flex at its thinnest, narrowest and
- * largest optical size, the greeting bold and wide. After a few seconds it folds into a single line (temperature
+ * largest optical size, the greeting bold and wide. After a few seconds it collapses into a single bar (temperature
  * and icon on the left, the date on the right) so the rest of the page moves up; tap that line to open it again.
  */
 
@@ -21,6 +21,14 @@ import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.IntrinsicSize
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.text.BasicText
+import androidx.compose.foundation.text.TextAutoSize
+import androidx.compose.material3.FilledTonalButton
+import androidx.compose.ui.BiasAlignment
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -126,7 +134,6 @@ private val DateFamily = FlexType.single(FlexAxes(opticalSize = 16f, width = 118
 fun ForYouHeader(
     greeting: String?,
     date: String?,
-    compactDate: String,
     weather: LoadState<WeatherNow>?,
     unit: TemperatureUnit,
     showDetails: Boolean,
@@ -136,6 +143,16 @@ fun ForYouHeader(
     onSetUpWeather: () -> Unit,
     onRetryWeather: () -> Unit,
     modifier: Modifier = Modifier,
+    /** The time in the middle of the collapsed bar (null leaves it out). */
+    barTime: String? = null,
+    /** The date on the right of the collapsed bar (null leaves it out). */
+    barDate: String? = null,
+    /** Whether the collapsed bar shows the weather. */
+    barWeather: Boolean = true,
+    /** The temperature's size while expanded. */
+    temperatureSp: Float = 116f,
+    /** Set while no name is saved: tapping the greeting asks for one. */
+    onAddName: (() -> Unit)? = null,
 ) {
     val view = LocalView.current
     val springy by animateFloatAsState(
@@ -147,6 +164,10 @@ fun ForYouHeader(
     val progress = springy.coerceIn(0f, 1f)
     val reading = (weather as? LoadState.Success)?.data
     val onSurface = MaterialTheme.colorScheme.onSurface
+    val bigSize = temperatureSp.sp
+    val iconScale = temperatureSp / 116f
+    // The weather fades out of the collapsed bar when it isn't wanted there.
+    val weatherAlpha = if (barWeather) 1f else progress
 
     Column(
         modifier
@@ -154,15 +175,17 @@ fun ForYouHeader(
             .clickable(
                 interactionSource = remember { MutableInteractionSource() },
                 indication = null,
-                onClickLabel = if (expanded) "Fold the greeting" else "Show the greeting",
+                onClickLabel = if (expanded) "Collapse the greeting" else "Expand the greeting",
             ) {
                 HapticUtil.performUIHaptic(view)
                 onExpandedChange(!expanded)
             }
-            .padding(start = 8.dp, end = 0.dp, top = lerp(0.dp, 4.dp, progress), bottom = lerp(0.dp, 8.dp, progress)),
+            .padding(top = lerp(0.dp, 4.dp, progress), bottom = lerp(0.dp, 8.dp, progress)),
     ) {
         Box(Modifier.fillMaxWidth().heightIn(min = 48.dp)) {
-            Row(Modifier.align(Alignment.CenterStart), verticalAlignment = Alignment.CenterVertically) {
+            if (weatherAlpha > 0.01f) Row(
+                Modifier.align(Alignment.CenterStart).alpha(weatherAlpha).height(IntrinsicSize.Min),
+            ) {
                 when {
                     weather == null -> Unit
                     reading != null -> {
@@ -171,14 +194,15 @@ fun ForYouHeader(
                             style = TextStyle(
                                 fontFamily = TemperatureFamily,
                                 fontWeight = FontWeight(220),
-                                fontSize = lerp(40.sp, 116.sp, progress),
+                                fontSize = lerp(32.sp, bigSize, progress),
                                 // Trimmed to the figures, so the greeting sits close underneath like the design.
-                                lineHeight = lerp(40.sp, 94.sp, progress),
+                                lineHeight = lerp(32.sp, bigSize * 0.81f, progress),
                                 lineHeightStyle = LineHeightStyle(LineHeightStyle.Alignment.Center, LineHeightStyle.Trim.Both),
                                 letterSpacing = (-0.02).em,
                             ),
                             color = onSurface,
                             modifier = Modifier
+                                .align(Alignment.CenterVertically)
                                 .semantics { contentDescription = "${unit.format(reading.temperatureC)}, ${reading.description}" }
                                 // Figures have no descenders: drop the empty space under them so the greeting sits close.
                                 .layout { measurable, constraints ->
@@ -187,12 +211,15 @@ fun ForYouHeader(
                                     layout(placeable.width, placeable.height - trim) { placeable.place(0, 0) }
                                 },
                         )
-                        Spacer(Modifier.width(lerp(6.dp, 22.dp, progress)))
+                        Spacer(Modifier.width(lerp(6.dp, 16.dp * iconScale, progress)))
+                        // Centred beside the small bar temperature; at the feet of the big one.
                         Icon(
                             reading.icon(),
                             contentDescription = null,
                             tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                            modifier = Modifier.size(lerp(26.dp, 60.dp, progress)),
+                            modifier = Modifier
+                                .align(BiasAlignment.Vertical(progress))
+                                .size(lerp(24.dp, 52.dp * iconScale, progress)),
                         )
                     }
                     weather is LoadState.Error && weather.error is WeatherException.MissingKey -> WeatherChip(
@@ -207,25 +234,28 @@ fun ForYouHeader(
                     )
                     else -> Text(
                         "--°",
-                        style = TextStyle(fontFamily = TemperatureFamily, fontWeight = FontWeight(220), fontSize = lerp(40.sp, 116.sp, progress), lineHeight = lerp(40.sp, 94.sp, progress), lineHeightStyle = LineHeightStyle(LineHeightStyle.Alignment.Center, LineHeightStyle.Trim.Both)),
+                        style = TextStyle(
+                            fontFamily = TemperatureFamily,
+                            fontWeight = FontWeight(220),
+                            fontSize = lerp(32.sp, bigSize, progress),
+                            lineHeight = lerp(32.sp, bigSize * 0.81f, progress),
+                            lineHeightStyle = LineHeightStyle(LineHeightStyle.Alignment.Center, LineHeightStyle.Trim.Both),
+                        ),
                         color = onSurface.copy(alpha = 0.3f),
                     )
                 }
             }
-            Row(
-                Modifier.align(Alignment.TopEnd).heightIn(min = 48.dp),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-            ) {
-                if (progress < 0.98f) {
-                    Text(
-                        compactDate,
-                        style = TextStyle(fontFamily = DateFamily, fontWeight = FontWeight(420), fontSize = 24.sp, lineHeight = 28.sp),
-                        color = onSurface,
-                        modifier = Modifier.alpha(1f - progress),
-                    )
+            // The collapsed bar: the time exactly in the middle, the date and the Edit pill on the right.
+            Row(Modifier.fillMaxWidth().height(48.dp).align(Alignment.TopCenter), verticalAlignment = Alignment.CenterVertically) {
+                Spacer(Modifier.weight(1f))
+                if (barTime != null && progress < 0.98f) BarText(barTime, Modifier.alpha(1f - progress).widthIn(max = 120.dp))
+                Row(Modifier.weight(1f).padding(start = 12.dp), horizontalArrangement = Arrangement.End, verticalAlignment = Alignment.CenterVertically) {
+                    if (barDate != null && progress < 0.98f) {
+                        BarText(barDate, Modifier.alpha(1f - progress).weight(1f, fill = false))
+                        Spacer(Modifier.width(10.dp))
+                    }
+                    EditButton(onEdit)
                 }
-                EditButton(onEdit)
             }
         }
         AnimatedVisibility(
@@ -233,7 +263,7 @@ fun ForYouHeader(
             enter = expandVertically(spring(dampingRatio = 0.85f, stiffness = Spring.StiffnessMediumLow)) + fadeIn(),
             exit = shrinkVertically(spring(dampingRatio = 1f, stiffness = Spring.StiffnessMediumLow)) + fadeOut(),
         ) {
-            Column(Modifier.padding(top = 2.dp, end = 8.dp)) {
+            Column(Modifier.padding(top = 2.dp)) {
                 if (showDetails && reading != null) {
                     val details = listOfNotNull(
                         reading.description,
@@ -245,12 +275,18 @@ fun ForYouHeader(
                 }
                 if (greeting != null) {
                     // One line like the design: longer greetings ("Good afternoon, Alexandra") step down in size.
-                    androidx.compose.foundation.text.BasicText(
+                    BasicText(
                         greeting,
                         style = TextStyle(fontFamily = GreetingFamily, fontWeight = FontWeight(700), fontSize = 30.sp, lineHeight = 36.sp, letterSpacing = (-0.01).em, color = onSurface),
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
-                        autoSize = androidx.compose.foundation.text.TextAutoSize.StepBased(minFontSize = 20.sp, maxFontSize = 30.sp, stepSize = 1.sp),
+                        autoSize = TextAutoSize.StepBased(minFontSize = 20.sp, maxFontSize = 30.sp, stepSize = 1.sp),
+                        modifier = if (onAddName != null) {
+                            Modifier.clickable(onClickLabel = "Add your name") {
+                                HapticUtil.performUIHaptic(view)
+                                onAddName()
+                            }
+                        } else Modifier,
                     )
                 }
                 if (date != null) {
@@ -264,6 +300,18 @@ fun ForYouHeader(
             }
         }
     }
+}
+
+/** The time or date in the collapsed bar, shrinking to fit when all three are shown. */
+@Composable
+private fun BarText(text: String, modifier: Modifier = Modifier) {
+    BasicText(
+        text,
+        style = TextStyle(fontFamily = DateFamily, fontWeight = FontWeight(420), fontSize = 22.sp, lineHeight = 26.sp, color = MaterialTheme.colorScheme.onSurface),
+        maxLines = 1,
+        autoSize = TextAutoSize.StepBased(minFontSize = 14.sp, maxFontSize = 22.sp, stepSize = 1.sp),
+        modifier = modifier,
+    )
 }
 
 @Composable
@@ -280,25 +328,26 @@ private fun WeatherChip(text: String, icon: ImageVector, onClick: () -> Unit) {
     )
 }
 
-/** The pencil that opens edit mode, at the top right of For You. */
+/** The Edit pill that opens edit mode, at the top right of For You. */
 @Composable
 fun EditButton(onEdit: () -> Unit, modifier: Modifier = Modifier) {
     val view = LocalView.current
-    FilledTonalIconButton(
+    FilledTonalButton(
         onClick = {
             HapticUtil.performUIHaptic(view)
             onEdit()
         },
-        modifier = modifier.size(40.dp),
+        contentPadding = PaddingValues(horizontal = 18.dp),
+        modifier = modifier.height(40.dp),
     ) {
-        Icon(Sym.Edit, contentDescription = "Edit For You", modifier = Modifier.size(20.dp))
+        Text("Edit", style = MaterialTheme.typography.labelLarge)
     }
 }
 
-/** Holds the edit button when the Greeting widget isn't at the top. */
+/** Holds the Edit pill when the Greeting widget isn't at the top. */
 @Composable
 fun ForYouTopRow(onEdit: () -> Unit, modifier: Modifier = Modifier) {
-    Row(modifier.fillMaxWidth().padding(start = 8.dp), verticalAlignment = Alignment.CenterVertically) {
+    Row(modifier.fillMaxWidth().heightIn(min = 48.dp), verticalAlignment = Alignment.CenterVertically) {
         Text("For You", style = MaterialTheme.typography.titleLarge, modifier = Modifier.weight(1f))
         EditButton(onEdit)
     }

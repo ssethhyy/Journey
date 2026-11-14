@@ -51,17 +51,31 @@ enum class DateStyle(val label: String) {
 }
 
 @Serializable
+enum class WeatherSize(val label: String, val temperatureSp: Float) {
+    SMALL("Small", 72f),
+    MEDIUM("Medium", 94f),
+    LARGE("Large", 116f),
+    HUGE("Huge", 140f),
+}
+
+@Serializable
 data class GreetingConfig(
     val showGreeting: Boolean = true,
     val showDate: Boolean = true,
     val dateStyle: DateStyle = DateStyle.SENTENCE,
     val showWeather: Boolean = true,
-    /** Shrink to a small line after [collapseAfterSeconds] so the rest of the page moves up. */
+    /** Collapse to a small bar after [collapseAfterSeconds] so the rest of the page moves up. */
     val collapses: Boolean = true,
     val collapseAfterSeconds: Int = 6,
     /** The condition and today's high and low under the temperature. */
     val showWeatherDetails: Boolean = false,
     val unit: TemperatureUnit = TemperatureUnit.CELSIUS,
+    /** How big the temperature is while the greeting is expanded. */
+    val weatherSize: WeatherSize = WeatherSize.LARGE,
+    /** What the collapsed bar shows: the weather on the left, the time in the middle, the date on the right. */
+    val barWeather: Boolean = true,
+    val barTime: Boolean = false,
+    val barDate: Boolean = false,
     val provider: WeatherProvider = WeatherProvider.DEFAULT,
     /** The user's own keys, per provider. */
     val keys: Map<WeatherProvider, String> = emptyMap(),

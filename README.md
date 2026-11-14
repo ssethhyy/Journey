@@ -47,11 +47,11 @@ Live departures, journey planning, a live map, myki balance and trip tracking fo
 ## Features
 
 ### 🏠 For You
-- **Arrange it your way:** For You is made of widgets. Tap the pencil to drag them into any order (they snap into place), remove them, add others (*Network status*, *Shortcuts*) and open each one's own settings. Every widget has a small title with an arrow to fold it away, or turn titles off altogether.
-- **Weather and a greeting:** a big temperature with an icon for the conditions, "Good morning" with your name and today's date, folding into one line after a few seconds. Weather comes from OpenWeatherMap (built in), WeatherAPI.com or Open-Meteo.
+- **Arrange it your way:** For You is made of widgets. Tap *Edit* to drag them into any order (they snap into place), remove them, add others (*Network status*, *Shortcuts*) and open each one's own settings. Every widget has a small title with an arrow to collapse it, or turn titles off altogether.
+- **Weather and a greeting:** a big temperature with an icon for the conditions, "Good morning" with your name and today's date. It collapses into a small bar (weather, and optionally the time and date) after a few seconds or as you scroll down, and expands again when you scroll up. Weather comes from OpenWeatherMap (built in), WeatherAPI.com or Open-Meteo.
 - Your favourite stops with **live departures**, first on the page and grouped by mode (trains, trams, buses). Choose how many departures, the order, and whether stops with nothing coming show.
 - **Favourite just the lines you use:** keep every departure from a stop, or pick lines and directions such as *Frankston to City*.
-- **Disruptions that matter:** folded to one quiet line, and only when there's a major disruption (closures, replacement buses, changed timetables) at your stops or on your lines.
+- **Disruptions that matter:** collapsed to one quiet line, and only when there's a major disruption (closures, replacement buses, changed timetables) at your stops or on your lines.
 - Saved places (Home, Work and your own) one tap away from planning a trip.
 - **Commutes:** the trips you make most (learned from your planning, or added by you) with when to leave, a backup if you miss it, and one-tap tracking or planning.
 - **Near you:** the closest stops and their next departures.

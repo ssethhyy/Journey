@@ -61,6 +61,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -122,8 +123,28 @@ fun FavouritesScreen(onAddFromNearby: () -> Unit, onAddFromSearch: () -> Unit) {
     var editing by rememberSaveable { mutableStateOf(false) }
     var settingsFor by rememberSaveable { mutableStateOf<ForYouWidget?>(null) }
     var addingWidget by rememberSaveable { mutableStateOf(false) }
-    // The greeting opens big each time For You is shown, then folds after a few seconds if set to.
+    // The greeting opens big each time For You is shown, then collapses after a few seconds if set to.
     var headerExpanded by rememberSaveable { mutableStateOf(true) }
+    // Scrolling down collapses it; scrolling up while it's on screen expands it again.
+    val collapseDistance = with(density) { 24.dp.toPx() }
+    val headerScroll = remember(listState) {
+        object : androidx.compose.ui.input.nestedscroll.NestedScrollConnection {
+            var travelled = 0f
+
+            override fun onPreScroll(available: androidx.compose.ui.geometry.Offset, source: androidx.compose.ui.input.nestedscroll.NestedScrollSource): androidx.compose.ui.geometry.Offset {
+                val dy = available.y
+                if (dy < 0f) {
+                    travelled = (travelled.coerceAtMost(0f) + dy)
+                    if (travelled < -collapseDistance && headerExpanded) headerExpanded = false
+                } else if (dy > 0f) {
+                    travelled = (travelled.coerceAtLeast(0f) + dy)
+                    val greetingVisible = listState.firstVisibleItemIndex == 0
+                    if (greetingVisible && travelled > collapseDistance / 2 && !headerExpanded) headerExpanded = true
+                }
+                return androidx.compose.ui.geometry.Offset.Zero
+            }
+        }
+    }
     LaunchedEffect(headerExpanded, layout.greeting.collapses, layout.greeting.collapseAfterSeconds, editing) {
         if (headerExpanded && layout.greeting.collapses && !editing) {
             delay(layout.greeting.collapseAfterSeconds * 1000L)
@@ -245,7 +266,7 @@ fun FavouritesScreen(onAddFromNearby: () -> Unit, onAddFromSearch: () -> Unit) {
                     !state.isLoaded -> LoadingState()
                     else -> LazyColumn(
                         state = listState,
-                        modifier = Modifier.fillMaxSize().floatingBarBlur(innerPadding.calculateTopPadding()),
+                        modifier = Modifier.fillMaxSize().nestedScroll(headerScroll).floatingBarBlur(innerPadding.calculateTopPadding()),
                         contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = innerPadding.calculateTopPadding() + 4.dp, bottom = ToolbarClearance + innerPadding.calculateBottomPadding()),
                         verticalArrangement = Arrangement.spacedBy(12.dp),
                     ) {
@@ -275,7 +296,6 @@ fun FavouritesScreen(onAddFromNearby: () -> Unit, onAddFromSearch: () -> Unit) {
                                         ForYouHeader(
                                             greeting = if (g.showGreeting) ForYouDates.greeting(state.settings.userName, now) else null,
                                             date = if (g.showDate) ForYouDates.format(g.dateStyle, now) else null,
-                                            compactDate = ForYouDates.format(DateStyle.NUMERIC, now),
                                             weather = if (g.showWeather) state.weather ?: LoadState.Loading else null,
                                             unit = g.unit,
                                             showDetails = g.showWeatherDetails,
@@ -287,19 +307,16 @@ fun FavouritesScreen(onAddFromNearby: () -> Unit, onAddFromSearch: () -> Unit) {
                                                 settingsFor = ForYouWidget.GREETING
                                             },
                                             onRetryWeather = { vm.loadWeather(force = true) },
+                                            barTime = if (g.barTime) TimeFormatter.clock(now) else null,
+                                            barDate = if (g.barDate) ForYouDates.format(DateStyle.NUMERIC, now) else null,
+                                            barWeather = g.barWeather,
+                                            temperatureSp = g.weatherSize.temperatureSp,
+                                            // No name yet: tapping the greeting asks for one.
+                                            onAddName = if (state.settings.userName.isBlank()) {
+                                                { askingName = true }
+                                            } else null,
                                             modifier = Modifier.animateItem(),
                                         )
-                                    }
-                                    if (g.showGreeting && state.settings.userName.isBlank() && headerExpanded) {
-                                        item(key = "name_prompt") {
-                                            androidx.compose.material3.AssistChip(
-                                                onClick = { askingName = true },
-                                                label = { Text("Add your name for a personal greeting") },
-                                                leadingIcon = { Icon(Sym.PersonFilled, null, Modifier.size(18.dp)) },
-                                                shape = androidx.compose.foundation.shape.CircleShape,
-                                                modifier = Modifier.animateItem(),
-                                            )
-                                        }
                                     }
                                 }
                                 ForYouWidget.PLACES -> item(key = "w_places") {
@@ -568,7 +585,7 @@ private fun LazyListScope.favouritesWidget(
 /** A small mode heading inside the Favourites widget ("Trains"). */
 @Composable
 private fun ModeHeading(text: String, modifier: Modifier = Modifier, trailing: (@Composable () -> Unit)? = null) {
-    Row(modifier.fillMaxWidth().padding(start = 8.dp, top = 4.dp), verticalAlignment = Alignment.CenterVertically) {
+    Row(modifier.fillMaxWidth().padding(top = 4.dp), verticalAlignment = Alignment.CenterVertically) {
         Text(text, style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary, modifier = Modifier.weight(1f))
         trailing?.invoke()
     }

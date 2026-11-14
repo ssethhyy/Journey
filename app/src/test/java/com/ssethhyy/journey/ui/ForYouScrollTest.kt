@@ -63,7 +63,7 @@ class ForYouScrollTest {
         runBlocking {
             // This test covers the original top-pill style, whose pill appears once the greeting scrolls away.
             container.settingsRepository.setBarStyle(com.ssethhyy.journey.data.repository.BarStyle.TOP_PILL)
-            // Keep the greeting open: it folds after a few seconds by default.
+            // Keep the greeting open: it collapses after a few seconds by default.
             container.forYouRepository.update { it.copy(greeting = it.greeting.copy(collapses = false)) }
             container.favouritesRepository.clear()
             container.favouritesRepository.add(Stop(1071, TransportMode.TRAIN, "Flinders Street Station", "Melbourne City", -37.8183, 144.9671))

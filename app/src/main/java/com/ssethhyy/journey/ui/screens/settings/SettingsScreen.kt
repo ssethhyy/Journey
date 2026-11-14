@@ -6,6 +6,7 @@
 
 package com.ssethhyy.journey.ui.screens.settings
 
+import com.ssethhyy.journey.appContainer
 import com.ssethhyy.journey.ui.components.pageBottomInset
 import com.ssethhyy.journey.ui.components.Sym
 import android.os.Build
@@ -173,10 +174,19 @@ fun SettingsScreen() {
             modifier = Modifier.fillMaxSize().floatingBarBlur(padding.calculateTopPadding()),
             contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = padding.calculateTopPadding(), bottom = pageBottomInset(32.dp)),
         ) {
-            item(key = "personal") {
-                SectionLabel("You")
+            item(key = "for_you") {
+                SectionLabel("For You")
                 RoundedCardContainer {
-                    NameField(current = settings.userName, onSave = { name -> vm.update { setUserName(name) } })
+                    // Your name, the weather, departures per stop and the rest now live with each widget.
+                    ActionItem(
+                        icon = Sym.DashboardCustomize,
+                        title = "Customise For You",
+                        description = "Reorder, add and remove widgets, and set up the greeting, weather, favourites and more",
+                        onClick = {
+                            context.appContainer.requestForYouEdit()
+                            navigator.goToTab(com.ssethhyy.journey.ui.navigation.HomeTab.FOR_YOU)
+                        },
+                    )
                 }
             }
 
@@ -254,15 +264,6 @@ fun SettingsScreen() {
                         onItemSelected = { vm.update { setTimeDisplay(it) } },
                         labelProvider = { it.label },
                     )
-                    SliderItem(
-                        icon = Sym.FormatListNumbered,
-                        title = "Departures per stop",
-                        value = settings.departuresPerStop,
-                        range = 1..6,
-                        step = 1,
-                        valueLabel = { "$it" },
-                        onValueChangeFinished = { vm.update { setDeparturesPerStop(it) } },
-                    )
                     IconToggleItem(
                         icon = Sym.Refresh,
                         title = "Auto refresh",
@@ -276,24 +277,6 @@ fun SettingsScreen() {
             item(key = "nearby") {
                 SectionLabel("Nearby stops")
                 RoundedCardContainer {
-                    IconToggleItem(
-                        icon = Sym.ForYou,
-                        title = "Show on For You",
-                        description = "The closest stops and their next departures",
-                        isChecked = settings.forYouNearby,
-                        onCheckedChange = { vm.update { setForYouNearby(it) } },
-                    )
-                    if (settings.forYouNearby) {
-                        SliderItem(
-                            icon = Sym.FormatListNumbered,
-                            title = "Stops on For You",
-                            value = settings.forYouNearbyCount,
-                            range = 1..8,
-                            step = 1,
-                            valueLabel = { "$it" },
-                            onValueChangeFinished = { vm.update { setForYouNearbyCount(it) } },
-                        )
-                    }
                     SliderItem(
                         icon = Sym.NearMe,
                         title = "Search radius",
@@ -782,38 +765,6 @@ private fun AboutSection() {
             title = "Data sources",
             description = "Timetable data licensed from Public Transport Victoria under CC BY 4.0. Journey planning by Transitous (MOTIS) using Transport Victoria open data. Maps © Mapbox © OpenStreetMap.",
             onClick = { runCatching { uriHandler.openUri("https://www.ptv.vic.gov.au/footer/data-and-reporting/datasets/ptv-timetable-api/") } },
-        )
-    }
-}
-
-@Composable
-private fun NameField(current: String, onSave: (String) -> Unit) {
-    var text by rememberSaveable(current) { mutableStateOf(current) }
-    val focus = androidx.compose.ui.platform.LocalFocusManager.current
-    Row(
-        Modifier
-            .fillMaxWidth()
-            .background(MaterialTheme.colorScheme.surfaceBright)
-            .padding(horizontal = 16.dp, vertical = 12.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        com.ssethhyy.journey.ui.components.LeadingIcon(Sym.Person)
-        Spacer(Modifier.width(16.dp))
-        OutlinedTextField(
-            value = text,
-            onValueChange = { text = it.take(30) },
-            label = { Text("Your name") },
-            supportingText = { Text("Used in your For You greeting") },
-            singleLine = true,
-            shape = RoundedCornerShape(16.dp),
-            keyboardOptions = KeyboardOptions(imeAction = androidx.compose.ui.text.input.ImeAction.Done),
-            keyboardActions = androidx.compose.foundation.text.KeyboardActions(onDone = {
-                onSave(text)
-                focus.clearFocus()
-            }),
-            modifier = Modifier
-                .weight(1f)
-                .onFocusChanged { if (!it.isFocused && text != current) onSave(text) },
         )
     }
 }

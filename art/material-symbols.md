@@ -123,3 +123,13 @@ falls back to the closest Material Icons glyph, so you can add them gradually.
 - `ic_widget_live.xml` ← rss_feed (widget live indicator)
 - `ic_widget_refresh.xml` ← refresh (widget refresh button)
 - `ic_stat_tracking.xml` ← train (tracking notification; keep it a single white path)
+
+## Weather and For You editing
+
+- `rounded_sunny_24px.xml`, `rounded_clear_night_24px.xml`, `rounded_partly_cloudy_day_24px.xml`,
+  `rounded_partly_cloudy_night_24px.xml`, `rounded_cloud_24px.xml`, `rounded_foggy_24px.xml`,
+  `rounded_rainy_24px.xml`, `rounded_rainy_light_24px.xml`, `rounded_rainy_heavy_24px.xml`,
+  `rounded_thunderstorm_24px.xml`, `rounded_weather_snowy_24px.xml` — weather conditions
+- `rounded_drag_indicator_24px.xml`, `rounded_tune_24px.xml`, `rounded_do_not_disturb_on_24px.xml`,
+  `rounded_title_24px.xml`, `rounded_dashboard_customize_24px.xml`, `rounded_bolt_24px.xml`,
+  `rounded_restart_alt_24px.xml` — For You edit mode

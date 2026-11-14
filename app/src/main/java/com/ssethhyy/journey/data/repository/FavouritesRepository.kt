@@ -123,6 +123,13 @@ object FavouritesCodec {
         return list.toMutableList().apply { add(to, removeAt(from)) }
     }
 
+    /** Puts the favourites in the order of [keys]; any not named keep their place after them. */
+    fun reorder(list: List<FavouriteStop>, keys: List<String>): List<FavouriteStop> {
+        val byKey = list.associateBy { it.key }
+        val ordered = keys.mapNotNull { byKey[it] }
+        return ordered + list.filter { it !in ordered }
+    }
+
     /** Merges imported favourites, keeping existing entries and their order. */
     fun merge(existing: List<FavouriteStop>, imported: List<FavouriteStop>): List<FavouriteStop> =
         imported.fold(existing) { acc, item -> add(acc, item) }
@@ -171,6 +178,8 @@ class FavouritesRepository(context: Context) {
     suspend fun rename(stopKey: String, nickname: String?) = update { FavouritesCodec.rename(it, stopKey, nickname) }
 
     suspend fun move(stopKey: String, delta: Int) = update { FavouritesCodec.move(it, stopKey, delta) }
+
+    suspend fun reorder(keys: List<String>) = update { FavouritesCodec.reorder(it, keys) }
 
     suspend fun clear() = update { emptyList() }
 

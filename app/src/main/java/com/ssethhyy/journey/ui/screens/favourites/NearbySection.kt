@@ -46,18 +46,30 @@ fun LazyListScope.nearbySection(
     onOpenStop: (Stop) -> Unit,
     onOpenMap: () -> Unit,
     onEnableLocation: () -> Unit,
+    showTitle: Boolean = true,
+    collapsed: Boolean = false,
+    onToggle: () -> Unit = {},
+    showMapButton: Boolean = true,
 ) {
-    item(key = "nearby_header") {
-        SectionLabel(
-            "Near you",
-            trailing = {
-                TextButton(onClick = hapticClick(onOpenMap)) {
-                    Icon(Sym.Map, null, Modifier.size(18.dp))
-                    Spacer(Modifier.width(6.dp))
-                    Text("Map")
-                }
-            },
-        )
+    if (showTitle) {
+        item(key = "nearby_header") {
+            WidgetTitle(
+                "Near you",
+                collapsed = collapsed,
+                onToggle = onToggle,
+                modifier = Modifier.animateItem(),
+                trailing = if (showMapButton) {
+                    {
+                        TextButton(onClick = hapticClick(onOpenMap)) {
+                            Icon(Sym.Map, null, Modifier.size(18.dp))
+                            Spacer(Modifier.width(6.dp))
+                            Text("Map")
+                        }
+                    }
+                } else null,
+            )
+        }
+        if (collapsed) return
     }
     item(key = "nearby_body") {
         val stops = state.stops.dataOrNull.orEmpty().take(count)

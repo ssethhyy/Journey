@@ -15,6 +15,10 @@ import com.ssethhyy.journey.data.model.TransportMode
 import com.ssethhyy.journey.data.repository.AppSettings
 import com.ssethhyy.journey.data.repository.FavouriteStop
 import com.ssethhyy.journey.data.repository.SavedPlace
+import com.ssethhyy.journey.data.foryou.ForYouDisruptions
+import com.ssethhyy.journey.data.foryou.ForYouLayout
+import com.ssethhyy.journey.data.foryou.ForYouWidget
+import com.ssethhyy.journey.data.weather.WeatherNow
 import com.ssethhyy.journey.ui.LoadState
 import com.ssethhyy.journey.ui.loadCatching
 import kotlinx.coroutines.Job
@@ -40,6 +44,9 @@ data class FavouritesUiState(
     val settings: AppSettings = AppSettings(),
     val refreshing: Boolean = false,
     val places: List<SavedPlace> = emptyList(),
+    val layout: ForYouLayout = ForYouLayout(),
+    /** Null while the weather is turned off or the Greeting widget isn't shown. */
+    val weather: LoadState<WeatherNow>? = null,
 ) {
     val availableModes: List<TransportMode> get() = favourites.map { it.mode }.distinct().sortedBy { it.ordinal }
 
@@ -49,6 +56,18 @@ data class FavouritesUiState(
             .groupBy { it.mode }
             .toList()
             .sortedBy { it.first.ordinal }
+
+    /** The favourites in the user's own order, ignoring modes (when grouping by mode is off). */
+    val visibleFlat: List<FavouriteStop> get() = favourites.filter { filter.isEmpty() || it.mode in filter }
+
+    /** What the Disruptions widget shows, per its settings. */
+    val widgetDisruptions: List<Disruption>
+        get() = ForYouDisruptions.select(
+            network = disruptions,
+            favourites = favourites,
+            boards = boards.mapNotNull { (k, v) -> v.dataOrNull?.let { k to it } }.toMap(),
+            config = layout.disruptions,
+        )
 
     /**
      * Disruptions on the routes serving the user's favourite stops: those referenced by their live
@@ -72,6 +91,16 @@ class FavouritesViewModel(private val container: AppContainer) : ViewModel() {
     private val filter = MutableStateFlow<Set<TransportMode>>(emptySet())
     private val disruptions = MutableStateFlow<List<Disruption>>(emptyList())
     private val refreshing = MutableStateFlow(false)
+    private val weather = MutableStateFlow<LoadState<WeatherNow>?>(null)
+    private var weatherJob: Job? = null
+
+    private data class Extras(
+        val disruptions: List<Disruption>,
+        val refreshing: Boolean,
+        val places: List<SavedPlace>,
+        val layout: ForYouLayout,
+        val weather: LoadState<WeatherNow>?,
+    )
     private val requestLimiter = Semaphore(4)
     private var refreshJob: Job? = null
 
@@ -80,8 +109,11 @@ class FavouritesViewModel(private val container: AppContainer) : ViewModel() {
         container.settingsRepository.settings,
         boards,
         filter,
-        combine(disruptions, refreshing, container.placesRepository.places) { d, r, p -> Triple(d, r, p) },
-    ) { favourites, settings, boards, filter, (disruptions, refreshing, places) ->
+        combine(disruptions, refreshing, container.placesRepository.places, container.forYouRepository.layout, weather) { d, r, p, l, w ->
+            Extras(d, r, p, l, w)
+        },
+    ) { favourites, settings, boards, filter, extras ->
+        val (disruptions, refreshing, places, layout, weather) = extras
         FavouritesUiState(
             isLoaded = true,
             favourites = favourites,
@@ -91,6 +123,8 @@ class FavouritesViewModel(private val container: AppContainer) : ViewModel() {
             settings = settings,
             refreshing = refreshing,
             places = places,
+            layout = layout,
+            weather = weather,
         )
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), FavouritesUiState())
 
@@ -103,7 +137,35 @@ class FavouritesViewModel(private val container: AppContainer) : ViewModel() {
             ) { keys, _ -> keys }.collect { refresh(force = false) }
         }
         loadDisruptions(force = false)
+        viewModelScope.launch { container.forYouRepository.migrate() }
+        // Fetch the weather whenever it's shown and its provider or key changes.
+        viewModelScope.launch {
+            container.forYouRepository.layout
+                .map { l -> if (ForYouWidget.GREETING in l.widgets && l.greeting.showWeather) l.greeting.provider to l.greeting.keys else null }
+                .distinctUntilChanged()
+                .collect { wanted -> if (wanted == null) weather.value = null else loadWeather(force = false) }
+        }
     }
+
+    fun loadWeather(force: Boolean) {
+        weatherJob?.cancel()
+        weatherJob = viewModelScope.launch {
+            val greeting = container.forYouRepository.current().greeting
+            if (weather.value !is LoadState.Success) weather.value = LoadState.Loading
+            val result = loadCatching { container.weatherRepository.current(greeting.provider, greeting.keys, force) }
+            // A failed refresh keeps the last reading.
+            weather.update { previous -> if (result is LoadState.Error && previous is LoadState.Success) previous else result }
+        }
+    }
+
+    fun updateLayout(transform: (ForYouLayout) -> ForYouLayout) = viewModelScope.launch { container.forYouRepository.update(transform) }
+
+    fun resetLayout() = viewModelScope.launch { container.forYouRepository.reset() }
+
+    fun reorderFavourites(keys: List<String>) = viewModelScope.launch { favouritesRepo.reorder(keys) }
+
+    fun updateSettings(block: suspend com.ssethhyy.journey.data.repository.SettingsRepository.() -> Unit) =
+        viewModelScope.launch { container.settingsRepository.block() }
 
     fun refresh(force: Boolean = true, userInitiated: Boolean = false) {
         refreshJob?.cancel()
@@ -128,7 +190,10 @@ class FavouritesViewModel(private val container: AppContainer) : ViewModel() {
                     }
                 }
             }
-            if (userInitiated) loadDisruptions(force = true)
+            if (userInitiated) {
+                loadDisruptions(force = true)
+                if (weather.value != null) loadWeather(force = true)
+            }
             jobs.forEach { it.join() }
             refreshing.value = false
         }

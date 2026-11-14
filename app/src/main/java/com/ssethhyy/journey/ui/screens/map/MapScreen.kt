@@ -197,6 +197,14 @@ fun MapScreen(isActive: Boolean, modifier: Modifier = Modifier) {
             flyTo(stop.latitude, stop.longitude, 14.5)
         }
     }
+    // The Stop roulette shortcut on For You.
+    val rouletteRequest by container.rouletteRequest.collectAsStateWithLifecycle()
+    LaunchedEffect(rouletteRequest, isActive) {
+        if (rouletteRequest != null && isActive) {
+            container.clearRouletteRequest()
+            rollStop()
+        }
+    }
     // Permission first, then the system Location switch, then find the user and the stops around them.
     val enableLocation = com.ssethhyy.journey.ui.components.rememberLocationEnabler(
         onUnavailable = {

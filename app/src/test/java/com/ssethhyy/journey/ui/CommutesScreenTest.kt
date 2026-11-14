@@ -36,6 +36,8 @@ class CommutesScreenTest {
         runBlocking {
             rule.activity.appContainer.commuteRepository.clear()
             rule.activity.appContainer.settingsRepository.setForYouNearby(true)
+            // The layout outlives a test within the test JVM.
+            rule.activity.appContainer.forYouRepository.reset()
         }
     }
 
@@ -50,6 +52,7 @@ class CommutesScreenTest {
     @Test
     fun showsTheNextTripAndABackup() {
         val container = rule.activity.appContainer
+        commutesFirst()
         runBlocking {
             container.commuteRepository.clear()
             container.commuteRepository.save(
@@ -74,8 +77,14 @@ class CommutesScreenTest {
         snap("commutes_for_you")
     }
 
+    /** Commutes straight under the greeting, so they're on screen whatever else For You holds. */
+    private fun commutesFirst() = runBlocking {
+        rule.activity.appContainer.forYouRepository.update { it.remove(com.ssethhyy.journey.data.foryou.ForYouWidget.COMMUTES).add(com.ssethhyy.journey.data.foryou.ForYouWidget.COMMUTES, 1) }
+    }
+
     @Test
     fun explainsHowCommutesAppearWhenThereAreNone() {
+        commutesFirst()
         runBlocking { rule.activity.appContainer.commuteRepository.clear() }
         rule.waitUntil(20_000) { has("No commutes yet") }
         snap("commutes_empty")
@@ -86,6 +95,8 @@ class CommutesScreenTest {
         runBlocking {
             rule.activity.appContainer.commuteRepository.clear()
             rule.activity.appContainer.settingsRepository.setForYouNearby(true)
+            // Near you straight under the greeting, so it's on screen.
+            rule.activity.appContainer.forYouRepository.update { it.remove(com.ssethhyy.journey.data.foryou.ForYouWidget.NEAR_YOU).add(com.ssethhyy.journey.data.foryou.ForYouWidget.NEAR_YOU, 1) }
         }
         rule.waitUntil(20_000) { has("Near you") }
         rule.waitUntil(20_000) { has("Flinders Street", substring = true) }

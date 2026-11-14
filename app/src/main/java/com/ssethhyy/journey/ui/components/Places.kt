@@ -156,6 +156,9 @@ fun PlacesRow(
     onCreate: (PlaceKind) -> Unit,
     modifier: Modifier = Modifier,
     contentPadding: PaddingValues = PaddingValues(horizontal = 16.dp),
+    /** "Set home" and "Set work" tiles while those aren't saved. */
+    showSuggestions: Boolean = true,
+    showAddTile: Boolean = true,
 ) {
     val view = LocalView.current
     val home = places.firstOrNull { it.kind == PlaceKind.HOME }
@@ -163,18 +166,18 @@ fun PlacesRow(
     val custom = places.filter { it.kind == PlaceKind.CUSTOM }
 
     LazyRow(modifier = modifier, contentPadding = contentPadding, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-        item(key = "home") {
+        if (home != null || showSuggestions) item(key = "home") {
             if (home != null) PlaceTile(home, onClick = { onOpen(home) }, onLongClick = { onEdit(home) })
             else PlaceTilePrompt(PlaceKind.HOME, Sym.Home, "Set home", onClick = { onCreate(PlaceKind.HOME) })
         }
-        item(key = "work") {
+        if (work != null || showSuggestions) item(key = "work") {
             if (work != null) PlaceTile(work, onClick = { onOpen(work) }, onLongClick = { onEdit(work) })
             else PlaceTilePrompt(PlaceKind.WORK, Sym.Work, "Set work", onClick = { onCreate(PlaceKind.WORK) })
         }
         items(custom, key = { it.id }) { place ->
             PlaceTile(place, onClick = { onOpen(place) }, onLongClick = { onEdit(place) })
         }
-        item(key = "add") {
+        if (showAddTile) item(key = "add") {
             PlaceTilePrompt(PlaceKind.CUSTOM, Sym.Add, "Add place", onClick = {
                 HapticUtil.performUIHaptic(view)
                 onCreate(PlaceKind.CUSTOM)

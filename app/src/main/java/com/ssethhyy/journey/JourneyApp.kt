@@ -60,6 +60,9 @@ class AppContainer(
     crowdingBaseUrl: String = com.ssethhyy.journey.data.crowding.CrowdingApi.DEFAULT_BASE_URL,
     /** A fixed Open Data key (tests); otherwise Settings, then the key built into the app. */
     openDataKeyOverride: String? = null,
+    weatherBaseUrls: Map<com.ssethhyy.journey.data.weather.WeatherProvider, String> = com.ssethhyy.journey.data.weather.WeatherApi.DEFAULT_BASE_URLS,
+    /** A fixed built-in weather key (tests); otherwise the one from .env. */
+    weatherKeyOverride: String? = null,
 ) {
     val appScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
     val settingsRepository = SettingsRepository(context)
@@ -80,6 +83,12 @@ class AppContainer(
         ),
     )
     val placesRepository = PlacesRepository(context)
+    val forYouRepository = com.ssethhyy.journey.data.foryou.ForYouRepository(context) { settingsRepository.current().forYouNearby }
+    val weatherRepository = com.ssethhyy.journey.data.weather.WeatherRepository(
+        api = com.ssethhyy.journey.data.weather.WeatherApi(baseUrls = weatherBaseUrls),
+        location = { locationProvider.lastKnownLocation() },
+        builtInKey = weatherKeyOverride ?: BuildConfig.WEATHER_KEY,
+    )
     val commuteRepository = com.ssethhyy.journey.data.commute.CommuteRepository(context)
     val updateManager = com.ssethhyy.journey.data.update.UpdateManager(
         context,
@@ -113,6 +122,32 @@ class AppContainer(
 
     fun closeJourneyMap() {
         _journeyMap.value = null
+    }
+
+    private val _forYouEditRequest = MutableStateFlow(false)
+
+    /** Settings → Customise For You: For You opens in edit mode and clears it. */
+    val forYouEditRequest: StateFlow<Boolean> = _forYouEditRequest.asStateFlow()
+
+    fun requestForYouEdit() {
+        _forYouEditRequest.value = true
+    }
+
+    fun clearForYouEditRequest() {
+        _forYouEditRequest.value = false
+    }
+
+    private val _rouletteRequest = MutableStateFlow<Long?>(null)
+
+    /** Set by the For You Stop roulette shortcut; the Map tab rolls once and clears it. */
+    val rouletteRequest: StateFlow<Long?> = _rouletteRequest.asStateFlow()
+
+    fun requestRoulette() {
+        _rouletteRequest.value = System.nanoTime()
+    }
+
+    fun clearRouletteRequest() {
+        _rouletteRequest.value = null
     }
 
     private val _favouritePicker = MutableStateFlow<FavouritePickerRequest?>(null)

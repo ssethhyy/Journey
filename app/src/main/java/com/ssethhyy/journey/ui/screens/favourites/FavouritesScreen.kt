@@ -1,14 +1,14 @@
 /*
  * Feature Module: Favourites
  * File: FavouritesScreen.kt
- * Description: Favourite stops grouped by mode, each with live departures.
+ * Description: The For You tab: a column of widgets (greeting and weather, places, favourites, disruptions,
+ * commutes, nearby stops and more) that the user orders, adds, removes and sets up in edit mode.
  */
 
 package com.ssethhyy.journey.ui.screens.favourites
 
 import com.ssethhyy.journey.appContainer
 import com.ssethhyy.journey.ui.components.Sym
-import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.combinedClickable
@@ -25,6 +25,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyListScope
 import com.ssethhyy.journey.ui.components.FloatingPullToRefreshBox
 import com.ssethhyy.journey.ui.components.floatingBarBlur
 import androidx.compose.ui.platform.LocalDensity
@@ -49,9 +50,8 @@ import androidx.compose.material3.SnackbarResult
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
-import androidx.compose.material3.TopAppBarDefaults
-import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -60,12 +60,15 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.input.nestedscroll.nestedScroll
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.ssethhyy.journey.data.foryou.DateStyle
+import com.ssethhyy.journey.data.foryou.ForYouWidget
+import com.ssethhyy.journey.data.foryou.Shortcut
 import com.ssethhyy.journey.data.model.DepartureBoard
 import com.ssethhyy.journey.data.model.TransportMode
 import com.ssethhyy.journey.data.repository.FavouriteStop
@@ -85,14 +88,13 @@ import com.ssethhyy.journey.ui.components.MessageState
 import com.ssethhyy.journey.ui.components.ModeFilterRow
 import com.ssethhyy.journey.ui.components.ModePictogram
 import com.ssethhyy.journey.ui.components.ReusableTopAppBar
-import com.ssethhyy.journey.ui.components.SectionLabel
-import com.ssethhyy.journey.ui.components.containerColor
-import com.ssethhyy.journey.ui.components.contentColor
 import com.ssethhyy.journey.ui.components.rememberNow
+import com.ssethhyy.journey.ui.navigation.HomeTab
 import com.ssethhyy.journey.ui.navigation.currentNavigator
 import com.ssethhyy.journey.ui.screens.home.ToolbarClearance
 import com.ssethhyy.journey.utils.HapticUtil
 import com.ssethhyy.journey.utils.TimeFormatter
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import java.time.Instant
 
@@ -102,11 +104,13 @@ fun FavouritesScreen(onAddFromNearby: () -> Unit, onAddFromSearch: () -> Unit) {
     val vm = appViewModel { FavouritesViewModel(it) }
     val state by vm.state.collectAsStateWithLifecycle()
     val navigator = currentNavigator
+    val container = LocalContext.current.appContainer
     val now by rememberNow()
     val snackbarHostState = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
     val listState = rememberLazyListState()
     val density = LocalDensity.current
+    val layout = state.layout
     val headerGone by remember {
         derivedStateOf {
             listState.firstVisibleItemIndex > 0 || listState.firstVisibleItemScrollOffset > with(density) { 72.dp.roundToPx() }
@@ -115,11 +119,31 @@ fun FavouritesScreen(onAddFromNearby: () -> Unit, onAddFromSearch: () -> Unit) {
     var renaming by remember { mutableStateOf<FavouriteStop?>(null) }
     var askingName by rememberSaveable { mutableStateOf(false) }
     var editingPlace by remember { mutableStateOf<Pair<PlaceKind, SavedPlace?>?>(null) }
+    var editing by rememberSaveable { mutableStateOf(false) }
+    var settingsFor by rememberSaveable { mutableStateOf<ForYouWidget?>(null) }
+    var addingWidget by rememberSaveable { mutableStateOf(false) }
+    // The greeting opens big each time For You is shown, then folds after a few seconds if set to.
+    var headerExpanded by rememberSaveable { mutableStateOf(true) }
+    LaunchedEffect(headerExpanded, layout.greeting.collapses, layout.greeting.collapseAfterSeconds, editing) {
+        if (headerExpanded && layout.greeting.collapses && !editing) {
+            delay(layout.greeting.collapseAfterSeconds * 1000L)
+            headerExpanded = false
+        }
+    }
+    androidx.activity.compose.BackHandler(enabled = editing) { editing = false }
+    val editRequest by container.forYouEditRequest.collectAsStateWithLifecycle()
+    LaunchedEffect(editRequest) {
+        if (editRequest) {
+            container.clearForYouEditRequest()
+            editing = true
+        }
+    }
+
     // Shared with the Map tab's Nearby panel (same key), so both show the same stops.
     val nearbyVm = appViewModel(key = "map_nearby") { com.ssethhyy.journey.ui.screens.nearby.NearbyViewModel(it) }
     val nearby by nearbyVm.state.collectAsStateWithLifecycle()
-    val showNearby = state.isLoaded && state.settings.forYouNearby
-    androidx.compose.runtime.LaunchedEffect(showNearby) {
+    val showNearby = state.isLoaded && ForYouWidget.NEAR_YOU in layout.widgets
+    LaunchedEffect(showNearby) {
         if (showNearby && nearby.stops !is LoadState.Success) nearbyVm.load()
     }
     val enableLocation = com.ssethhyy.journey.ui.components.rememberLocationEnabler(onUnavailable = { nearbyVm.load(force = true) }) {
@@ -127,6 +151,7 @@ fun FavouritesScreen(onAddFromNearby: () -> Unit, onAddFromSearch: () -> Unit) {
     }
     val commutesVm = appViewModel(key = "commutes") { CommutesViewModel(it) }
     val commutes by commutesVm.state.collectAsStateWithLifecycle()
+    val showCommutes = ForYouWidget.COMMUTES in layout.widgets
     // null = closed, Pair(null, _) = new commute, Pair(commute, _) = editing
     var commuteEditor by remember { mutableStateOf<Pair<com.ssethhyy.journey.data.commute.Commute?, Boolean>?>(null) }
     val commuteActions = remember(commutesVm) {
@@ -140,16 +165,40 @@ fun FavouritesScreen(onAddFromNearby: () -> Unit, onAddFromSearch: () -> Unit) {
     }
 
     AutoRefreshEffect(enabled = state.settings.autoRefresh && state.favourites.isNotEmpty()) { vm.refresh(force = true) }
-    AutoRefreshEffect(enabled = commutes.cards.isNotEmpty(), intervalMs = 60_000) { commutesVm.refresh() }
+    AutoRefreshEffect(enabled = showCommutes && commutes.cards.isNotEmpty(), intervalMs = 60_000) { commutesVm.refresh() }
     AutoRefreshEffect(enabled = showNearby && state.settings.autoRefresh) {
         nearbyVm.loadBoards(nearby.stops.dataOrNull.orEmpty().take(state.settings.forYouNearbyCount), force = true)
     }
+    // The weather changes slowly; a reading every 15 minutes is plenty.
+    AutoRefreshEffect(enabled = state.weather != null, intervalMs = 15 * 60_000L) { vm.loadWeather(force = false) }
 
     val onRemove: (FavouriteStop) -> Unit = { fav ->
         vm.remove(fav.key)
         scope.launch {
             val result = snackbarHostState.showSnackbar("Removed ${fav.displayName}", actionLabel = "Undo", withDismissAction = true)
             if (result == SnackbarResult.ActionPerformed) vm.restore(fav)
+        }
+    }
+    val removeWidget: (ForYouWidget) -> Unit = { widget ->
+        val index = layout.widgets.indexOf(widget)
+        vm.updateLayout { it.remove(widget) }
+        settingsFor = null
+        scope.launch {
+            val result = snackbarHostState.showSnackbar("Removed ${widget.title}", actionLabel = "Undo", withDismissAction = true)
+            if (result == SnackbarResult.ActionPerformed) vm.updateLayout { it.add(widget, index) }
+        }
+    }
+    val toggle: (ForYouWidget) -> Unit = { widget -> vm.updateLayout { it.toggleCollapsed(widget) } }
+    val onShortcut: (Shortcut) -> Unit = { shortcut ->
+        when (shortcut) {
+            Shortcut.PLAN -> navigator.goToTab(HomeTab.PLAN)
+            Shortcut.MAP -> navigator.goToTab(HomeTab.MAP)
+            Shortcut.DISRUPTIONS -> navigator.openDisruptions()
+            Shortcut.SEARCH -> navigator.openSearch()
+            Shortcut.ROULETTE -> {
+                container.requestRoulette()
+                navigator.goToTab(HomeTab.MAP)
+            }
         }
     }
 
@@ -160,123 +209,218 @@ fun FavouritesScreen(onAddFromNearby: () -> Unit, onAddFromSearch: () -> Unit) {
                 isTabRoot = true,
                 title = "For You",
                 subtitle = TimeFormatter.shortToday(now),
-                visible = headerGone || !state.isLoaded,
+                visible = (headerGone || !state.isLoaded) && !editing,
+                actions = { HapticIconButton(Sym.Edit, "Edit For You", onClick = { editing = true }) },
             )
         },
         snackbarHost = { SnackbarHost(snackbarHostState, Modifier.padding(bottom = ToolbarClearance - 24.dp)) },
         containerColor = MaterialTheme.colorScheme.surface,
     ) { innerPadding ->
-        FloatingPullToRefreshBox(
-            isRefreshing = state.refreshing,
-            onRefresh = {
-                vm.refresh(force = true, userInitiated = true)
-                commutesVm.refresh()
-                if (showNearby) nearbyVm.load(force = true)
-            },
-            topInset = innerPadding.calculateTopPadding(),
-            modifier = Modifier.fillMaxSize(),
-        ) {
-            when {
-                !state.isLoaded -> LoadingState()
-                else -> LazyColumn(
-                    state = listState,
-                    modifier = Modifier.fillMaxSize().floatingBarBlur(innerPadding.calculateTopPadding()),
-                    contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = innerPadding.calculateTopPadding() + 4.dp, bottom = ToolbarClearance + innerPadding.calculateBottomPadding()),
-                    verticalArrangement = Arrangement.spacedBy(12.dp),
-                ) {
-                    item(key = "greeting") {
-                        GreetingHeader(
-                            greeting = TimeFormatter.personalGreeting(state.settings.userName, now),
-                            today = TimeFormatter.todayLine(now),
-                        )
-                    }
-                    if (state.settings.userName.isBlank()) {
-                        item(key = "name_prompt") {
-                            androidx.compose.material3.AssistChip(
-                                onClick = { askingName = true },
-                                label = { Text("Add your name for a personal greeting") },
-                                leadingIcon = { Icon(Sym.PersonFilled, null, Modifier.size(18.dp)) },
-                                shape = androidx.compose.foundation.shape.CircleShape,
-                            )
+        if (editing && state.isLoaded) {
+            ForYouEditor(
+                layout = layout,
+                summary = { widgetSummary(it, state, commutes) },
+                topPadding = innerPadding.calculateTopPadding(),
+                bottomPadding = ToolbarClearance + innerPadding.calculateBottomPadding(),
+                onReorder = { order -> vm.updateLayout { it.copy(widgets = order) } },
+                onRemove = removeWidget,
+                onSettings = { settingsFor = it },
+                onAdd = { addingWidget = true },
+                onShowTitles = { on -> vm.updateLayout { it.copy(showTitles = on) } },
+                onReset = { vm.resetLayout() },
+                onDone = { editing = false },
+            )
+        } else {
+            FloatingPullToRefreshBox(
+                isRefreshing = state.refreshing,
+                onRefresh = {
+                    vm.refresh(force = true, userInitiated = true)
+                    if (showCommutes) commutesVm.refresh()
+                    if (showNearby) nearbyVm.load(force = true)
+                },
+                topInset = innerPadding.calculateTopPadding(),
+                modifier = Modifier.fillMaxSize(),
+            ) {
+                when {
+                    !state.isLoaded -> LoadingState()
+                    else -> LazyColumn(
+                        state = listState,
+                        modifier = Modifier.fillMaxSize().floatingBarBlur(innerPadding.calculateTopPadding()),
+                        contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = innerPadding.calculateTopPadding() + 4.dp, bottom = ToolbarClearance + innerPadding.calculateBottomPadding()),
+                        verticalArrangement = Arrangement.spacedBy(12.dp),
+                    ) {
+                        // The edit button lives in the greeting; without that at the top, a slim row carries it.
+                        if (layout.widgets.firstOrNull() != ForYouWidget.GREETING) {
+                            item(key = "top_row") { ForYouTopRow(onEdit = { editing = true }, modifier = Modifier.animateItem()) }
                         }
-                    }
-                    item(key = "places") {
-                        PlacesRow(
-                            places = state.places,
-                            onOpen = { navigator.planTo(it.toPlanLocation()) },
-                            onEdit = { editingPlace = it.kind to it },
-                            onCreate = { kind -> editingPlace = kind to null },
-                            contentPadding = PaddingValues(0.dp),
-                        )
-                    }
-                    commutesSection(commutes, now, commuteActions)
-                    if (showNearby) {
-                        nearbySection(
-                            state = nearby,
-                            count = state.settings.forYouNearbyCount,
-                            now = now,
-                            onOpenStop = navigator::openStop,
-                            onOpenMap = { navigator.goToTab(com.ssethhyy.journey.ui.navigation.HomeTab.MAP) },
-                            onEnableLocation = enableLocation,
-                        )
-                    }
-                    if (state.favourites.isEmpty()) {
-                        item(key = "empty") { EmptyFavourites(onAddFromNearby, onAddFromSearch) }
-                        return@LazyColumn
-                    }
-                    item(key = "status") {
-                        NetworkStatusCard(
-                            disruptionCount = state.relevantDisruptions.size,
-                            severeCount = state.relevantDisruptions.count { it.severity.ordinal <= 1 },
-                            onClick = navigator::openDisruptions,
-                        )
-                    }
-                    if (state.availableModes.size > 1) {
-                        item(key = "filters") {
-                            ModeFilterRow(
-                                selected = state.filter,
-                                onToggle = vm::toggleFilter,
-                                modes = state.availableModes,
-                                contentPadding = PaddingValues(0.dp),
-                            )
+                        if (layout.widgets.isEmpty()) {
+                            item(key = "nothing") {
+                                MessageState(icon = Sym.DashboardCustomize, title = "Nothing on For You", message = "Add the widgets you want to see here.") {
+                                    Button(onClick = {
+                                        editing = true
+                                        addingWidget = true
+                                    }) {
+                                        Icon(Sym.Add, null, Modifier.size(18.dp))
+                                        Spacer(Modifier.width(8.dp))
+                                        Text("Add a widget")
+                                    }
+                                }
+                            }
                         }
-                    }
-                    val firstMode = state.visibleGroups.firstOrNull()?.first
-                    state.visibleGroups.forEach { (mode, favourites) ->
-                        item(key = "header_${mode.name}") {
-                            SectionLabel(
-                                mode.pluralLabel,
-                                Modifier.animateItem(),
-                                // The first group header carries "Add", replacing the old For You FAB.
-                                trailing = if (mode == firstMode) {
-                                    { AddFavouriteButton(onClick = onAddFromNearby) }
-                                } else null,
-                            )
-                        }
-                        items(favourites, key = { it.key }) { fav ->
-                            FavouriteStopCard(
-                                favourite = fav,
-                                board = state.boards[fav.key],
-                                now = now,
-                                departuresToShow = state.settings.departuresPerStop,
-                                timeDisplay = state.settings.timeDisplay,
-                                canMoveUp = favourites.first() != fav,
-                                canMoveDown = favourites.last() != fav,
-                                onOpen = { navigator.openStop(fav.toStop()) },
-                                onOpenTrip = { dep ->
-                                    dep.runRef?.let { navigator.openTrip(it, fav.mode, fav.stopId, dep.headsign) }
-                                },
-                                onRetry = { vm.refresh(force = true) },
-                                onRename = { renaming = fav },
-                                onMove = { delta -> vm.move(fav.key, delta) },
-                                onRemove = { onRemove(fav) },
-                                modifier = Modifier.animateItem(),
-                            )
+                        layout.widgets.forEach { widget ->
+                            when (widget) {
+                                ForYouWidget.GREETING -> {
+                                    val g = layout.greeting
+                                    item(key = "w_greeting") {
+                                        ForYouHeader(
+                                            greeting = if (g.showGreeting) ForYouDates.greeting(state.settings.userName, now) else null,
+                                            date = if (g.showDate) ForYouDates.format(g.dateStyle, now) else null,
+                                            compactDate = ForYouDates.format(DateStyle.NUMERIC, now),
+                                            weather = if (g.showWeather) state.weather ?: LoadState.Loading else null,
+                                            unit = g.unit,
+                                            showDetails = g.showWeatherDetails,
+                                            expanded = headerExpanded,
+                                            onExpandedChange = { headerExpanded = it },
+                                            onEdit = { editing = true },
+                                            onSetUpWeather = {
+                                                editing = true
+                                                settingsFor = ForYouWidget.GREETING
+                                            },
+                                            onRetryWeather = { vm.loadWeather(force = true) },
+                                            modifier = Modifier.animateItem(),
+                                        )
+                                    }
+                                    if (g.showGreeting && state.settings.userName.isBlank() && headerExpanded) {
+                                        item(key = "name_prompt") {
+                                            androidx.compose.material3.AssistChip(
+                                                onClick = { askingName = true },
+                                                label = { Text("Add your name for a personal greeting") },
+                                                leadingIcon = { Icon(Sym.PersonFilled, null, Modifier.size(18.dp)) },
+                                                shape = androidx.compose.foundation.shape.CircleShape,
+                                                modifier = Modifier.animateItem(),
+                                            )
+                                        }
+                                    }
+                                }
+                                ForYouWidget.PLACES -> item(key = "w_places") {
+                                    CollapsibleWidget("Places", layout.showTitles, layout.isCollapsed(widget), { toggle(widget) }, Modifier.animateItem()) {
+                                        PlacesRow(
+                                            places = state.places,
+                                            onOpen = { navigator.planTo(it.toPlanLocation()) },
+                                            onEdit = { editingPlace = it.kind to it },
+                                            onCreate = { kind -> editingPlace = kind to null },
+                                            contentPadding = PaddingValues(0.dp),
+                                            showSuggestions = layout.places.showSuggestions,
+                                            showAddTile = layout.places.showAddTile,
+                                        )
+                                    }
+                                }
+                                ForYouWidget.FAVOURITES -> favouritesWidget(
+                                    state = state,
+                                    now = now,
+                                    collapsed = layout.isCollapsed(widget),
+                                    onToggle = { toggle(widget) },
+                                    onAdd = onAddFromNearby,
+                                    onAddFromSearch = onAddFromSearch,
+                                    onToggleFilter = vm::toggleFilter,
+                                ) { fav, canMoveUp, canMoveDown, modifier ->
+                                    FavouriteStopCard(
+                                        favourite = fav,
+                                        board = state.boards[fav.key],
+                                        now = now,
+                                        departuresToShow = state.settings.departuresPerStop,
+                                        timeDisplay = state.settings.timeDisplay,
+                                        canMoveUp = canMoveUp,
+                                        canMoveDown = canMoveDown,
+                                        onOpen = { navigator.openStop(fav.toStop()) },
+                                        onOpenTrip = { dep ->
+                                            dep.runRef?.let { navigator.openTrip(it, fav.mode, fav.stopId, dep.headsign) }
+                                        },
+                                        onRetry = { vm.refresh(force = true) },
+                                        onRename = { renaming = fav },
+                                        onMove = { delta -> vm.move(fav.key, delta) },
+                                        onRemove = { onRemove(fav) },
+                                        modifier = modifier,
+                                    )
+                                }
+                                ForYouWidget.DISRUPTIONS -> {
+                                    val list = state.widgetDisruptions
+                                    if (list.isNotEmpty() || !layout.disruptions.hideWhenClear) {
+                                        item(key = "w_disruptions") {
+                                            DisruptionsWidget(
+                                                disruptions = list,
+                                                level = layout.disruptions.level,
+                                                maxShown = layout.disruptions.maxShown,
+                                                collapsed = layout.isCollapsed(widget),
+                                                onToggle = { toggle(widget) },
+                                                onOpenAll = navigator::openDisruptions,
+                                                modifier = Modifier.animateItem(),
+                                            )
+                                        }
+                                    }
+                                }
+                                ForYouWidget.COMMUTES -> commutesSection(
+                                    state = commutes,
+                                    now = now,
+                                    actions = commuteActions,
+                                    config = layout.commutes,
+                                    showTitle = layout.showTitles,
+                                    collapsed = layout.isCollapsed(widget),
+                                    onToggle = { toggle(widget) },
+                                )
+                                ForYouWidget.NEAR_YOU -> nearbySection(
+                                    state = nearby,
+                                    count = state.settings.forYouNearbyCount,
+                                    now = now,
+                                    onOpenStop = navigator::openStop,
+                                    onOpenMap = { navigator.goToTab(HomeTab.MAP) },
+                                    onEnableLocation = enableLocation,
+                                    showTitle = layout.showTitles,
+                                    collapsed = layout.isCollapsed(widget),
+                                    onToggle = { toggle(widget) },
+                                    showMapButton = layout.nearYou.showMapButton,
+                                )
+                                ForYouWidget.NETWORK_STATUS -> item(key = "w_network") {
+                                    CollapsibleWidget("Network status", layout.showTitles, layout.isCollapsed(widget), { toggle(widget) }, Modifier.animateItem()) {
+                                        NetworkStatusWidget(state.disruptions, layout.networkStatus.modes, navigator::openDisruptions)
+                                    }
+                                }
+                                ForYouWidget.SHORTCUTS -> item(key = "w_shortcuts") {
+                                    CollapsibleWidget("Shortcuts", layout.showTitles, layout.isCollapsed(widget), { toggle(widget) }, Modifier.animateItem()) {
+                                        ShortcutsWidget(layout.shortcuts.shortcuts, onShortcut)
+                                    }
+                                }
+                            }
                         }
                     }
                 }
             }
         }
+    }
+
+    settingsFor?.let { widget ->
+        WidgetSettingsSheet(
+            widget = widget,
+            state = state,
+            weatherReady = container.weatherRepository::isReady,
+            onLayout = { transform -> vm.updateLayout(transform) },
+            onSettings = { block -> vm.updateSettings(block) },
+            onReorderFavourites = { keys -> vm.reorderFavourites(keys) },
+            onRetryWeather = { vm.loadWeather(force = true) },
+            onRemove = { removeWidget(widget) },
+            onDismiss = { settingsFor = null },
+        )
+    }
+
+    if (addingWidget) {
+        AddWidgetSheet(
+            available = layout.available,
+            onAdd = { widget ->
+                vm.updateLayout { it.add(widget) }
+                addingWidget = false
+            },
+            onDismiss = { addingWidget = false },
+        )
     }
 
     commuteEditor?.let { (existing, _) ->
@@ -309,6 +453,127 @@ fun FavouritesScreen(onAddFromNearby: () -> Unit, onAddFromSearch: () -> Unit) {
     }
 }
 
+/** The line under each widget's name in edit mode. */
+private fun widgetSummary(widget: ForYouWidget, state: FavouritesUiState, commutes: CommutesUiState): String {
+    val l = state.layout
+    return when (widget) {
+        ForYouWidget.GREETING -> {
+            val parts = listOfNotNull(
+                "weather".takeIf { l.greeting.showWeather },
+                "greeting".takeIf { l.greeting.showGreeting },
+                "date".takeIf { l.greeting.showDate },
+            )
+            val list = when (parts.size) {
+                0 -> "Nothing shown"
+                1 -> parts[0]
+                else -> parts.dropLast(1).joinToString(", ") + " and " + parts.last()
+            }.replaceFirstChar { it.uppercase() }
+            if (l.greeting.showWeather) "$list · ${l.greeting.provider.label}" else list
+        }
+        ForYouWidget.PLACES -> when (state.places.size) {
+            0 -> "No places saved yet"
+            1 -> "1 place"
+            else -> "${state.places.size} places"
+        }
+        ForYouWidget.FAVOURITES -> "${state.favourites.size} stop${if (state.favourites.size == 1) "" else "s"} · ${state.settings.departuresPerStop} departures each"
+        ForYouWidget.DISRUPTIONS -> "${l.disruptions.level.label} · ${l.disruptions.scope.label}"
+        ForYouWidget.COMMUTES -> if (commutes.cards.isEmpty()) "No commutes yet" else "Up to ${l.commutes.maxShown} of ${commutes.cards.size}"
+        ForYouWidget.NEAR_YOU -> "The ${state.settings.forYouNearbyCount} closest stops"
+        ForYouWidget.NETWORK_STATUS -> TransportMode.entries.filter { it in l.networkStatus.modes }.joinToString(", ") { it.pluralLabel }
+        ForYouWidget.SHORTCUTS -> l.shortcuts.shortcuts.joinToString(", ") { it.label }
+    }
+}
+
+/** The Favourites widget: its title, the mode filters and each favourite stop. */
+private fun LazyListScope.favouritesWidget(
+    state: FavouritesUiState,
+    now: Instant,
+    collapsed: Boolean,
+    onToggle: () -> Unit,
+    onAdd: () -> Unit,
+    onAddFromSearch: () -> Unit,
+    onToggleFilter: (TransportMode) -> Unit,
+    card: @Composable (FavouriteStop, Boolean, Boolean, Modifier) -> Unit,
+) {
+    val config = state.layout.favourites
+    val showTitle = state.layout.showTitles
+    if (showTitle) {
+        item(key = "favourites_header") {
+            WidgetTitle(
+                "Favourites",
+                collapsed = collapsed,
+                onToggle = onToggle,
+                modifier = Modifier.animateItem(),
+                trailing = if (config.showAddButton && state.favourites.isNotEmpty()) {
+                    { TitleAddButton("Add", onAdd) }
+                } else null,
+            )
+        }
+        if (collapsed) return
+    }
+    if (state.favourites.isEmpty()) {
+        item(key = "empty") { EmptyFavourites(onAdd, onAddFromSearch) }
+        return
+    }
+    if (config.showModeFilters && state.availableModes.size > 1) {
+        item(key = "filters") {
+            ModeFilterRow(
+                selected = state.filter,
+                onToggle = onToggleFilter,
+                modes = state.availableModes,
+                contentPadding = PaddingValues(0.dp),
+                modifier = Modifier.animateItem(),
+            )
+        }
+    }
+    // A favourite with nothing coming can be hidden, once its departures have loaded.
+    val shown: (FavouriteStop) -> Boolean = { fav ->
+        config.showEmptyStops || run {
+            val board = (state.boards[fav.key] as? LoadState.Success)?.data
+            board == null || fav.filter(board.departures).any { d -> d.bestTime?.isAfter(now.minusSeconds(60)) ?: false }
+        }
+    }
+    // Without a title, the Add button sits on the first heading instead.
+    val addOnHeading = !showTitle && config.showAddButton
+    if (config.groupByMode) {
+        val firstMode = state.visibleGroups.firstOrNull()?.first
+        state.visibleGroups.forEach { (mode, all) ->
+            val favourites = all.filter(shown)
+            if (favourites.isEmpty()) return@forEach
+            item(key = "header_${mode.name}") {
+                ModeHeading(
+                    mode.pluralLabel,
+                    Modifier.animateItem(),
+                    trailing = if (addOnHeading && mode == firstMode) {
+                        { AddFavouriteButton(onClick = onAdd) }
+                    } else null,
+                )
+            }
+            items(favourites, key = { it.key }) { fav ->
+                card(fav, all.first() != fav, all.last() != fav, Modifier.animateItem())
+            }
+        }
+    } else {
+        if (addOnHeading) {
+            item(key = "favourites_add") {
+                Row(Modifier.fillMaxWidth().animateItem(), horizontalArrangement = Arrangement.End) { AddFavouriteButton(onClick = onAdd) }
+            }
+        }
+        items(state.visibleFlat.filter(shown), key = { it.key }) { fav ->
+            card(fav, false, false, Modifier.animateItem())
+        }
+    }
+}
+
+/** A small mode heading inside the Favourites widget ("Trains"). */
+@Composable
+private fun ModeHeading(text: String, modifier: Modifier = Modifier, trailing: (@Composable () -> Unit)? = null) {
+    Row(modifier.fillMaxWidth().padding(start = 8.dp, top = 4.dp), verticalAlignment = Alignment.CenterVertically) {
+        Text(text, style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary, modifier = Modifier.weight(1f))
+        trailing?.invoke()
+    }
+}
+
 @Composable
 private fun AddFavouriteButton(onClick: () -> Unit) {
     val view = LocalView.current
@@ -323,61 +588,6 @@ private fun AddFavouriteButton(onClick: () -> Unit) {
         Icon(Sym.Add, contentDescription = null, modifier = Modifier.size(18.dp))
         Spacer(Modifier.width(6.dp))
         Text("Add", style = MaterialTheme.typography.labelLarge)
-    }
-}
-
-/** The big greeting at the top of For You. */
-@Composable
-private fun GreetingHeader(greeting: String, today: String) {
-    Column(Modifier.fillMaxWidth().padding(start = 8.dp, end = 8.dp, top = 4.dp, bottom = 8.dp)) {
-        Text(greeting, style = MaterialTheme.typography.displaySmallEmphasized)
-        Text(today, style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
-    }
-}
-
-@Composable
-private fun NetworkStatusCard(disruptionCount: Int, severeCount: Int, onClick: () -> Unit) {
-    val view = LocalView.current
-    val severity = when {
-        severeCount > 0 -> com.ssethhyy.journey.data.model.DisruptionSeverity.MAJOR
-        disruptionCount > 0 -> com.ssethhyy.journey.data.model.DisruptionSeverity.MINOR
-        else -> com.ssethhyy.journey.data.model.DisruptionSeverity.INFO
-    }
-    Surface(
-        onClick = {
-            HapticUtil.performUIHaptic(view)
-            onClick()
-        },
-        shape = RoundedCornerShape(28.dp),
-        color = if (disruptionCount == 0) MaterialTheme.colorScheme.primaryContainer else severity.containerColor(),
-        contentColor = if (disruptionCount == 0) MaterialTheme.colorScheme.onPrimaryContainer else severity.contentColor(),
-        modifier = Modifier.fillMaxWidth(),
-    ) {
-        Row(Modifier.padding(20.dp), verticalAlignment = Alignment.CenterVertically) {
-            Box(
-                Modifier
-                    .size(48.dp)
-                    .background(MaterialTheme.colorScheme.surface.copy(alpha = 0.35f), RoundedCornerShape(16.dp)),
-                contentAlignment = Alignment.Center,
-            ) {
-                Icon(if (disruptionCount == 0) Sym.CheckCircle else Sym.Warning, contentDescription = null)
-            }
-            Spacer(Modifier.width(16.dp))
-            Column(Modifier.weight(1f)) {
-                Text(
-                    when (disruptionCount) {
-                        0 -> "Good service"
-                        1 -> "1 service update"
-                        else -> "$disruptionCount service updates"
-                    },
-                    style = MaterialTheme.typography.titleMedium,
-                )
-                Text(
-                    if (disruptionCount == 0) "No reported disruptions for your modes" else "Tap to see what's affecting your travel",
-                    style = MaterialTheme.typography.bodySmall,
-                )
-            }
-        }
     }
 }
 

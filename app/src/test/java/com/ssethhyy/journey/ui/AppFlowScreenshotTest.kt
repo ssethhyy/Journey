@@ -15,6 +15,8 @@ import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performScrollToNode
+import androidx.compose.ui.test.performScrollToIndex
 import androidx.compose.ui.test.performTextInput
 import com.ssethhyy.journey.AppContainer
 import com.ssethhyy.journey.JourneyApp
@@ -69,6 +71,12 @@ class AppFlowScreenshotTest {
     @get:Rule
     val rule = createAndroidComposeRule<MainActivity>()
 
+    @org.junit.After
+    fun resetForYou() {
+        // The For You layout outlives a test within the test JVM.
+        runBlocking { rule.activity.appContainer.forYouRepository.reset() }
+    }
+
     private val outDir = File("build/screenshots").apply { mkdirs() }
 
     private fun snap(name: String) {
@@ -105,6 +113,11 @@ class AppFlowScreenshotTest {
     private fun seedFavourites(container: AppContainer) = runBlocking {
         // This walk-through is about favourites; the Near you section (tested elsewhere) would push them off screen.
         container.settingsRepository.setForYouNearby(false)
+        container.forYouRepository.update {
+            it.remove(com.ssethhyy.journey.data.foryou.ForYouWidget.NEAR_YOU)
+                .copy(greeting = it.greeting.copy(collapses = false))
+                .copy(disruptions = it.disruptions.copy(scope = com.ssethhyy.journey.data.foryou.DisruptionScope.NETWORK))
+        }
         container.favouritesRepository.clear()
         container.favouritesRepository.add(Stop(1071, TransportMode.TRAIN, "Flinders Street Station", "Melbourne City", -37.8183, 144.9671))
         container.favouritesRepository.add(Stop(2258, TransportMode.TRAM, "Bourke St/Spencer St #1", "Melbourne City", -37.8166, 144.9548))
@@ -161,11 +174,18 @@ class AppFlowScreenshotTest {
         rule.activity.onBackPressedDispatcher.onBackPressed()
         rule.waitForIdle()
 
-        // Disruptions from the status card.
-        rule.onNodeWithText("service updates", substring = true).performClick()
+        // Disruptions from the Disruptions widget: unfold it, then see them all.
+        rule.onAllNodes(androidx.compose.ui.test.SemanticsMatcher.keyIsDefined(androidx.compose.ui.semantics.SemanticsProperties.VerticalScrollAxisRange))
+            .onFirst().performScrollToNode(androidx.compose.ui.test.hasText("major disruption", substring = true))
+        rule.onNodeWithText("major disruption", substring = true).performClick()
+        waitForText("See all", substring = true)
+        rule.onNodeWithText("See all", substring = true).performClick()
         waitForText("Route 96: Major delays", substring = true)
         snap("06_disruptions")
         rule.activity.onBackPressedDispatcher.onBackPressed()
+        rule.waitForIdle()
+        rule.onAllNodes(androidx.compose.ui.test.SemanticsMatcher.keyIsDefined(androidx.compose.ui.semantics.SemanticsProperties.VerticalScrollAxisRange))
+            .onFirst().performScrollToIndex(0)
         rule.waitForIdle()
 
         // Plan tab: saved places and recent journeys.

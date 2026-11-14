@@ -66,6 +66,24 @@ object FlexType {
     )
 }
 
+/**
+ * One exact instance of the font, for hero text that needs a weight or width outside the type scale (the For You
+ * temperature is thin and narrow). Use it with `fontWeight = FontWeight(weight)`.
+ */
+fun FlexType.single(axes: FlexAxes, weight: Int): FontFamily = FontFamily(
+    Font(
+        resId = R.font.google_sans_flex,
+        weight = FontWeight(weight),
+        variationSettings = FontVariation.Settings(
+            FontVariation.weight(weight),
+            FontVariation.width(axes.width),
+            FontVariation.slant(axes.slant),
+            FontVariation.Setting("opsz", axes.opticalSize),
+            FontVariation.Setting("ROND", axes.roundness),
+        ),
+    ),
+)
+
 /** Builds the app typography on the Google Sans Flex variable font. */
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Suppress("UNUSED_PARAMETER")

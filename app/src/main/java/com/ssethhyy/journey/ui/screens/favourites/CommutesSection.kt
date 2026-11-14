@@ -80,31 +80,33 @@ class CommuteActions(
     val onRemove: (Commute) -> Unit,
 )
 
-fun LazyListScope.commutesSection(state: CommutesUiState, now: Instant, actions: CommuteActions) {
-    item(key = "commutes_header") {
-        SectionLabel(
-            "Commutes",
-            Modifier,
-            trailing = {
-                val view = LocalView.current
-                FilledTonalButton(
-                    onClick = {
-                        HapticUtil.performUIHaptic(view)
-                        actions.onAdd()
-                    },
-                    contentPadding = androidx.compose.foundation.layout.PaddingValues(start = 12.dp, end = 16.dp),
-                    modifier = Modifier.height(36.dp),
-                ) {
-                    Icon(Sym.Add, contentDescription = null, modifier = Modifier.size(18.dp))
-                    Spacer(Modifier.width(6.dp))
-                    Text("Add commute", style = MaterialTheme.typography.labelLarge)
-                }
-            },
-        )
+fun LazyListScope.commutesSection(
+    state: CommutesUiState,
+    now: Instant,
+    actions: CommuteActions,
+    config: com.ssethhyy.journey.data.foryou.CommutesConfig = com.ssethhyy.journey.data.foryou.CommutesConfig(),
+    showTitle: Boolean = true,
+    collapsed: Boolean = false,
+    onToggle: () -> Unit = {},
+) {
+    if (showTitle) {
+        item(key = "commutes_header") {
+            WidgetTitle(
+                "Commutes",
+                collapsed = collapsed,
+                onToggle = onToggle,
+                modifier = Modifier.animateItem(),
+                trailing = if (config.showAddButton) {
+                    { TitleAddButton("Add", actions.onAdd) }
+                } else null,
+            )
+        }
+        if (collapsed) return
     }
-    if (state.cards.isEmpty()) {
+    val cards = state.cards.filter { config.showLearned || it.commute.manual }.take(config.maxShown)
+    if (cards.isEmpty()) {
         item(key = "commutes_empty") {
-            Surface(shape = RoundedCornerShape(28.dp), color = MaterialTheme.colorScheme.surfaceContainer, modifier = Modifier.fillMaxWidth()) {
+            Surface(onClick = actions.onAdd, shape = RoundedCornerShape(28.dp), color = MaterialTheme.colorScheme.surfaceContainer, modifier = Modifier.fillMaxWidth().animateItem()) {
                 Row(Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(14.dp)) {
                     CommuteBadge(CommuteKind.OTHER)
                     Column {
@@ -119,8 +121,8 @@ fun LazyListScope.commutesSection(state: CommutesUiState, now: Instant, actions:
             }
         }
     } else {
-        items(state.cards.size, key = { "commute_${state.cards[it].commute.id}" }) { index ->
-            CommuteCard(state.cards[index], now, actions, Modifier.animateItem())
+        items(cards.size, key = { "commute_${cards[it].commute.id}" }) { index ->
+            CommuteCard(cards[index], now, actions, config.showBackup, Modifier.animateItem())
         }
     }
 }
@@ -144,7 +146,7 @@ private fun CommuteBadge(kind: CommuteKind) {
 }
 
 @Composable
-private fun CommuteCard(card: CommuteCardState, now: Instant, actions: CommuteActions, modifier: Modifier = Modifier) {
+private fun CommuteCard(card: CommuteCardState, now: Instant, actions: CommuteActions, showBackup: Boolean, modifier: Modifier = Modifier) {
     val commute = card.commute
     val view = LocalView.current
     var menuOpen by remember { mutableStateOf(false) }
@@ -194,7 +196,7 @@ private fun CommuteCard(card: CommuteCardState, now: Instant, actions: CommuteAc
                     Text("No trips found right now", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(end = 8.dp))
                 } else {
                     PrimaryTrip(trip.primary, now, onOpen = { actions.onOpen(commute, trip.primary) })
-                    trip.backup?.let { BackupTrip(commute, it, trip.primary, onOpen = { actions.onOpen(commute, it) }) }
+                    trip.backup?.takeIf { showBackup }?.let { BackupTrip(commute, it, trip.primary, onOpen = { actions.onOpen(commute, it) }) }
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.padding(end = 8.dp)) {
                         TrackTripButton(commute, trip.primary, label = "Track", modifier = Modifier.weight(1f))
                         OutlinedButton(

@@ -1,7 +1,10 @@
 /*
  * Feature Module: Map
  * File: MapViewModel.kt
- * Description: Viewport-driven stop loading for every mode, plus the selected stop preview.
+ * Description: Stop markers by zoom level, plus the selected stop preview.
+ *
+ * Each mode appears from its own zoom level: V/Line always, then trains, trams, and buses closest in. V/Line and train
+ * stops are few enough to load once for the whole network; trams and buses load for the area on screen.
  */
 
 package com.ssethhyy.journey.ui.screens.map
@@ -32,7 +35,6 @@ data class Viewport(val latitude: Double, val longitude: Double, val zoom: Doubl
 data class MapUiState(
     val stops: List<Stop> = emptyList(),
     val modes: Set<TransportMode> = TransportMode.entries.toSet(),
-    val zoomedOutTooFar: Boolean = false,
     val loading: Boolean = false,
     val error: Throwable? = null,
     val selected: Stop? = null,
@@ -45,8 +47,12 @@ data class MapUiState(
 class MapViewModel(private val container: AppContainer) : ViewModel() {
     private val repo = container.ptvRepository
 
+    /** Tram and bus stops loaded around the viewport. */
     private val stops = MutableStateFlow<Map<String, Stop>>(emptyMap())
-    private val zoomedOut = MutableStateFlow(false)
+    /** Every V/Line and train stop, loaded once. */
+    private val networkStops = MutableStateFlow<Map<String, Stop>>(emptyMap())
+    private val zoom = MutableStateFlow(DEFAULT_ZOOM)
+    private var networkJob: Job? = null
     private val loading = MutableStateFlow(false)
     private val error = MutableStateFlow<Throwable?>(null)
     private val selected = MutableStateFlow<Stop?>(null)
@@ -57,15 +63,16 @@ class MapViewModel(private val container: AppContainer) : ViewModel() {
     private var boardJob: Job? = null
 
     val state: StateFlow<MapUiState> = combine(
-        combine(stops, zoomedOut, loading, error) { s, z, l, e -> Quad(s, z, l, e) },
+        combine(stops, networkStops, zoom, loading, error) { s, n, z, l, e -> Loaded(n + s, z, l, e) },
         combine(selected, selectedBoard, userLocation) { s, b, u -> Triple(s, b, u) },
         container.favouritesRepository.favouriteKeys,
         container.settingsRepository.settings,
-    ) { (stops, zoomedOut, loading, error), (sel, board, location), favKeys, settings ->
+    ) { (all, zoom, loading, error), (sel, board, location), favKeys, settings ->
+        val shown = visibleModes(zoom, settings.mapModes)
         MapUiState(
-            stops = stops.values.filter { it.mode in settings.mapModes },
+            // The selected stop stays on the map even when its mode isn't shown at this zoom.
+            stops = all.values.filter { it.mode in shown || it.key == sel?.key },
             modes = settings.mapModes,
-            zoomedOutTooFar = zoomedOut,
             loading = loading,
             error = error,
             selected = sel,
@@ -78,30 +85,43 @@ class MapViewModel(private val container: AppContainer) : ViewModel() {
 
     fun onViewportIdle(viewport: Viewport) {
         lastViewport = viewport
-        if (viewport.zoom < MIN_STOP_ZOOM) {
-            zoomedOut.value = true
-            return
-        }
-        zoomedOut.value = false
+        zoom.value = viewport.zoom
         loadJob?.cancel()
         loadJob = viewModelScope.launch {
-            loading.value = true
             val settings = container.settingsRepository.current()
-            val radius = GeoUtils.viewportRadiusMeters(viewport.latitude, viewport.zoom, viewport.widthDp, viewport.heightDp)
-                .toInt()
-                .coerceIn(300, MAX_RADIUS_M)
-            val result = loadCatching {
-                repo.nearbyStops(viewport.latitude, viewport.longitude, settings.mapModes, radius, maxResults = MAX_RESULTS)
-            }
-            when (result) {
-                is LoadState.Success -> {
-                    error.value = null
-                    stops.update { current -> trim(current + result.data.associateBy { it.key }, viewport) }
+            val shown = visibleModes(viewport.zoom, settings.mapModes)
+            loading.value = true
+            val results = buildList {
+                if (networkStops.value.isEmpty() || error.value != null) add(loadNetwork())
+                // Trams and buses: only the stops in view, once zoomed in far enough for them.
+                for (group in LOCAL_GROUPS) {
+                    val modes = group.modes.filter { it in shown }.toSet()
+                    if (modes.isEmpty()) continue
+                    val radius = GeoUtils.viewportRadiusMeters(viewport.latitude, viewport.zoom, viewport.widthDp, viewport.heightDp)
+                        .toInt()
+                        .coerceIn(300, group.maxRadiusM)
+                    val result = loadCatching { repo.nearbyStops(viewport.latitude, viewport.longitude, modes, radius, maxResults = group.maxResults) }
+                    if (result is LoadState.Success) stops.update { current -> trim(current + result.data.associateBy { it.key }, viewport) }
+                    add(result)
                 }
-                is LoadState.Error -> error.value = result.error
-                LoadState.Loading -> Unit
             }
+            error.value = results.filterIsInstance<LoadState.Error>().firstOrNull()?.error
             loading.value = false
+        }
+    }
+
+    /** Every V/Line and train stop, which are few enough to keep for the whole network. */
+    private suspend fun loadNetwork(): LoadState<Unit> {
+        val result = loadCatching {
+            NETWORK_GROUPS.flatMap { group ->
+                repo.nearbyStops(NETWORK_CENTRE.latitude, NETWORK_CENTRE.longitude, group.modes, group.maxRadiusM, maxResults = group.maxResults)
+            }
+        }
+        if (result is LoadState.Success) networkStops.value = result.data.associateBy { it.key }
+        return when (result) {
+            is LoadState.Success -> LoadState.Success(Unit)
+            is LoadState.Error -> result
+            LoadState.Loading -> LoadState.Loading
         }
     }
 
@@ -141,7 +161,7 @@ class MapViewModel(private val container: AppContainer) : ViewModel() {
     }
 
     fun selectByKey(key: String) {
-        stops.value[key]?.let(::select)
+        (stops.value[key] ?: networkStops.value[key])?.let(::select)
     }
 
     /** Adds a stop that may not be in the loaded set yet (e.g. from search) and selects it. */
@@ -193,12 +213,38 @@ class MapViewModel(private val container: AppContainer) : ViewModel() {
 
     fun hasLocationPermission() = container.locationProvider.hasPermission()
 
-    private data class Quad<A, B, C, D>(val a: A, val b: B, val c: C, val d: D)
+    private data class Loaded(val stops: Map<String, Stop>, val zoom: Double, val loading: Boolean, val error: Throwable?)
+
+    /** Modes loaded together, how far from the centre and how many at most. */
+    private data class StopGroup(val modes: Set<TransportMode>, val maxRadiusM: Int, val maxResults: Int)
 
     companion object {
-        const val MIN_STOP_ZOOM = 13.0
-        const val MAX_RADIUS_M = 4_000
-        const val MAX_RESULTS = 500
+        /**
+         * The zoom each mode appears from. V/Line shows across the whole state, trains from a city-wide view, trams
+         * from the inner suburbs and buses (day and night) once you're down to a few streets.
+         */
+        fun minZoom(mode: TransportMode): Double = when (mode) {
+            TransportMode.VLINE -> 0.0
+            TransportMode.TRAIN -> 9.5
+            TransportMode.TRAM -> 12.0
+            TransportMode.BUS, TransportMode.NIGHT_BUS -> 14.0
+        }
+
+        /** The modes to draw at [zoom], out of the ones turned on. */
+        fun visibleModes(zoom: Double, enabled: Set<TransportMode>): Set<TransportMode> =
+            enabled.filter { zoom >= minZoom(it) }.toSet()
+
+        const val DEFAULT_ZOOM = 12.0
         const val MAX_CACHED_STOPS = 2_500
+        private val NETWORK_CENTRE = LatLng(-37.8136, 144.9631)
+        private val NETWORK_GROUPS = listOf(
+            // Reaches Mildura, Albury and Mallacoota from Melbourne.
+            StopGroup(setOf(TransportMode.VLINE), maxRadiusM = 700_000, maxResults = 2_000),
+            StopGroup(setOf(TransportMode.TRAIN), maxRadiusM = 90_000, maxResults = 1_000),
+        )
+        private val LOCAL_GROUPS = listOf(
+            StopGroup(setOf(TransportMode.TRAM), maxRadiusM = 15_000, maxResults = 1_500),
+            StopGroup(setOf(TransportMode.BUS, TransportMode.NIGHT_BUS), maxRadiusM = 4_000, maxResults = 500),
+        )
     }
 }

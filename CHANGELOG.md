@@ -53,8 +53,15 @@ All notable changes to Journey are documented here. The format follows
   suspension, buses replacing trains or a changed timetable. Tap it to see every alert, the important ones first.
   *Settings → Service updates on stops and lines* chooses what counts (major only, major and delays, or everything)
   and whether the card starts collapsed.
+- **The map shows stops by zoom level.** Zoomed right out you see V/Line stations across the state; closer in, train
+  stations appear, then trams, and buses and night buses once you're down to a few streets. Every stop of those modes
+  in view is drawn, so there's no more *Zoom in to see stops*.
 - For developers: an optional `WEATHER_API_KEY` in `.env` (a free OpenWeatherMap key) is built into release builds for
   the default weather provider. Without it people choose Open-Meteo or paste their own key.
+
+### Removed
+- The satellite map and 3D buildings, which used up far more of the Mapbox free tier. The map is always the flat
+  standard map, with night lighting in the dark theme.
 
 ## [1.2.1-beta.1] - 2026-11-13
 

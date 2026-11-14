@@ -348,12 +348,6 @@ fun SettingsScreen() {
                         isChecked = settings.mapFollowsTheme,
                         onCheckedChange = { vm.update { setMapFollowsTheme(it) } },
                     )
-                    IconToggleItem(
-                        icon = Sym.ViewInAr,
-                        title = "3D buildings & landmarks",
-                        isChecked = settings.map3dObjects,
-                        onCheckedChange = { vm.update { setMap3d(it) } },
-                    )
                 }
             }
 

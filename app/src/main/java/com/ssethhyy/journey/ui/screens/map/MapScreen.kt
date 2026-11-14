@@ -77,7 +77,6 @@ import com.mapbox.maps.extension.compose.annotation.generated.CircleAnnotationGr
 import com.mapbox.maps.extension.compose.annotation.generated.CircleAnnotationGroupState
 import com.mapbox.maps.extension.compose.style.BooleanValue
 import com.mapbox.maps.extension.compose.style.standard.LightPresetValue
-import com.mapbox.maps.extension.compose.style.standard.MapboxStandardSatelliteStyle
 import com.mapbox.maps.extension.compose.style.standard.MapboxStandardStyle
 import com.mapbox.maps.plugin.PuckBearing
 import com.mapbox.maps.plugin.animation.MapAnimationOptions
@@ -321,18 +320,12 @@ fun MapScreen(isActive: Boolean, modifier: Modifier = Modifier) {
                 },
                 style = {
                     val preset = if (state.settings.mapFollowsTheme && darkTheme) LightPresetValue.NIGHT else LightPresetValue.DAY
-                    if (state.settings.mapSatellite) {
-                        MapboxStandardSatelliteStyle {
-                            lightPreset = preset
-                            showTransitLabels = BooleanValue(false)
-                        }
-                    } else {
-                        MapboxStandardStyle {
-                            lightPreset = preset
-                            show3dObjects = BooleanValue(state.settings.map3dObjects)
-                            // Our own stop markers replace Mapbox's transit POIs.
-                            showTransitLabels = BooleanValue(false)
-                        }
+                    MapboxStandardStyle {
+                        lightPreset = preset
+                        // Flat map: 3D buildings and satellite imagery use up far more of the Mapbox free tier.
+                        show3dObjects = BooleanValue(false)
+                        // Our own stop markers replace Mapbox's transit POIs.
+                        showTransitLabels = BooleanValue(false)
                     }
                 },
             ) {
@@ -379,9 +372,8 @@ fun MapScreen(isActive: Boolean, modifier: Modifier = Modifier) {
                 }
 
                 val selectedKey = state.selected?.key
-                val annotations = remember(state.stops, selectedKey, state.zoomedOutTooFar) {
-                    // Zoomed out too far to load stops: hide the ones from before rather than leave a stale cluster.
-                    (if (state.zoomedOutTooFar) emptyList() else state.stops).map { stop ->
+                val annotations = remember(state.stops, selectedKey) {
+                    state.stops.map { stop ->
                         val isSelected = stop.key == selectedKey
                         CircleAnnotationOptions()
                             .withPoint(Point.fromLngLat(stop.longitude, stop.latitude))
@@ -442,7 +434,6 @@ fun MapScreen(isActive: Boolean, modifier: Modifier = Modifier) {
                 modifier = Modifier.padding(horizontal = 16.dp).padding(bottom = 8.dp),
             )
             when {
-                state.zoomedOutTooFar -> StatusPill(icon = { Icon(Sym.ZoomIn, null, Modifier.size(18.dp)) }, text = "Zoom in to see stops")
                 state.error != null -> StatusPill(
                     icon = { Icon(Sym.Refresh, null, Modifier.size(18.dp)) },
                     text = state.error?.message ?: "Couldn't load stops",
@@ -461,16 +452,6 @@ fun MapScreen(isActive: Boolean, modifier: Modifier = Modifier) {
                 .padding(end = 16.dp, bottom = ToolbarClearance + previewClearance + 8.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
-            if (hasValidToken) {
-                MapOverlayButton(
-                    icon = if (state.settings.mapSatellite) Sym.Map else Sym.Layers,
-                    contentDescription = if (state.settings.mapSatellite) "Show standard map" else "Show satellite map",
-                    onClick = {
-                        val next = !state.settings.mapSatellite
-                        container.appScope.launch { container.settingsRepository.setMapSatellite(next) }
-                    },
-                )
-            }
             if (!showNearby) {
                 MapOverlayButton(
                     icon = Sym.NearMe,

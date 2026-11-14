@@ -204,6 +204,14 @@ lighting doesn't darken the colours.
   backup after the main trip.
 - *Near you* on For You shares the Map tab's `NearbyViewModel`, so the location is looked up once.
 
+## Map stops
+
+`MapViewModel` draws each mode from its own zoom (`MapViewModel.minZoom`): V/Line always, trains from 9.5, trams from
+12 and buses and night buses from 14. V/Line and train stops are loaded once for the whole network (one wide
+`/v3/stops/location` call each around Melbourne, cached); trams and buses are loaded for the viewport when the camera
+settles, capped at 15 km and 4 km. The flat Mapbox Standard style is used without 3D objects, and there is no
+satellite style, to keep within the Mapbox free tier.
+
 ## Service updates on stop and line pages
 
 `serviceUpdates` (in `ui/components/ServiceUpdates.kt`) adds the card to the stop and line pages. `ServiceUpdateSplit`

@@ -69,6 +69,7 @@ Live departures, journey planning, a live map, myki balance and trip tracking fo
 
 ### 🗺️ Map
 - Full-screen edge-to-edge Mapbox map of stops for every mode, a stop preview and a floating *Nearby* panel that keeps you centred in the part of the map you can see.
+- **Stops by zoom level:** V/Line stations across the state when zoomed out, then trains, trams, and buses closest in, every one in view.
 - Search stops, routes and lines, and *Plan a trip here* from any stop.
 - **Stop roulette** (from MelbourneTrainGame): roll a random station within a radius, with an optional travel challenge.
 

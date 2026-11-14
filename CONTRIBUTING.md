@@ -59,7 +59,7 @@ git remote add upstream https://github.com/ssethhyy/Journey.git
 
 # 2. Add your own keys (.env is git-ignored)
 cp .env.template .env
-# edit .env: PTV_DEV_ID, PTV_API_KEY, MAPBOX_ACCESS_TOKEN
+# edit .env: PTV_DEV_ID, PTV_API_KEY, MAPBOX_ACCESS_TOKEN (and optionally VIC_OPENDATA_KEY, WEATHER_API_KEY)
 
 # 3. Check the build and tests pass before you change anything
 ./gradlew :app:testDebugUnitTest

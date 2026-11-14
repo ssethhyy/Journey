@@ -115,6 +115,14 @@ state or country the geocoder reports matches. The Map tab's camera is bounded t
 Optional GTFS Realtime vehicle-position feeds, read with a free key in the `KeyID` header and parsed by a small
 hand-written protobuf reader (`GtfsRealtime`). See [Crowding](#crowding).
 
+### Weather (`data.weather`)
+
+`WeatherApi` asks one of three providers for current conditions in metric units: OpenWeatherMap (`/data/2.5/weather`,
+the default), WeatherAPI.com (`/v1/forecast.json`, for today's high and low too) or Open-Meteo (`/v1/forecast`, no
+key). `WeatherParsers` maps each response, and each provider's condition codes, to one `WeatherNow`.
+`WeatherRepository` picks the key (the user's own for that provider, else, for the default provider only, the
+`WEATHER_KEY` built from `.env`), uses the last known location or Melbourne, and caches a reading for 15 minutes.
+
 ### GitHub Releases (`data.update`)
 
 The public GitHub API, read without a key, for the in-app updater. See [In-app updates](#in-app-updates).
@@ -195,6 +203,26 @@ lighting doesn't darken the colours.
   usual hour when trips agree) and stores the user's own. `CommutesViewModel` plans each for "leave now" and picks a
   backup after the main trip.
 - *Near you* on For You shares the Map tab's `NearbyViewModel`, so the location is looked up once.
+
+## For You widgets
+
+- `ForYouLayout` (in `data.foryou`) holds the widget order, which widgets are folded, whether titles show, and each
+  widget's config. `ForYouRepository` stores it as one JSON document in its own DataStore; a document that can't be
+  read falls back to the default. The first layout is written from the old settings, so Near you stays off for people
+  who had turned it off. Settings other screens share (the name, departures per stop, nearby count) stay in
+  `AppSettings`.
+- `FavouritesScreen` renders `layout.widgets` in order into one `LazyColumn`. Widgets that already spanned several
+  list items (Favourites, Commutes, Near you) add their own items, with a `WidgetTitle` first when titles are on.
+- `ForYouEditor` is edit mode. The drag is read on the whole list at the initial pointer pass, so it survives the
+  dragged item moving and stops the list scrolling: the handle starts it at once, anywhere else after a long press.
+  The lifted tile is drawn over the list at the finger; its slot in the list becomes a filled placeholder of the same
+  size, and it swaps with a neighbour once its middle passes the neighbour's (from the lazy layout's own offsets, which
+  don't move with animations). The list scrolls by itself near its edges. The order is saved once, on release.
+- `ForYouDisruptions.select` picks what the Disruptions widget shows: by default current major disruptions (severe or
+  major types, or titles that mention closures, replacement buses, suspensions or timetable changes) on the routes of
+  favourite stops (only the chosen lines for a favourite limited to some) or naming a favourite stop.
+- `ForYouHeader` is the Greeting widget, drawn from `for-you-page-top`: the temperature is Google Sans Flex at weight
+  220, width 40 and optical size 144 (`FlexType.single`), and one animated value shrinks it into the folded line.
 
 ## Crowding
 

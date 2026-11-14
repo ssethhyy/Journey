@@ -47,12 +47,15 @@ Live departures, journey planning, a live map, myki balance and trip tracking fo
 ## Features
 
 ### 🏠 For You
-- A greeting with today's date, then your favourite stops with **live departures** grouped by mode (trains, trams, buses).
+- **Arrange it your way:** For You is made of widgets. Tap the pencil to drag them into any order (they snap into place), remove them, add others (*Network status*, *Shortcuts*) and open each one's own settings. Every widget has a small title with an arrow to fold it away, or turn titles off altogether.
+- **Weather and a greeting:** a big temperature with an icon for the conditions, "Good morning" with your name and today's date, folding into one line after a few seconds. Weather comes from OpenWeatherMap (built in), WeatherAPI.com or Open-Meteo.
+- Your favourite stops with **live departures**, first on the page and grouped by mode (trains, trams, buses). Choose how many departures, the order, and whether stops with nothing coming show.
 - **Favourite just the lines you use:** keep every departure from a stop, or pick lines and directions such as *Frankston to City*.
+- **Disruptions that matter:** folded to one quiet line, and only when there's a major disruption (closures, replacement buses, changed timetables) at your stops or on your lines.
 - Saved places (Home, Work and your own) one tap away from planning a trip.
 - **Commutes:** the trips you make most (learned from your planning, or added by you) with when to leave, a backup if you miss it, and one-tap tracking or planning.
-- **Near you:** the closest stops and their next departures (turn it off or choose how many in Settings).
-- Network status at a glance, mode filters, pull to refresh and auto refresh.
+- **Near you:** the closest stops and their next departures.
+- Mode filters, pull to refresh and auto refresh.
 - A **Profile** with stats from the trips you log, and an avatar that morphs between Material 3 Expressive shapes.
 
 ### 🧭 Plan
@@ -126,6 +129,7 @@ This repository contains **no keys**. Journey needs two free credentials, and yo
 | `PTV_DEV_ID` and `PTV_API_KEY` | Live departures, stops, routes, disruptions, fare zones, vehicle positions | Request a key from Public Transport Victoria on the [PTV Timetable API page](https://www.ptv.vic.gov.au/footer/data-and-reporting/datasets/ptv-timetable-api/). They email you a **developer ID** and an **API key**. | Free |
 | `VIC_OPENDATA_KEY` | *Optional.* Crowding: how busy a service and its carriages are, plus crowding alerts | Create a free account and key at [opendata.transport.vic.gov.au](https://opendata.transport.vic.gov.au) | Free |
 | `MAPBOX_ACCESS_TOKEN` | The map tab, trip map and journey map | Create a **public** token (starts with `pk.`) at [account.mapbox.com](https://account.mapbox.com/access-tokens/) | Free tier |
+| `WEATHER_API_KEY` | *Optional.* The weather on For You, from OpenWeatherMap (the default provider). Without it, people pick Open-Meteo (no key) or paste their own key in the Greeting widget's settings | Create a free account at [openweathermap.org](https://home.openweathermap.org/users/sign_up) and copy a key from *API keys* (new keys can take an hour or two to start working) | Free |
 
 Journey's journey planner uses [Transitous](https://transitous.org), which needs **no key**.
 
@@ -259,9 +263,9 @@ provider and the testing approach in more detail.
 - **No account, no analytics, no ads, no trackers.**
 - Your favourites, places, mykis, trips and settings stay **on your device**.
 - The app talks only to PTV (departures), Transitous (journeys), Mapbox (map tiles), Transport Victoria Open Data
-  (crowding, only if you add a key) and GitHub (checking for updates when the app opens, if turned on). Your location
-  is used on the device for *nearby*, planning and stop alerts, and sent to those services only as the coordinates of
-  a request.
+  (crowding, only if you add a key), the weather provider you choose (OpenWeatherMap by default, while the weather is
+  shown) and GitHub (checking for updates when the app opens, if turned on). Your location is used on the device for
+  *nearby*, planning, the weather and stop alerts, and sent to those services only as the coordinates of a request.
 - Journey reads a myki's **card number** over NFC. A myki's balance and trips are locked on the card, so balances
   are entered by you and updated by the trips you log.
 

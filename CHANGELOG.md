@@ -6,6 +6,45 @@ All notable changes to Journey are documented here. The format follows
 
 ## [Unreleased]
 
+### Added
+- **A new For You, built from widgets you arrange yourself.** Greeting, Places, Favourites, Disruptions, Commutes and
+  Near you are each a widget. Tap the pencil at the top of For You to edit the page:
+  - **Move widgets by dragging.** Hold a widget, or grab its handle, and it lifts and follows your finger. A filled
+    rounded shape shows where it will land, the other widgets move aside, and it snaps into place when you let go.
+  - **Each widget has its own settings** (the cog), and a remove button. Removed widgets, plus two new ones (*Network
+    status* and *Shortcuts* to Plan, the Map, Disruptions, Search and Stop roulette), wait under *Add a widget*.
+    *Reset to the default layout* puts everything back.
+  - Settings → *Customise For You* opens edit mode too.
+- **Weather on For You.** The Greeting widget now shows the temperature and an icon for the conditions, in the style
+  of the new header design: a big thin temperature, a bold greeting and today's date. After a few seconds it folds
+  into one line (temperature on the left, the date on the right) so you see more of the page; tap it to open it again.
+  In the Greeting settings you can turn the weather or the folding off, choose how long before it folds, Celsius or
+  Fahrenheit, show the conditions, feels-like and today's high and low, and pick the provider:
+  - **OpenWeatherMap** (the default). Builds published on GitHub include a key, so it works straight away.
+  - **WeatherAPI.com**, with your own free key.
+  - **Open-Meteo**, which needs no key.
+  The weather uses your last known location (or Melbourne) and is cached for 15 minutes.
+- **Titles on every widget**, small and simple, with an arrow to fold the widget away. Turn all titles on or off in
+  edit mode.
+
+### Changed
+- **Favourites come first**, straight under your places. Their settings cover departures per stop (moved from
+  Settings), grouping by mode, the mode filters, hiding stops with nothing coming, the Add button, and the order of
+  your favourites (drag the handles).
+- **Disruptions are quieter and only show what matters.** The Disruptions widget is folded by default to a single line
+  in the page's own colours (for example *1 major disruption · Hurstbridge*), and only appears when there is a major
+  disruption (a closure, suspension, buses replacing trains or a changed timetable) at one of your favourite stops or
+  on one of your favourite lines. Its settings choose major only, major and delays, or everything; your stops and lines
+  or the whole network; how many to list; and whether it hides when there are none.
+- **The greeting design** follows the new header: "Good morning, Seth" on one line (longer greetings step down in size)
+  and "Today is the 14th of November 2026". Choose another date style, or turn the greeting or date off, in its
+  settings.
+- Your name, departures per stop and the Near you options moved from Settings into the widgets' own settings.
+  Commutes can hide suggested commutes and the backup trip and limit how many show; Places can hide the Home and Work
+  suggestions and the Add tile.
+- For developers: an optional `WEATHER_API_KEY` in `.env` (a free OpenWeatherMap key) is built into release builds for
+  the default weather provider. Without it people choose Open-Meteo or paste their own key.
+
 ## [1.2.1-beta.1] - 2026-11-13
 
 A pre-release of 1.2.1. It installs straight over 1.2.0, keeping your data. From this version on, Journey can update

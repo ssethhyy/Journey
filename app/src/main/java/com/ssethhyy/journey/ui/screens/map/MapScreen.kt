@@ -381,7 +381,8 @@ fun MapScreen(isActive: Boolean, modifier: Modifier = Modifier) {
                             .withCircleRadius(if (isSelected) 11.0 else 6.5)
                             .withCircleStrokeColor(Color.White.toArgb())
                             .withCircleStrokeWidth(if (isSelected) 3.5 else 1.75)
-                            .withCircleSortKey(if (isSelected) 10.0 else stop.mode.ordinal.toDouble())
+                            // Bigger networks on top: V/Line, then trains, trams and buses.
+                            .withCircleSortKey(if (isSelected) 10.0 else 5.0 - MapViewModel.minZoom(stop.mode) / 3.0)
                             .withData(JsonPrimitive(stop.key))
                     }
                 }

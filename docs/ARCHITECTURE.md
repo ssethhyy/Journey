@@ -130,7 +130,13 @@ The public GitHub API, read without a key, for the in-app updater. See [In-app u
 ## Persistence
 
 Everything is stored with Jetpack DataStore (JSON in preferences): settings, favourites, places, mykis and trip
-history, and fare edits. Each store has a repository exposing a `Flow`, and the encode/decode and list logic
+history, and fare edits. Map tiles go in Mapbox's own disk cache (the default `TileStore`), which `JourneyApp`
+limits to 200 MB.
+
+API responses are kept in memory by `TtlCache` (in `PtvRepository`). Besides its time to live it shares one request
+between callers asking for the same key at once, and a forced reload within `minForceAgeMs` of the last fetch reuses
+it, so a refresh straight after loading costs nothing. Departures live 20 s (forced reloads at most every 8 s),
+nearby stops 10 minutes, disruptions 5 minutes. Each store has a repository exposing a `Flow`, and the encode/decode and list logic
 (`PlacesCodec`, `MykiLedger`, `FareConfigs`) is pure so it can be tested without Android.
 
 ## Fares
@@ -209,8 +215,16 @@ lighting doesn't darken the colours.
 `MapViewModel` draws each mode from its own zoom (`MapViewModel.minZoom`): V/Line always, trains from 9.5, trams from
 12 and buses and night buses from 14. V/Line and train stops are loaded once for the whole network (one wide
 `/v3/stops/location` call each around Melbourne, cached); trams and buses are loaded for the viewport when the camera
-settles, capped at 15 km and 4 km. The flat Mapbox Standard style is used without 3D objects, and there is no
+settles, capped at 15 km and 4 km. Each load asks for 30% more than the screen and is remembered for 15 minutes, so
+panning or zooming within an area already loaded asks PTV nothing (a load that hit the result limit isn't remembered,
+nor is anything after the marker cap trims stops). The flat Mapbox Standard style is used without 3D objects, and there is no
 satellite style, to keep within the Mapbox free tier.
+
+The Nearby panel (`NearbyPanel`) keeps its list height in a float that drags change directly; letting go springs it
+to collapsed or open by distance and fling, or opens `NearbyScreen` (every stop within 1 km) when pulled 110 dp past
+open. Its list hands drags to the panel through a `NestedScrollConnection`. While it moves, `nearbyZoomScale` scales
+the map's layer a little (peaking half-way, 1 at rest) around the middle of the visible map, and the camera only
+re-centres once the panel has stopped moving.
 
 ## Service updates on stop and line pages
 

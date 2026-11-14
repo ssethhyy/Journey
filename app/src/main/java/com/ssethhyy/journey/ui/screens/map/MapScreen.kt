@@ -59,6 +59,12 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.layout.widthIn
+import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.ui.graphics.graphicsLayer
+import com.ssethhyy.journey.ui.components.MapControlPill
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.res.stringResource
@@ -144,6 +150,8 @@ fun MapScreen(isActive: Boolean, modifier: Modifier = Modifier) {
     var showNearby by rememberSaveable { mutableStateOf(true) }
     var nearbyExpanded by rememberSaveable { mutableStateOf(true) }
     var nearbyLoaded by rememberSaveable { mutableStateOf(false) }
+    // How open the Nearby panel is while it moves, for the map's small zoom as it does.
+    var nearbyProgress by remember { mutableFloatStateOf(if (nearbyExpanded) 1f else 0f) }
     var locationEnabled by remember { mutableStateOf(vm.hasLocationPermission()) }
 
     // The part of the map not covered by the filters at the top or the panel and toolbar at the bottom, kept up
@@ -252,13 +260,19 @@ fun MapScreen(isActive: Boolean, modifier: Modifier = Modifier) {
         nearbyVisible -> with(density) { nearbyHeightPx.toDp() } + 4.dp
         else -> 0.dp
     }
+    // The row of map control pills sits just above whichever panel is showing.
+    val controlsVisible = roulette is RouletteState.Idle || state.selected == null
+    val controlsClearance = if (controlsVisible) ControlRowHeight + 8.dp else 0.dp
 
     val statusTopPx = WindowInsets.statusBars.getTop(density)
     val navBottomPx = WindowInsets.navigationBars.getBottom(density)
-    val bottomCoveredPx = navBottomPx + with(density) { (ToolbarClearance + previewClearance).toPx() }
+    val bottomCoveredPx = navBottomPx + with(density) { (ToolbarClearance + previewClearance + controlsClearance).toPx() }
     val topCoveredPx = statusTopPx + with(density) { 72.dp.toPx() }
     LaunchedEffect(bottomCoveredPx, topCoveredPx) {
         visiblePadding = EdgeInsets(topCoveredPx.toDouble(), 0.0, bottomCoveredPx.toDouble(), 0.0)
+        // Wait for the panel to stop moving (each new height restarts this) so dragging it doesn't nudge the camera
+        // every frame.
+        kotlinx.coroutines.delay(160)
         // Opening, expanding or closing the Nearby panel keeps you in the middle of the uncovered map.
         val here = state.userLocation
         if (followingUser && here != null && journey == null && state.selected == null) {
@@ -284,9 +298,22 @@ fun MapScreen(isActive: Boolean, modifier: Modifier = Modifier) {
         }
 
         if (hasValidToken) {
-            val bottomOrnamentPadding = ToolbarClearance + previewClearance
+            val bottomOrnamentPadding = ToolbarClearance + previewClearance + controlsClearance
+            // The middle of the part of the map you can see, so the zoom effect leans in on it.
+            val pivotY = with(density) {
+                val full = heightDp.dp.toPx()
+                ((topCoveredPx + (full - bottomCoveredPx)) / 2f / full).coerceIn(0f, 1f)
+            }
             MapboxMap(
-                modifier = Modifier.fillMaxSize(),
+                modifier = Modifier
+                    .fillMaxSize()
+                    .graphicsLayer {
+                        // A subtle zoom while the Nearby panel moves; none once it settles.
+                        val scale = if (nearbyVisible) nearbyZoomScale(nearbyProgress) else 1f
+                        scaleX = scale
+                        scaleY = scale
+                        transformOrigin = androidx.compose.ui.graphics.TransformOrigin(0.5f, pivotY)
+                    },
                 // TextureView (instead of SurfaceView) so the navigation bar blur can sample the map.
                 composeMapInitOptions = remember(density) { ComposeMapInitOptions(density.density, textureView = true) },
                 mapViewportState = viewportState,
@@ -446,37 +473,50 @@ fun MapScreen(isActive: Boolean, modifier: Modifier = Modifier) {
 
         // Right-side map controls. With a roll result at the top and a stop preview at the bottom there is no room
         // for them in between, and the roulette card has its own actions, so they step aside.
-        if (roulette is RouletteState.Idle || state.selected == null) Column(
+        // Map controls as a row of pills resting on top of the panel below. If they don't all fit, the row scrolls
+        // sideways and the rest are hidden at the edge.
+        if (controlsVisible) BoxWithConstraints(
             Modifier
-                .align(Alignment.BottomEnd)
+                .align(Alignment.BottomCenter)
+                .fillMaxWidth()
                 .windowInsetsPadding(WindowInsets.navigationBars)
-                .padding(end = 16.dp, bottom = ToolbarClearance + previewClearance + 8.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp),
+                .padding(bottom = ToolbarClearance + previewClearance + 4.dp),
         ) {
-            if (!showNearby) {
-                MapOverlayButton(
-                    icon = Sym.NearMe,
-                    contentDescription = "Show nearby stops",
-                    onClick = {
-                        showNearby = true
-                        nearbyExpanded = true
-                    },
+            val rowWidth = maxWidth
+            Row(
+                Modifier
+                    .horizontalScroll(rememberScrollState())
+                    .widthIn(min = rowWidth)
+                    .height(ControlRowHeight)
+                    .padding(horizontal = 12.dp),
+                horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.End),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                if (!showNearby) {
+                    MapControlPill(
+                        icon = Sym.NearMe,
+                        label = "Nearby",
+                        onClick = {
+                            showNearby = true
+                            nearbyExpanded = true
+                        },
+                    )
+                }
+                if (state.settings.gameEnabled) {
+                    MapControlPill(
+                        icon = Sym.Casino,
+                        label = "Roll a stop",
+                        loading = roulette is RouletteState.Rolling,
+                        onClick = rollStop,
+                    )
+                }
+                MapControlPill(
+                    icon = Sym.MyLocation,
+                    label = "My location",
+                    loading = locating,
+                    onClick = enableLocation,
                 )
             }
-            if (state.settings.gameEnabled) {
-                MapOverlayButton(
-                    icon = Sym.Casino,
-                    contentDescription = "Roll a random stop",
-                    loading = roulette is RouletteState.Rolling,
-                    onClick = rollStop,
-                )
-            }
-            MapOverlayButton(
-                icon = Sym.MyLocation,
-                contentDescription = "Centre on my location",
-                loading = locating,
-                onClick = enableLocation,
-            )
         }
 
         // Fit the whole journey, or the chosen leg, into the part of the map the panels leave visible.
@@ -539,7 +579,9 @@ fun MapScreen(isActive: Boolean, modifier: Modifier = Modifier) {
                 state = nearbyState,
                 expanded = nearbyExpanded,
                 now = now,
-                onToggleExpanded = { nearbyExpanded = it },
+                onExpandedChange = { nearbyExpanded = it },
+                onOpenAll = navigator::openNearby,
+                onProgress = { nearbyProgress = it },
                 onClose = { showNearby = false },
                 onSelect = { stop ->
                     nearbyExpanded = false
@@ -699,3 +741,6 @@ private fun MissingTokenCard() {
         )
     }
 }
+
+/** Height of the row of map control pills. */
+private val ControlRowHeight = 48.dp

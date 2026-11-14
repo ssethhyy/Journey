@@ -284,6 +284,7 @@ fun JourneyRoot(
                     entry<RouteDetailKey> { key -> RouteDetailScreen(key) }
                     entry<TripKey> { key -> TripScreen(key) }
                     entry<SearchKey> { SearchScreen() }
+                    entry<com.ssethhyy.journey.ui.navigation.NearbyKey> { com.ssethhyy.journey.ui.screens.nearby.NearbyScreen() }
                     entry<SettingsKey> { SettingsScreen() }
                     entry<DisruptionsKey> { DisruptionsScreen() }
                     entry<IslandSettingsKey> { IslandSettingsScreen() }

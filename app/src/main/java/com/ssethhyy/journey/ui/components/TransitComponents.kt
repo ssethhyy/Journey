@@ -645,6 +645,36 @@ fun MapOverlayButton(icon: ImageVector, contentDescription: String, onClick: () 
     }
 }
 
+/** A map control as a small pill with an icon and a label, for the row above the map's bottom panel. */
+@Composable
+@OptIn(androidx.compose.material3.ExperimentalMaterial3ExpressiveApi::class)
+fun MapControlPill(icon: ImageVector, label: String, onClick: () -> Unit, modifier: Modifier = Modifier, loading: Boolean = false) {
+    val view = LocalView.current
+    Surface(
+        onClick = {
+            HapticUtil.performUIHaptic(view)
+            onClick()
+        },
+        modifier = modifier.height(40.dp),
+        shape = CircleShape,
+        color = MaterialTheme.colorScheme.surfaceContainerHigh,
+        contentColor = MaterialTheme.colorScheme.onSurface,
+        shadowElevation = 3.dp,
+    ) {
+        Row(Modifier.padding(start = 12.dp, end = 16.dp), verticalAlignment = Alignment.CenterVertically) {
+            Box(Modifier.size(20.dp), contentAlignment = Alignment.Center) {
+                if (loading) {
+                    androidx.compose.material3.LoadingIndicator(Modifier.size(22.dp).semantics { this.contentDescription = "Working" })
+                } else {
+                    Icon(icon, contentDescription = null, modifier = Modifier.size(18.dp))
+                }
+            }
+            Spacer(Modifier.width(8.dp))
+            Text(label, style = MaterialTheme.typography.labelLarge, maxLines = 1)
+        }
+    }
+}
+
 /** Icon button used in top app bars with haptics. */
 @Composable
 fun HapticIconButton(icon: ImageVector, contentDescription: String, onClick: () -> Unit, modifier: Modifier = Modifier, tint: Color = MaterialTheme.colorScheme.onSurface) {

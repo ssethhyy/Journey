@@ -49,7 +49,15 @@ data class NearbyUiState(
         get() = stops.dataOrNull.orEmpty().map { it.mode }.distinct().sortedBy { it.ordinal }
 }
 
-class NearbyViewModel(private val container: AppContainer) : ViewModel() {
+/**
+ * [radiusMeters] and [maxResults] override the Nearby settings, for the full Nearby page (everything within a
+ * kilometre); otherwise the user's search radius is used.
+ */
+class NearbyViewModel(
+    private val container: AppContainer,
+    private val radiusMeters: Int? = null,
+    private val maxResults: Int = 50,
+) : ViewModel() {
     private val stops = MutableStateFlow<LoadState<List<Stop>>>(LoadState.Loading)
     private val boards = MutableStateFlow<Map<String, LoadState<DepartureBoard>>>(emptyMap())
     private val filter = MutableStateFlow<Set<TransportMode>>(emptySet())
@@ -107,8 +115,8 @@ class NearbyViewModel(private val container: AppContainer) : ViewModel() {
                     location.latitude,
                     location.longitude,
                     settings.nearbyModes,
-                    settings.nearbyRadiusMeters,
-                    maxResults = 50,
+                    radiusMeters ?: settings.nearbyRadiusMeters,
+                    maxResults = maxResults,
                     force = force,
                 )
             }

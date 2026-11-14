@@ -62,6 +62,21 @@ All notable changes to Journey are documented here. The format follows
 - **The map shows stops by zoom level.** Zoomed right out you see V/Line stations across the state; closer in, train
   stations appear, then trams, and buses and night buses once you're down to a few streets. Every stop of those modes
   in view is drawn, so there's no more *Zoom in to see stops*.
+- **A draggable Nearby panel on the map.** It's shorter, with room for about three stops, and you drag it: down to
+  collapse it, up to open it, and it springs to whichever step is closer (or the way you flicked) when you let go.
+  Keep pulling up past open and it opens a new **Nearby page** listing every stop within a kilometre, closest first,
+  with live departures. The map leans in with a small zoom while the panel moves.
+- **Map controls are pills in a row** resting on top of the Nearby panel (or the stop preview): *My location*,
+  *Roll a stop* and *Nearby* when the panel is hidden. If they don't all fit, the row scrolls sideways.
+- **Search lists stops and lines by transport type**: V/Line first, then trains, trams, buses and night buses. Good
+  matches still come before loose ones.
+- **Fewer PTV requests for the same live data.** Two screens asking for the same thing at once now share one request,
+  pull to refresh straight after a page loads reuses what just arrived, favourites split from one stop share one
+  departures request, nearby stops and disruptions are kept for longer (stops don't move; disruptions for five
+  minutes), the island shares that disruptions cache, and the map doesn't reload trams and buses for an area it
+  already has. Live times still refresh as often as before.
+- **Map tiles are cached on the phone** (up to 200 MB, oldest cleared first), so places you've looked at load from the
+  phone instead of being downloaded again.
 - For developers: an optional `WEATHER_API_KEY` in `.env` (a free OpenWeatherMap key) is built into release builds for
   the default weather provider. Without it people choose Open-Meteo or paste their own key.
 

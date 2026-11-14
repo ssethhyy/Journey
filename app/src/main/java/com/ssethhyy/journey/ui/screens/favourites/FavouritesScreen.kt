@@ -73,7 +73,7 @@ import com.ssethhyy.journey.data.foryou.Shortcut
 import com.ssethhyy.journey.data.model.DepartureBoard
 import com.ssethhyy.journey.data.model.TransportMode
 import com.ssethhyy.journey.data.repository.FavouriteStop
-import com.ssethhyy.journey.data.repository.PlaceKind
+import com.ssethhyy.journey.data.repository.PlaceIcon
 import com.ssethhyy.journey.data.repository.SavedPlace
 import com.ssethhyy.journey.ui.components.PlaceEditorSheet
 import com.ssethhyy.journey.ui.components.PlacesRow
@@ -119,7 +119,8 @@ fun FavouritesScreen(onAddFromNearby: () -> Unit, onAddFromSearch: () -> Unit) {
     }
     var renaming by remember { mutableStateOf<FavouriteStop?>(null) }
     var askingName by rememberSaveable { mutableStateOf(false) }
-    var editingPlace by remember { mutableStateOf<Pair<PlaceKind, SavedPlace?>?>(null) }
+    var editingPlace by remember { mutableStateOf<Pair<PlaceIcon, String>?>(null) }
+    var editingExistingPlace by remember { mutableStateOf<SavedPlace?>(null) }
     var editing by rememberSaveable { mutableStateOf(false) }
     var settingsFor by rememberSaveable { mutableStateOf<ForYouWidget?>(null) }
     var addingWidget by rememberSaveable { mutableStateOf(false) }
@@ -324,10 +325,15 @@ fun FavouritesScreen(onAddFromNearby: () -> Unit, onAddFromSearch: () -> Unit) {
                                         PlacesRow(
                                             places = state.places,
                                             onOpen = { navigator.planTo(it.toPlanLocation()) },
-                                            onEdit = { editingPlace = it.kind to it },
-                                            onCreate = { kind -> editingPlace = kind to null },
+                                            onEdit = {
+                                                editingExistingPlace = it
+                                                editingPlace = null
+                                            },
+                                            onCreate = { icon, name ->
+                                                editingExistingPlace = null
+                                                editingPlace = icon to name
+                                            },
                                             contentPadding = PaddingValues(0.dp),
-                                            showSuggestions = layout.places.showSuggestions,
                                             showAddTile = layout.places.showAddTile,
                                         )
                                     }
@@ -444,8 +450,16 @@ fun FavouritesScreen(onAddFromNearby: () -> Unit, onAddFromSearch: () -> Unit) {
         CommuteEditorSheet(existing = existing, newId = commutesVm::newId, onSave = { commutesVm.saveManual(it) }, onDismiss = { commuteEditor = null })
     }
 
-    editingPlace?.let { (kind, place) ->
-        PlaceEditorSheet(initialKind = kind, existing = place, onDismiss = { editingPlace = null })
+    if (editingPlace != null || editingExistingPlace != null) {
+        PlaceEditorSheet(
+            existing = editingExistingPlace,
+            initialIcon = editingPlace?.first ?: PlaceIcon.STAR,
+            initialName = editingPlace?.second.orEmpty(),
+            onDismiss = {
+                editingPlace = null
+                editingExistingPlace = null
+            }
+        )
     }
 
     if (askingName) {

@@ -59,7 +59,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.ssethhyy.journey.data.planner.PlanLocation
 import com.ssethhyy.journey.data.planner.TimeMode
-import com.ssethhyy.journey.data.repository.PlaceKind
+import com.ssethhyy.journey.data.repository.PlaceIcon
 import com.ssethhyy.journey.data.repository.SavedPlace
 import com.ssethhyy.journey.ui.LoadState
 import com.ssethhyy.journey.ui.appViewModel
@@ -98,7 +98,9 @@ fun PlanScreen() {
     val now by rememberNow()
     var picking by rememberSaveable { mutableStateOf<Field?>(null) }
     var showTimePicker by rememberSaveable { mutableStateOf(false) }
-    var editingPlace by remember { mutableStateOf<Pair<PlaceKind, SavedPlace?>?>(null) }
+    // New place prefill: (icon, name). Existing place being edited: editingExistingPlace.
+    var editingPlace by remember { mutableStateOf<Pair<PlaceIcon, String>?>(null) }
+    var editingExistingPlace by remember { mutableStateOf<SavedPlace?>(null) }
 
     // Live updates: re-plan every minute while results are on screen.
     AutoRefreshEffect(enabled = state.to != null && state.settings.autoRefresh, intervalMs = 60_000) { vm.liveRefresh() }
@@ -150,8 +152,14 @@ fun PlanScreen() {
                     PlacesRow(
                         places = state.places,
                         onOpen = { vm.setTo(it.toPlanLocation()) },
-                        onEdit = { editingPlace = it.kind to it },
-                        onCreate = { kind -> editingPlace = kind to null },
+                        onEdit = {
+                            editingExistingPlace = it
+                            editingPlace = null
+                        },
+                        onCreate = { icon, name ->
+                            editingExistingPlace = null
+                            editingPlace = icon to name
+                        },
                         contentPadding = PaddingValues(0.dp),
                     )
                 }
@@ -250,8 +258,16 @@ fun PlanScreen() {
         )
     }
 
-    editingPlace?.let { (kind, place) ->
-        PlaceEditorSheet(initialKind = kind, existing = place, onDismiss = { editingPlace = null })
+    if (editingPlace != null || editingExistingPlace != null) {
+        PlaceEditorSheet(
+            existing = editingExistingPlace,
+            initialIcon = editingPlace?.first ?: PlaceIcon.STAR,
+            initialName = editingPlace?.second.orEmpty(),
+            onDismiss = {
+                editingPlace = null
+                editingExistingPlace = null
+            },
+        )
     }
 }
 

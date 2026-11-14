@@ -24,6 +24,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.text.BasicText
 import androidx.compose.foundation.text.TextAutoSize
@@ -210,14 +211,16 @@ fun ForYouHeader(
                                     layout(placeable.width, placeable.height - trim) { placeable.place(0, 0) }
                                 },
                         )
-                        Spacer(Modifier.width(lerp(6.dp, 22.dp * iconScale, progress)))
-                        // Centred beside the temperature.
+                        Spacer(Modifier.width(lerp(6.dp, 10.dp * iconScale, progress)))
+                        // Beside the temperature, centred on the figures themselves: the text box keeps some empty
+                        // space above them, so the icon moves down to their middle.
                         Icon(
                             reading.icon(),
                             contentDescription = null,
                             tint = MaterialTheme.colorScheme.onSurfaceVariant,
                             modifier = Modifier
                                 .align(Alignment.CenterVertically)
+                                .offset(y = 19.dp * iconScale * progress)
                                 .size(lerp(24.dp, 60.dp * iconScale, progress)),
                         )
                     }
@@ -262,7 +265,7 @@ fun ForYouHeader(
             enter = expandVertically(spring(dampingRatio = 0.85f, stiffness = Spring.StiffnessMediumLow)) + fadeIn(),
             exit = shrinkVertically(spring(dampingRatio = 1f, stiffness = Spring.StiffnessMediumLow)) + fadeOut(),
         ) {
-            Column(Modifier.padding(top = 2.dp)) {
+            Column(Modifier.padding(top = 12.dp)) {
                 if (showDetails && reading != null) {
                     val details = listOfNotNull(
                         reading.description,

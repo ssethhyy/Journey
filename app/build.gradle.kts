@@ -51,6 +51,7 @@ android {
         buildConfigField("String", "PTV_API_KEY", "\"${secret("PTV_API_KEY", "ptv.apiKey")}\"")
         // Optional: Transport Victoria Open Data key for the crowding feeds.
         buildConfigField("String", "OPENDATA_KEY", "\"${secret("VIC_OPENDATA_KEY", "vic.opendata.key")}\"")
+        buildConfigField("String", "WEATHER_KEY", "\"${secret("WEATHER_API_KEY", "weather.apiKey")}\"")
         resValue("string", "mapbox_access_token", secret("MAPBOX_ACCESS_TOKEN", "mapbox.accessToken").ifEmpty { "YOUR_MAPBOX_ACCESS_TOKEN" })
     }
 

@@ -220,7 +220,10 @@ class PtvRepository(private val api: PtvApi) {
     }
 }
 
-/** Client-side ranking so the most likely matches surface first. */
+/**
+ * Client-side ranking so the most likely matches surface first. Good matches (the name, or a word in it, starts with
+ * what you typed) come before loose ones; within each, V/Line comes first, then trains, trams, buses and night buses.
+ */
 object SearchRanking {
     fun score(query: String, name: String): Int {
         val q = query.trim().lowercase()
@@ -234,14 +237,24 @@ object SearchRanking {
         }
     }
 
+    /** 0 for a good match, 1 for a loose one. */
+    private fun tier(score: Int) = if (score <= 2) 0 else 1
+
     fun rank(query: String, results: SearchResults): SearchResults = SearchResults(
         stops = results.stops.sortedWith(
-            compareBy<Stop>({ score(query, it.name) }, { it.mode.ordinal }, { it.distanceMeters ?: Double.MAX_VALUE }, { it.name }),
+            compareBy<Stop>(
+                { tier(score(query, it.name)) },
+                { it.mode.searchPriority },
+                { score(query, it.name) },
+                { it.distanceMeters ?: Double.MAX_VALUE },
+                { it.name },
+            ),
         ),
         routes = results.routes.sortedWith(
             compareBy(
+                { tier(minOf(score(query, it.number), score(query, it.name))) },
+                { it.mode.searchPriority },
                 { minOf(score(query, it.number), score(query, it.name)) },
-                { it.mode.ordinal },
                 { it.number.toIntOrNull() ?: Int.MAX_VALUE },
                 { it.name },
             ),

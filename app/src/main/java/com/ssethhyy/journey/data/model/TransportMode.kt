@@ -24,6 +24,19 @@ enum class TransportMode(
     NIGHT_BUS(4, "Night Bus", "Night Buses", listOf("night_bus")),
     ;
 
+    /**
+     * Where this mode comes in lists of stops and lines found by searching: V/Line first, then trains, trams, buses
+     * and night buses (the bigger the network, the higher up).
+     */
+    val searchPriority: Int
+        get() = when (this) {
+            VLINE -> 0
+            TRAIN -> 1
+            TRAM -> 2
+            BUS -> 3
+            NIGHT_BUS -> 4
+        }
+
     companion object {
         fun fromRouteType(routeType: Int): TransportMode = entries.firstOrNull { it.routeType == routeType } ?: BUS
 

@@ -68,6 +68,8 @@ class RepositoryLogicTest {
                 stop(1, "Richmond Station/Swan St", TransportMode.TRAM),
                 stop(2, "Richmond Station", TransportMode.TRAIN),
                 stop(3, "North Richmond", TransportMode.TRAIN),
+                stop(4, "Richmond V/Line Coach Stop", TransportMode.VLINE),
+                stop(5, "Eastrichmond Rd", TransportMode.VLINE),
             ),
             routes = listOf(
                 Route(1, TransportMode.BUS, "Richmond - Box Hill", "246"),
@@ -75,7 +77,8 @@ class RepositoryLogicTest {
             ),
         )
         val ranked = SearchRanking.rank("richmond", results)
-        assertEquals(listOf(2, 1, 3), ranked.stops.map { it.id })
+        // Good matches by transport type (V/Line, trains, then trams); the loose match last.
+        assertEquals(listOf(4, 2, 3, 1, 5), ranked.stops.map { it.id })
         assertEquals(listOf(2, 1), ranked.routes.map { it.id })
     }
 

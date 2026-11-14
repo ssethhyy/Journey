@@ -16,7 +16,7 @@ All notable changes to Journey are documented here. The format follows
     *Reset to the default layout* puts everything back.
   - Settings → *Customise For You* opens edit mode too.
 - **Weather on For You.** The Greeting widget now shows the temperature and an icon for the conditions, in the style
-  of the new header design: a big thin temperature with the weather icon at its feet, a bold greeting and today's
+  of the new header design: a big thin temperature with the weather icon beside it, a bold greeting and today's
   date. After a few seconds it collapses into a small bar so you see more of the page. Scrolling down collapses it
   too, and scrolling up (even when the page is already at the top) or tapping the bar expands it again. Choose what
   the collapsed bar shows: the weather on the left (the default), the time in the middle and the date on the right.

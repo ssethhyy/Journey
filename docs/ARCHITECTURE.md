@@ -223,7 +223,7 @@ lighting doesn't darken the colours.
   favourite stops (only the chosen lines for a favourite limited to some) or naming a favourite stop.
 - `ForYouHeader` is the Greeting widget, drawn from `for-you-page-top`: the temperature is Google Sans Flex at weight
   220, width 40 and optical size 144 (`FlexType.single`, sized by `WeatherSize`), and one animated value shrinks it
-  into the collapsed bar, moving the icon from the temperature's feet to its middle. The bar centres the time between
+  into the collapsed bar. The bar centres the time between
   two equal-weight halves. A `NestedScrollConnection` on the list collapses the header after 24 dp of scrolling down
   and expands it on scrolling up while it's on screen, including a pull at the top of the list.
 

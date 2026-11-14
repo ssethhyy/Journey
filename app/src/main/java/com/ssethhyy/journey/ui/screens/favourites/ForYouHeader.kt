@@ -28,7 +28,6 @@ import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.text.BasicText
 import androidx.compose.foundation.text.TextAutoSize
 import androidx.compose.material3.FilledTonalButton
-import androidx.compose.ui.BiasAlignment
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -211,15 +210,15 @@ fun ForYouHeader(
                                     layout(placeable.width, placeable.height - trim) { placeable.place(0, 0) }
                                 },
                         )
-                        Spacer(Modifier.width(lerp(6.dp, 16.dp * iconScale, progress)))
-                        // Centred beside the small bar temperature; at the feet of the big one.
+                        Spacer(Modifier.width(lerp(6.dp, 22.dp * iconScale, progress)))
+                        // Centred beside the temperature.
                         Icon(
                             reading.icon(),
                             contentDescription = null,
                             tint = MaterialTheme.colorScheme.onSurfaceVariant,
                             modifier = Modifier
-                                .align(BiasAlignment.Vertical(progress))
-                                .size(lerp(24.dp, 52.dp * iconScale, progress)),
+                                .align(Alignment.CenterVertically)
+                                .size(lerp(24.dp, 60.dp * iconScale, progress)),
                         )
                     }
                     weather is LoadState.Error && weather.error is WeatherException.MissingKey -> WeatherChip(

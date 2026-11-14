@@ -175,18 +175,22 @@ class FavouritesViewModel(private val container: AppContainer) : ViewModel() {
             val perStop = container.settingsRepository.current().departuresPerStop
             // Drop boards for removed favourites.
             boards.update { current -> current.filterKeys { key -> favourites.any { it.key == key } } }
-            val jobs = favourites.map { fav ->
+            // Favourites split from one stop share a single request for it.
+            val jobs = favourites.groupBy { it.stopKey }.values.map { group ->
                 launch {
-                    if (boards.value[fav.key] == null) boards.update { it + (fav.key to LoadState.Loading) }
+                    val first = group.first()
+                    group.forEach { fav -> if (boards.value[fav.key] == null) boards.update { it + (fav.key to LoadState.Loading) } }
+                    // A favourite limited to some lines needs a longer look ahead to still fill its rows.
+                    val count = group.maxOf { fav -> if (fav.showsEverything) perStop + 2 else 12 }
                     val result = requestLimiter.withPermit {
-                        // A favourite limited to some lines needs a longer look ahead to still fill its rows.
-                        loadCatching { repo.departures(fav.mode, fav.stopId, maxResults = if (fav.showsEverything) perStop + 2 else 12, force = force) }
+                        loadCatching { repo.departures(first.mode, first.stopId, maxResults = count, force = force) }
                     }
                     // Keep showing stale data if a background refresh fails.
                     boards.update { current ->
-                        val previous = current[fav.key]
-                        val next = if (result is LoadState.Error && previous is LoadState.Success) previous else result
-                        current + (fav.key to next)
+                        current + group.associate { fav ->
+                            val previous = current[fav.key]
+                            fav.key to if (result is LoadState.Error && previous is LoadState.Success) previous else result
+                        }
                     }
                 }
             }

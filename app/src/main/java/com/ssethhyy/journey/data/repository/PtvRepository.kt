@@ -18,19 +18,26 @@ import com.ssethhyy.journey.data.model.StopDetails
 import com.ssethhyy.journey.data.fare.StopFare
 import com.ssethhyy.journey.data.model.StoppingPattern
 import com.ssethhyy.journey.data.model.TransportMode
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
 import java.util.concurrent.ConcurrentHashMap
 
-/** Minimal TTL cache. */
+/**
+ * Minimal TTL cache that also saves API calls: two callers asking for the same key at once share one request, and a
+ * forced reload within [minForceAgeMs] of the last one reuses it (pull to refresh straight after opening a page, or
+ * two screens refreshing the same stop together).
+ */
 class TtlCache<K : Any, V : Any>(
     private val ttlMs: Long,
     private val maxEntries: Int = 200,
+    private val minForceAgeMs: Long = 0,
     private val clock: () -> Long = System::currentTimeMillis,
 ) {
     private data class Entry<V>(val value: V, val storedAt: Long)
 
     private val map = ConcurrentHashMap<K, Entry<V>>()
+    private val inFlight = ConcurrentHashMap<K, CompletableDeferred<V>>()
 
     fun get(key: K): V? {
         val entry = map[key] ?: return null
@@ -47,18 +54,38 @@ class TtlCache<K : Any, V : Any>(
     fun clear() = map.clear()
 
     suspend fun getOrLoad(key: K, force: Boolean = false, loader: suspend () -> V): V {
-        if (!force) get(key)?.let { return it }
-        return loader().also { put(key, it) }
+        val cached = map[key]
+        if (cached != null) {
+            val age = clock() - cached.storedAt
+            if ((!force && age <= ttlMs) || (force && age < minForceAgeMs)) return cached.value
+        }
+        // Someone else is already fetching this: wait for their answer instead of asking again.
+        inFlight[key]?.let { return it.await() }
+        val mine = CompletableDeferred<V>()
+        val existing = inFlight.putIfAbsent(key, mine)
+        if (existing != null) return existing.await()
+        return try {
+            loader().also {
+                put(key, it)
+                mine.complete(it)
+            }
+        } catch (t: Throwable) {
+            mine.completeExceptionally(t)
+            throw t
+        } finally {
+            inFlight.remove(key, mine)
+        }
     }
 }
 
 class PtvRepository(private val api: PtvApi) {
-    private val departuresCache = TtlCache<String, DepartureBoard>(ttlMs = 20_000)
-    private val nearbyCache = TtlCache<String, List<Stop>>(ttlMs = 60_000)
+    private val departuresCache = TtlCache<String, DepartureBoard>(ttlMs = 20_000, minForceAgeMs = 8_000)
+    // Stops don't move, so a nearby list stays good for a while.
+    private val nearbyCache = TtlCache<String, List<Stop>>(ttlMs = 10 * 60_000L, minForceAgeMs = 30_000)
     private val stopDetailsCache = TtlCache<String, StopDetails>(ttlMs = 6 * 60 * 60_000L)
     private val routeCache = TtlCache<Int, RouteDetails>(ttlMs = 6 * 60 * 60_000L)
     private val routeStopsCache = TtlCache<String, List<Stop>>(ttlMs = 6 * 60 * 60_000L)
-    private val disruptionsCache = TtlCache<String, List<Disruption>>(ttlMs = 2 * 60_000L)
+    private val disruptionsCache = TtlCache<String, List<Disruption>>(ttlMs = 5 * 60_000L, minForceAgeMs = 30_000)
     private val searchCache = TtlCache<String, SearchResults>(ttlMs = 5 * 60_000L)
 
     suspend fun nearbyStops(

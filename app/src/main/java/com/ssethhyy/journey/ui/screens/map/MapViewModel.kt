@@ -60,6 +60,8 @@ class MapViewModel(private val container: AppContainer) : ViewModel() {
     private val userLocation = MutableStateFlow<LatLng?>(null)
     private var lastViewport: Viewport? = null
     private var loadJob: Job? = null
+    /** Areas already loaded for each set of modes, so panning back or zooming in inside them asks PTV nothing. */
+    private val covered = mutableMapOf<Set<TransportMode>, MutableList<LoadedArea>>()
     private var boardJob: Job? = null
 
     val state: StateFlow<MapUiState> = combine(
@@ -100,8 +102,17 @@ class MapViewModel(private val container: AppContainer) : ViewModel() {
                     val radius = GeoUtils.viewportRadiusMeters(viewport.latitude, viewport.zoom, viewport.widthDp, viewport.heightDp)
                         .toInt()
                         .coerceIn(300, group.maxRadiusM)
-                    val result = loadCatching { repo.nearbyStops(viewport.latitude, viewport.longitude, modes, radius, maxResults = group.maxResults) }
-                    if (result is LoadState.Success) stops.update { current -> trim(current + result.data.associateBy { it.key }, viewport) }
+                    if (isCovered(modes, viewport.latitude, viewport.longitude, radius)) continue
+                    // Ask for a little more than the screen so small pans stay inside what's loaded.
+                    val asked = (radius * 1.3).toInt().coerceAtMost(group.maxRadiusM)
+                    val result = loadCatching { repo.nearbyStops(viewport.latitude, viewport.longitude, modes, asked, maxResults = group.maxResults) }
+                    if (result is LoadState.Success) {
+                        stops.update { current -> trim(current + result.data.associateBy { it.key }, viewport) }
+                        // A full page of results may have left stops out at the edge, so it doesn't count as covered.
+                        if (result.data.size < group.maxResults) {
+                            covered.getOrPut(modes) { mutableListOf() }.add(LoadedArea(viewport.latitude, viewport.longitude, asked, System.currentTimeMillis()))
+                        }
+                    }
                     add(result)
                 }
             }
@@ -125,9 +136,18 @@ class MapViewModel(private val container: AppContainer) : ViewModel() {
         }
     }
 
+    private fun isCovered(modes: Set<TransportMode>, latitude: Double, longitude: Double, radius: Int): Boolean {
+        val now = System.currentTimeMillis()
+        val areas = covered[modes] ?: return false
+        areas.removeAll { now - it.loadedAt > COVERAGE_MS }
+        return areas.any { GeoUtils.haversineMeters(latitude, longitude, it.latitude, it.longitude) + radius <= it.radiusM }
+    }
+
     /** Keeps the marker set bounded by dropping the stops furthest from the viewport centre. */
     private fun trim(all: Map<String, Stop>, viewport: Viewport): Map<String, Stop> {
         if (all.size <= MAX_CACHED_STOPS) return all
+        // Some loaded areas lose stops here, so they have to be fetched again next time.
+        covered.clear()
         return all.values
             .sortedBy { GeoUtils.haversineMeters(viewport.latitude, viewport.longitude, it.latitude, it.longitude) }
             .take(MAX_CACHED_STOPS)
@@ -144,6 +164,7 @@ class MapViewModel(private val container: AppContainer) : ViewModel() {
     }
 
     fun retry() {
+        covered.clear()
         lastViewport?.let(::onViewportIdle)
     }
 
@@ -213,6 +234,8 @@ class MapViewModel(private val container: AppContainer) : ViewModel() {
 
     fun hasLocationPermission() = container.locationProvider.hasPermission()
 
+    private data class LoadedArea(val latitude: Double, val longitude: Double, val radiusM: Int, val loadedAt: Long)
+
     private data class Loaded(val stops: Map<String, Stop>, val zoom: Double, val loading: Boolean, val error: Throwable?)
 
     /** Modes loaded together, how far from the centre and how many at most. */
@@ -236,6 +259,8 @@ class MapViewModel(private val container: AppContainer) : ViewModel() {
 
         const val DEFAULT_ZOOM = 12.0
         const val MAX_CACHED_STOPS = 2_500
+        /** How long a loaded area counts as up to date (stops rarely change). */
+        private const val COVERAGE_MS = 15 * 60_000L
         private val NETWORK_CENTRE = LatLng(-37.8136, 144.9631)
         private val NETWORK_GROUPS = listOf(
             // Reaches Mildura, Albury and Mallacoota from Melbourne.

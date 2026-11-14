@@ -7,6 +7,7 @@
 
 package com.ssethhyy.journey.ui.screens.favourites
 
+import androidx.compose.foundation.clickable
 import android.widget.Toast
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.Arrangement
@@ -113,12 +114,12 @@ class FavouritePickerViewModel(private val container: AppContainer) : ViewModel(
         }
     }
 
-    fun save(request: FavouritePickerRequest, lines: List<FavouriteLine>) {
+    fun save(request: FavouritePickerRequest, lines: List<FavouriteLine>, separately: Boolean = false) {
         container.appScope.launch {
             if (request.editing) {
-                container.favouritesRepository.setLines(request.stop.key, lines)
+                container.favouritesRepository.setLines(request.favouriteKey ?: request.stop.key, lines)
             } else {
-                container.favouritesRepository.add(request.stop, lines)
+                container.favouritesRepository.add(request.stop, lines, separately)
             }
         }
     }
@@ -140,6 +141,8 @@ private fun FavouritePickerSheet(request: FavouritePickerRequest, onDismiss: () 
     val choices by vm.choices.collectAsStateWithLifecycle()
     var everything by remember(request) { mutableStateOf(request.current.isEmpty()) }
     var picked by remember(request) { mutableStateOf(request.current.map { it.routeId to it.directionId }.toSet()) }
+    // Several lines or directions picked: show each as its own favourite, or keep them together on one card.
+    var separately by remember(request) { mutableStateOf(true) }
 
     LaunchedEffect(request) {
         vm.load(request) {
@@ -219,6 +222,25 @@ private fun FavouritePickerSheet(request: FavouritePickerRequest, onDismiss: () 
                 }
             }
         }
+        if (!request.editing && !everything && picked.size > 1) {
+            Row(
+                Modifier
+                    .fillMaxWidth()
+                    .clickable { separately = !separately }
+                    .padding(vertical = 4.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Column(Modifier.weight(1f)) {
+                    Text("Separate favourites", style = MaterialTheme.typography.titleSmall)
+                    Text(
+                        if (separately) "Each line and direction gets its own card" else "All ${picked.size} on one card",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+                androidx.compose.material3.Switch(checked = separately, onCheckedChange = { separately = it })
+            }
+        }
         Row(verticalAlignment = Alignment.CenterVertically) {
             TextButton(onClick = onDismiss) { Text("Cancel") }
             Spacer(Modifier.weight(1f))
@@ -227,10 +249,18 @@ private fun FavouritePickerSheet(request: FavouritePickerRequest, onDismiss: () 
                 enabled = canSave,
                 onClick = hapticConfirm {
                     val lines = if (everything) emptyList() else list.orEmpty().flatMap { it.directions }.filter { (it.routeId to it.directionId) in picked }
-                    vm.save(request, lines)
+                    vm.save(request, lines, separately)
                     onDismiss()
                 },
-            ) { Text(if (request.editing) "Save" else "Add to favourites") }
+            ) {
+                Text(
+                    when {
+                        request.editing -> "Save"
+                        !everything && separately && picked.size > 1 -> "Add ${picked.size} favourites"
+                        else -> "Add to favourites"
+                    },
+                )
+            }
         }
     }
 }

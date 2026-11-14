@@ -217,8 +217,5 @@ class FavouritesViewModel(private val container: AppContainer) : ViewModel() {
 
     fun move(key: String, delta: Int) = viewModelScope.launch { favouritesRepo.move(key, delta) }
 
-    fun restore(favourite: FavouriteStop) = viewModelScope.launch {
-        favouritesRepo.add(favourite.toStop())
-        if (favourite.nickname != null) favouritesRepo.rename(favourite.key, favourite.nickname)
-    }
+    fun restore(favourite: FavouriteStop) = viewModelScope.launch { favouritesRepo.restore(favourite) }
 }

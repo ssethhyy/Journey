@@ -51,9 +51,17 @@ data class FavouriteStop(
     val addedAtEpochMs: Long = 0,
     /** The lines and directions to show. Empty means every departure from the stop. */
     val lines: List<FavouriteLine> = emptyList(),
+    /**
+     * Set when one stop is saved as several favourites, one per line and direction, so each has its own key.
+     * Null for the usual single favourite per stop.
+     */
+    val split: String? = null,
 ) {
     val mode: TransportMode get() = TransportMode.fromRouteType(routeType)
-    val key: String get() = Stop.stopKey(mode, stopId)
+
+    /** The stop this favourite belongs to (the same for every favourite split from one stop). */
+    val stopKey: String get() = Stop.stopKey(mode, stopId)
+    val key: String get() = split?.let { "$stopKey#$it" } ?: stopKey
     val displayName: String get() = nickname?.takeIf { it.isNotBlank() } ?: name
 
     val showsEverything: Boolean get() = lines.isEmpty()
@@ -111,6 +119,28 @@ object FavouritesCodec {
     fun rename(list: List<FavouriteStop>, key: String, nickname: String?): List<FavouriteStop> =
         list.map { if (it.key == key) it.copy(nickname = nickname?.trim()?.takeIf { n -> n.isNotEmpty() }) else it }
 
+    /**
+     * Saves a stop with these lines. With [separately] and more than one line, each line and direction becomes its
+     * own favourite; otherwise one favourite holds them all. Either way it replaces the stop's earlier favourites,
+     * keeping the place of the first one.
+     */
+    fun addStop(list: List<FavouriteStop>, stop: Stop, lines: List<FavouriteLine>, separately: Boolean, now: Long = System.currentTimeMillis()): List<FavouriteStop> {
+        val clean = lines.distinctBy { it.routeId to it.directionId }
+        val previous = list.filter { it.stopKey == stop.key }
+        val nickname = previous.singleOrNull()?.nickname
+        val items = if (separately && clean.size > 1) {
+            clean.map { line ->
+                FavouriteStop.from(stop, now, listOf(line)).copy(split = "${line.routeId}-${line.directionId ?: "all"}")
+            }
+        } else {
+            listOf(FavouriteStop.from(stop, now, clean).copy(nickname = nickname))
+        }
+        val at = list.indexOfFirst { it.stopKey == stop.key }.takeIf { it >= 0 } ?: list.size
+        val rest = list.filterNot { it.stopKey == stop.key }.toMutableList()
+        rest.addAll(at.coerceAtMost(rest.size), items)
+        return rest
+    }
+
     /** Moves an item by [delta] positions within its own transport mode group. */
     fun move(list: List<FavouriteStop>, key: String, delta: Int): List<FavouriteStop> {
         val item = list.firstOrNull { it.key == key } ?: return list
@@ -143,7 +173,8 @@ class FavouritesRepository(context: Context) {
 
     val favourites: Flow<List<FavouriteStop>> = store.data.map { FavouritesCodec.decode(it[key]) }
 
-    val favouriteKeys: Flow<Set<String>> = favourites.map { list -> list.map { it.key }.toSet() }
+    /** Stop keys with at least one favourite, for the star buttons. */
+    val favouriteKeys: Flow<Set<String>> = favourites.map { list -> list.map { it.stopKey }.toSet() }
 
     private suspend fun update(transform: (List<FavouriteStop>) -> List<FavouriteStop>) {
         store.edit { prefs ->
@@ -151,22 +182,29 @@ class FavouritesRepository(context: Context) {
         }
     }
 
-    suspend fun add(stop: Stop, lines: List<FavouriteLine> = emptyList()) = update { list ->
-        if (list.any { it.key == stop.key }) FavouritesCodec.setLines(list, stop.key, lines) else FavouritesCodec.add(list, FavouriteStop.from(stop, lines = lines))
+    suspend fun add(stop: Stop, lines: List<FavouriteLine> = emptyList(), separately: Boolean = false) = update { list ->
+        FavouritesCodec.addStop(list, stop, lines, separately)
     }
 
     suspend fun setLines(stopKey: String, lines: List<FavouriteLine>) = update { FavouritesCodec.setLines(it, stopKey, lines) }
 
-    suspend fun isFavourite(stopKey: String): Boolean = favourites.first().any { it.key == stopKey }
+    suspend fun isFavourite(stopKey: String): Boolean = favourites.first().any { it.stopKey == stopKey }
 
-    suspend fun remove(stopKey: String) = update { FavouritesCodec.remove(it, stopKey) }
+    /** Removes one favourite by its key. */
+    suspend fun remove(key: String) = update { FavouritesCodec.remove(it, key) }
+
+    /** Puts back a favourite exactly as it was (undo), including one split from a stop. */
+    suspend fun restore(favourite: FavouriteStop) = update { FavouritesCodec.add(it, favourite) }
+
+    /** Removes every favourite of a stop (the star button). */
+    suspend fun removeStop(stopKey: String) = update { list -> list.filterNot { it.stopKey == stopKey } }
 
     /** Returns true if the stop is now a favourite. */
     suspend fun toggle(stop: Stop): Boolean {
         var added = false
         update { list ->
-            if (list.any { it.key == stop.key }) {
-                FavouritesCodec.remove(list, stop.key)
+            if (list.any { it.stopKey == stop.key }) {
+                list.filterNot { it.stopKey == stop.key }
             } else {
                 added = true
                 FavouritesCodec.add(list, FavouriteStop.from(stop))

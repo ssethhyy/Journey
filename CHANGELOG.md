@@ -32,6 +32,11 @@ All notable changes to Journey are documented here. The format follows
 - Everything on For You lines up: the greeting, titles, chips, places and cards share the same left and right edges,
   and edit mode opens from an *Edit* pill at the top right.
 
+- **One favourite per line and direction.** When you pick more than one line or direction while adding a favourite,
+  *Separate favourites* (on by default) saves each as its own card, so *Frankston to City* and *Frankston to Frankston*
+  can sit apart and be reordered. Turn it off to keep them on one card. The star still removes every favourite of
+  that stop, and undo puts back exactly the one you removed.
+
 ### Changed
 - **Favourites come first**, straight under your places. Their settings cover departures per stop (moved from
   Settings), grouping by mode, the mode filters, hiding stops with nothing coming, the Add button, and the order of

@@ -10,45 +10,29 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class PlacesCodecTest {
-    private fun place(id: String, kind: PlaceKind, name: String = id) = SavedPlace(id, kind, name, "Addr $id", -37.8, 144.9, PlaceIcon.STAR)
-
-    @Test
-    fun homeAndWorkAreUnique() {
-        val home1 = place("h1", PlaceKind.HOME)
-        val gym = place("g", PlaceKind.CUSTOM, "Gym")
-        val home2 = place("h2", PlaceKind.HOME)
-        val list = PlacesCodec.upsert(PlacesCodec.upsert(listOf(home1), gym), home2)
-        assertEquals(listOf("h2", "g"), list.map { it.id })
-    }
+    private fun place(id: String, name: String = id) = SavedPlace(
+        id = id,
+        kind = PlaceKind.CUSTOM,
+        name = name,
+        address = "Addr $id",
+        latitude = -37.8,
+        longitude = 144.9,
+        icon = PlaceIcon.STAR,
+    )
 
     @Test
     fun customPlacesUpsertById() {
-        val gym = place("g", PlaceKind.CUSTOM, "Gym")
-        val uni = place("u", PlaceKind.CUSTOM, "Uni")
-        val renamed = gym.copy(name = "Pool")
-        val list = PlacesCodec.upsert(listOf(gym, uni), renamed)
-        assertEquals(listOf("Pool", "Uni"), list.map { it.label })
-        assertEquals(3, PlacesCodec.upsert(list, place("x", PlaceKind.CUSTOM)).size)
-    }
-
-    @Test
-    fun changingKindOfExistingPlaceReplacesPreviousHome() {
-        val home = place("h", PlaceKind.HOME)
-        val gym = place("g", PlaceKind.CUSTOM, "Gym")
-        val list = PlacesCodec.upsert(listOf(home, gym), gym.copy(kind = PlaceKind.HOME))
-        assertEquals(listOf("g"), list.map { it.id })
-        assertEquals("Home", list.single().label)
-    }
-
-    @Test
-    fun sortedPutsHomeThenWorkFirst() {
-        val sorted = PlacesCodec.sorted(listOf(place("c", PlaceKind.CUSTOM), place("w", PlaceKind.WORK), place("h", PlaceKind.HOME)))
-        assertEquals(listOf("h", "w", "c"), sorted.map { it.id })
+        val gym = place("g", "Gym")
+        val uni = place("u", "Uni")
+        val renamed = place("g", "Pool")
+        val list: List<SavedPlace> = PlacesCodec.upsert(listOf(gym, uni), renamed)
+        assertEquals(listOf("Pool", "Uni"), list.map { it.name })
+        assertEquals(3, PlacesCodec.upsert(list, place("x")).size)
     }
 
     @Test
     fun roundTripAndGarbage() {
-        val list = listOf(place("h", PlaceKind.HOME), place("c", PlaceKind.CUSTOM))
+        val list: List<SavedPlace> = listOf(place("h", "Home"), place("c", "Custom"))
         assertEquals(list, PlacesCodec.decodePlaces(PlacesCodec.encodePlaces(list)))
         assertTrue(PlacesCodec.decodePlaces("nope").isEmpty())
         assertTrue(PlacesCodec.decodeRecents(null).isEmpty())

@@ -1,24 +1,49 @@
 package com.ssethhyy.journey.data
 
-import com.ssethhyy.journey.data.repository.PlaceIcon
-import com.ssethhyy.journey.data.repository.PlaceKind
 import com.ssethhyy.journey.data.repository.PlacesCodec
 import com.ssethhyy.journey.data.repository.RecentTrip
 import com.ssethhyy.journey.data.repository.SavedPlace
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
+import java.lang.reflect.Constructor
 
 class PlacesCodecTest {
-    private fun place(id: String, name: String = id) = SavedPlace(
-        id = id,
-        kind = PlaceKind.CUSTOM,
-        name = name,
-        address = "Addr $id",
-        latitude = -37.8,
-        longitude = 144.9,
-        icon = PlaceIcon.STAR,
-    )
+    private fun enumConstant(type: Class<*>, name: String): Any? {
+        val raw = type.enumConstants ?: return null
+        return raw.firstOrNull { (it as Enum<*>).name == name } ?: raw.firstOrNull()
+    }
+
+    @Suppress("SpreadOperator")
+    private fun construct(ctor: Constructor<*>, vararg args: Any?): SavedPlace {
+        return ctor.newInstance(*args) as SavedPlace
+    }
+
+    private fun place(id: String, name: String = id): SavedPlace {
+        val ctor = SavedPlace::class.java.declaredConstructors.first()
+        return when (ctor.parameterCount) {
+            7 -> construct(
+                ctor,
+                id,
+                enumConstant(ctor.parameterTypes[1], "CUSTOM"),
+                name,
+                "Addr $id",
+                -37.8,
+                144.9,
+                enumConstant(ctor.parameterTypes[6], "STAR"),
+            )
+            6 -> construct(
+                ctor,
+                id,
+                name,
+                "Addr $id",
+                -37.8,
+                144.9,
+                enumConstant(ctor.parameterTypes[5], "STAR"),
+            )
+            else -> error("Unsupported SavedPlace constructor with ${ctor.parameterCount} parameters")
+        }
+    }
 
     @Test
     fun customPlacesUpsertById() {

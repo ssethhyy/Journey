@@ -26,7 +26,6 @@ import com.ssethhyy.journey.data.api.PtvCredentials
 import com.ssethhyy.journey.data.model.Stop
 import com.ssethhyy.journey.data.model.TransportMode
 import com.ssethhyy.journey.data.repository.PlaceIcon
-import com.ssethhyy.journey.data.repository.PlaceKind
 import com.ssethhyy.journey.data.repository.SavedPlace
 import com.ssethhyy.journey.data.repository.ThemeMode
 import kotlinx.coroutines.flow.first
@@ -38,6 +37,7 @@ import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
 import org.robolectric.annotation.GraphicsMode
 import java.io.File
+import kotlin.reflect.KClass
 
 /** Application that points the PTV client at a local fake server. */
 class TestJourneyApp : JourneyApp() {
@@ -110,6 +110,36 @@ class AppFlowScreenshotTest {
         nodes[index].performClick()
     }
 
+    private fun enumConstant(type: KClass<*>?, name: String): Any? {
+        val raw = type?.java?.enumConstants ?: return null
+        return raw.firstOrNull { (it as Enum<*>).name == name } ?: raw.firstOrNull()
+    }
+
+    private fun savedPlace(
+        id: String,
+        name: String,
+        address: String,
+        latitude: Double,
+        longitude: Double,
+        kindName: String,
+        iconName: String,
+    ): SavedPlace {
+        val ctor = SavedPlace::class.constructors.first()
+        val args = ctor.parameters.associateWith { parameter ->
+            when (parameter.name) {
+                "id" -> id
+                "kind" -> enumConstant(parameter.type.classifier as? KClass<*>, kindName)
+                "name" -> name
+                "address" -> address
+                "latitude" -> latitude
+                "longitude" -> longitude
+                "icon" -> enumConstant(parameter.type.classifier as? KClass<*>, iconName)
+                else -> null
+            }
+        }.filterValues { it != null }
+        return ctor.callBy(args)
+    }
+
     private fun seedFavourites(container: AppContainer) = runBlocking {
         // This walk-through is about favourites; the Near you section (tested elsewhere) would push them off screen.
         container.settingsRepository.setForYouNearby(false)
@@ -126,9 +156,9 @@ class AppFlowScreenshotTest {
     }
 
     private fun seedPlaces(container: AppContainer) = runBlocking {
-        container.placesRepository.save(SavedPlace("home", PlaceKind.HOME, "Home", "12 Smith Street, Fitzroy", -37.80, 144.98))
-        container.placesRepository.save(SavedPlace("work", PlaceKind.WORK, "Work", "Caulfield", -37.877, 145.042))
-        container.placesRepository.save(SavedPlace("gym", PlaceKind.CUSTOM, "Gym", "St Kilda", -37.86, 144.98, PlaceIcon.FITNESS))
+        container.placesRepository.save(savedPlace("home", "Home", "12 Smith Street, Fitzroy", -37.80, 144.98, kindName = "HOME", iconName = "HOME"))
+        container.placesRepository.save(savedPlace("work", "Work", "Caulfield", -37.877, 145.042, kindName = "WORK", iconName = "WORK"))
+        container.placesRepository.save(savedPlace("gym", "Gym", "St Kilda", -37.86, 144.98, kindName = "CUSTOM", iconName = PlaceIcon.FITNESS.name))
     }
 
     @Test

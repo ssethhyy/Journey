@@ -405,8 +405,9 @@ fun MapScreen(isActive: Boolean, modifier: Modifier = Modifier) {
                 }
 
                 val selectedKey = state.selected?.key
-                val annotations = remember(state.stops, selectedKey) {
-                    state.stops.map { stop ->
+                val annotations = remember(state.stops, selectedKey, journey) {
+                    // Exploring a planned journey: only its route, not every stop around it (a tapped stop still shows).
+                    (if (journey != null) state.stops.filter { it.key == selectedKey } else state.stops).map { stop ->
                         val isSelected = stop.key == selectedKey
                         CircleAnnotationOptions()
                             .withPoint(Point.fromLngLat(stop.longitude, stop.latitude))
@@ -540,7 +541,8 @@ fun MapScreen(isActive: Boolean, modifier: Modifier = Modifier) {
             // Never let the panels leave less than a third of the screen for the route, or Mapbox can't fit it at all.
             val screenHeight = with(density) { heightDp.dp.toPx() }.toDouble()
             val top = statusTop + px(84.dp)
-            val bottom = (navBottom + px(ToolbarClearance) + journeyPanelHeightPx + px(16.dp)).coerceAtMost(screenHeight * 0.66 - top)
+            // The control pills sit above the journey panel too.
+            val bottom = (navBottom + px(ToolbarClearance) + journeyPanelHeightPx + px(ControlRowHeight + 24.dp)).coerceAtMost(screenHeight * 0.66 - top)
             val padding = EdgeInsets(top, px(40.dp), bottom, px(40.dp))
             val camera = viewportState.cameraForCoordinates(points, CameraOptions.Builder().build(), padding, 17.0, null)
             viewportState.flyTo(camera, MapAnimationOptions.mapAnimationOptions { duration(900) })

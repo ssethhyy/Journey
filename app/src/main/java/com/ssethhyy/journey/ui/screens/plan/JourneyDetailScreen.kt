@@ -235,8 +235,11 @@ private fun JourneyMap(journey: Journey, onOpen: () -> Unit) {
     val all = remember(journey) { JourneyGeometry.allPoints(JourneyGeometry.drawable(journey)) }
     if (all.size < 2) return
     val viewport = rememberMapViewportState()
+    val fitDensity = androidx.compose.ui.platform.LocalDensity.current
     LaunchedEffect(journey.id) {
-        val camera = viewport.cameraForCoordinates(all, CameraOptions.Builder().build(), EdgeInsets(56.0, 56.0, 56.0, 56.0), null, null)
+        // Padding is in pixels: keep the whole route clear of the rounded corners and the Explore chip at the top.
+        val px = { dp: Float -> with(fitDensity) { dp.dp.toPx() }.toDouble() }
+        val camera = viewport.cameraForCoordinates(all, CameraOptions.Builder().build(), EdgeInsets(px(64f), px(32f), px(36f), px(32f)), null, null)
         viewport.setCameraOptions(camera)
     }
     Box(
@@ -279,7 +282,9 @@ private fun JourneyMap(journey: Journey, onOpen: () -> Unit) {
                 .matchParentSize()
                 .clickable(onClickLabel = "Open the journey on the map", onClick = hapticClick(onOpen)),
         )
+        // Tappable too: a plain surface on top would swallow the tap meant for the layer beneath.
         Surface(
+            onClick = hapticClick(onOpen),
             shape = RoundedCornerShape(16.dp),
             color = MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.92f),
             modifier = Modifier.align(Alignment.TopEnd).padding(10.dp),

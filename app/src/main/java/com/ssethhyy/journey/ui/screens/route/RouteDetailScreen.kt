@@ -59,6 +59,8 @@ import com.ssethhyy.journey.data.repository.AppSettings
 import com.ssethhyy.journey.ui.LoadState
 import com.ssethhyy.journey.ui.appViewModel
 import com.ssethhyy.journey.ui.components.DisruptionCard
+import com.ssethhyy.journey.ui.components.serviceUpdates
+import androidx.compose.runtime.setValue
 import com.ssethhyy.journey.ui.components.ErrorState
 import com.ssethhyy.journey.ui.components.LoadingState
 import com.ssethhyy.journey.ui.components.MessageState
@@ -126,6 +128,8 @@ class RouteDetailViewModel(private val container: AppContainer, private val rout
 fun RouteDetailScreen(key: RouteDetailKey) {
     val vm = appViewModel(key = "route_${key.routeId}") { RouteDetailViewModel(it, key.routeId, key.mode) }
     val state by vm.state.collectAsStateWithLifecycle()
+    // Null until tapped: follows the "Start collapsed" setting.
+    var updatesCollapsed by androidx.compose.runtime.saveable.rememberSaveable { androidx.compose.runtime.mutableStateOf<Boolean?>(null) }
     val navigator = currentNavigator
     val color = key.mode.color
     val details = state.details.dataOrNull
@@ -164,10 +168,13 @@ fun RouteDetailScreen(key: RouteDetailKey) {
                         )
                     }
                 }
-                if (state.disruptions.isNotEmpty()) {
-                    item(key = "disruptions_label") { SectionLabel("Service updates") }
-                    items(state.disruptions, key = { "d${it.id}" }) { DisruptionCard(it) }
-                }
+                // Only alerts that matter bring the card up; expanding it shows every alert.
+                serviceUpdates(
+                    state.disruptions,
+                    level = state.settings.stopDisruptionLevel,
+                    collapsed = updatesCollapsed ?: state.settings.stopDisruptionsCollapsed,
+                    onToggle = { updatesCollapsed = !(updatesCollapsed ?: state.settings.stopDisruptionsCollapsed) },
+                )
                 item(key = "stops_label") { SectionLabel("Stops") }
                 when (val stops = state.stops) {
                     LoadState.Loading -> item(key = "stops_loading") { LoadingState() }

@@ -58,8 +58,8 @@ class StopRouletteScreenTest {
         }
         rule.waitUntil(15_000) { hasDescription("Map") }
         rule.onAllNodesWithContentDescription("Map").onFirst().performClick()
-        rule.waitUntil(15_000) { hasDescription("Roll a random stop") }
-        rule.onAllNodesWithContentDescription("Roll a random stop").onFirst().performClick()
+        rule.waitUntil(15_000) { hasText("Roll a stop") }
+        rule.onAllNodesWithText("Roll a stop").onFirst().performClick()
         rule.waitUntil(20_000) { hasText("Your destination") }
         rule.waitUntil(5_000) { hasText("Plan trip") && hasText("Roll again") && hasText("Challenge") }
         snap("map_stop_roulette")

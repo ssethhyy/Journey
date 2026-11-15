@@ -130,7 +130,13 @@ The public GitHub API, read without a key, for the in-app updater. See [In-app u
 ## Persistence
 
 Everything is stored with Jetpack DataStore (JSON in preferences): settings, favourites, places, mykis and trip
-history, and fare edits. Each store has a repository exposing a `Flow`, and the encode/decode and list logic
+history, and fare edits. Map tiles go in Mapbox's own disk cache (the default `TileStore`), which `JourneyApp`
+limits to 200 MB.
+
+API responses are kept in memory by `TtlCache` (in `PtvRepository`). Besides its time to live it shares one request
+between callers asking for the same key at once, and a forced reload within `minForceAgeMs` of the last fetch reuses
+it, so a refresh straight after loading costs nothing. Departures live 20 s (forced reloads at most every 8 s),
+nearby stops 10 minutes, disruptions 5 minutes. Each store has a repository exposing a `Flow`, and the encode/decode and list logic
 (`PlacesCodec`, `MykiLedger`, `FareConfigs`) is pure so it can be tested without Android.
 
 ## Fares
@@ -204,6 +210,30 @@ lighting doesn't darken the colours.
   backup after the main trip.
 - *Near you* on For You shares the Map tab's `NearbyViewModel`, so the location is looked up once.
 
+## Map stops
+
+`MapViewModel` draws each mode from its own zoom (`MapViewModel.minZoom`): V/Line always, trains from 9.5, trams from
+12 and buses and night buses from 14. V/Line and train stops are loaded once for the whole network (one wide
+`/v3/stops/location` call each around Melbourne, cached); trams and buses are loaded for the viewport when the camera
+settles, capped at 15 km and 4 km. Each load asks for 30% more than the screen and is remembered for 15 minutes, so
+panning or zooming within an area already loaded asks PTV nothing (a load that hit the result limit isn't remembered,
+nor is anything after the marker cap trims stops). The flat Mapbox Standard style is used without 3D objects, and there is no
+satellite style, to keep within the Mapbox free tier.
+
+The Nearby panel (`NearbyPanel`) keeps its list height in a float that drags change directly, from 0 (collapsed)
+through open (about three stops) to full screen (the height `MapScreen` gives it, less the header); letting go
+springs it to the nearest of the three, or on in the direction of a fling. At full screen the departures of the stops
+scrolled into view are loaded, the control pills fade away and Back returns it to open. Its list hands drags to the panel through a `NestedScrollConnection`. While it moves, `nearbyZoomScale` scales
+the map's layer a little (peaking half-way, 1 at rest) around the middle of the visible map, and the camera only
+re-centres once the panel has stopped moving.
+
+## Service updates on stop and line pages
+
+`serviceUpdates` (in `ui/components/ServiceUpdates.kt`) adds the card to the stop and line pages. `ServiceUpdateSplit`
+splits the alerts with `ForYouDisruptions.matchesLevel` at `AppSettings.stopDisruptionLevel` (major only by default):
+the card only appears when something matches, starts collapsed (`stopDisruptionsCollapsed`), and expanded lists the
+matching alerts and then the rest under *Other updates*.
+
 ## For You widgets
 
 - `ForYouLayout` (in `data.foryou`) holds the widget order, which widgets are collapsed, whether titles show, and each
@@ -222,10 +252,15 @@ lighting doesn't darken the colours.
   major types, or titles that mention closures, replacement buses, suspensions or timetable changes) on the routes of
   favourite stops (only the chosen lines for a favourite limited to some) or naming a favourite stop.
 - `ForYouHeader` is the Greeting widget, drawn from `for-you-page-top`: the temperature is Google Sans Flex at weight
-  220, width 40 and optical size 144 (`FlexType.single`, sized by `WeatherSize`), and one animated value shrinks it
-  into the collapsed bar, moving the icon from the temperature's feet to its middle. The bar centres the time between
-  two equal-weight halves. A `NestedScrollConnection` on the list collapses the header after 24 dp of scrolling down
-  and expands it on scrolling up while it's on screen, including a pull at the top of the list.
+  220, width 40 and optical size 144 (`FlexType.single`, sized by `WeatherSize`). One `progress` value (0 slim bar,
+  1 open) drives every part of it: the temperature is laid out once at full size and scaled as a layer, and the
+  greeting and date are measured once and shown at `progress` of their height and opacity. The bar centres the time
+  between two equal-weight halves.
+- With the Greeting first, `FavouritesScreen` pins the header above the list as the page's top bar (the top pill is
+  hidden). A `NestedScrollConnection` on the list feeds scrolling into an `Animatable`: scrolling down shrinks the
+  header before the list moves, a pull at the top of the list grows it, and on release it springs to 0 or 1 by
+  position and fling. The scroll it takes is the open header's measured height less the bar's. The top of the list
+  fades out under the header (`headerBlend`). A greeting further down the page stays an ordinary list item.
 
 ## Crowding
 

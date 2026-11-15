@@ -16,9 +16,13 @@ All notable changes to Journey are documented here. The format follows
     *Reset to the default layout* puts everything back.
   - Settings → *Customise For You* opens edit mode too.
 - **Weather on For You.** The Greeting widget now shows the temperature and an icon for the conditions, in the style
-  of the new header design: a big thin temperature with the weather icon at its feet, a bold greeting and today's
-  date. After a few seconds it collapses into a small bar so you see more of the page. Scrolling down collapses it
-  too, and scrolling up (even when the page is already at the top) or tapping the bar expands it again. Choose what
+  of the new header design: a big thin temperature with the weather icon just beside it, centred on the figures, a bold greeting and today's
+  date. It stays pinned at the top of the page as its top bar: scrolling down shrinks it into a slim bar right under
+  your finger, with the page fading softly beneath it, and pulling down at the top grows it back. Let go part-way and
+  it settles open or closed, whichever is closer or the way you flicked. Every part of it (temperature, icon,
+  greeting, date and the bar's time and date) moves together from one value, so nothing lags behind. It also shrinks
+  on its own after a few seconds, and tapping it toggles it. The slim bar stays at the top even with widget titles
+  turned off. Choose what
   the collapsed bar shows: the weather on the left (the default), the time in the middle and the date on the right.
   In the Greeting settings you can also turn the weather or collapsing off, choose how long before it collapses, how
   big the temperature is (small to huge), Celsius or Fahrenheit, show the conditions, feels-like and today's high and
@@ -31,6 +35,11 @@ All notable changes to Journey are documented here. The format follows
   edit mode.
 - Everything on For You lines up: the greeting, titles, chips, places and cards share the same left and right edges,
   and edit mode opens from an *Edit* pill at the top right.
+
+- **One favourite per line and direction.** When you pick more than one line or direction while adding a favourite,
+  *Separate favourites* (on by default) saves each as its own card, so *Frankston to City* and *Frankston to Frankston*
+  can sit apart and be reordered. Turn it off to keep them on one card. The star still removes every favourite of
+  that stop, and undo puts back exactly the one you removed.
 
 ### Changed
 - **Favourites come first**, straight under your places. Their settings cover departures per stop (moved from
@@ -48,8 +57,37 @@ All notable changes to Journey are documented here. The format follows
 - Your name, departures per stop and the Near you options moved from Settings into the widgets' own settings.
   Commutes can hide suggested commutes and the backup trip and limit how many show; Places can hide the Home and Work
   suggestions and the Add tile.
+- **Service updates on stop and line pages are quieter too.** Instead of a long list of every notice, a stop or line
+  page shows one collapsed line (for example *2 major disruptions · Buses replace trains…*) only when there's a closure,
+  suspension, buses replacing trains or a changed timetable (station notices such as car park or lift closures don't
+  count, here or on For You). Tap it to see every alert, the important ones first.
+  *Settings → Service updates on stops and lines* chooses what counts (major only, major and delays, or everything)
+  and whether the card starts collapsed.
+- **The map shows stops by zoom level.** Zoomed right out you see V/Line stations across the state; closer in, train
+  stations appear, then trams, and buses and night buses once you're down to a few streets. Every stop of those modes
+  in view is drawn, so there's no more *Zoom in to see stops*.
+- **A draggable Nearby panel on the map.** It's shorter, with room for about three stops, and you drag it: down to
+  collapse it, up to open it, and it springs to whichever step is closer (or the way you flicked) when you let go.
+  Keep dragging up and the panel grows with your finger until it fills the screen, listing every nearby stop with
+  live departures; let go and it snaps to full screen or back to open. Back brings it down again. The map leans in
+  with a small zoom while the panel moves.
+- **Map controls are pills in a row** resting on top of the Nearby panel (or the stop preview): *My location*,
+  *Roll a stop* and *Nearby* when the panel is hidden. If they don't all fit, the row scrolls sideways.
+- **Search lists stops and lines by transport type**: V/Line first, then trains, trams, buses and night buses. Good
+  matches still come before loose ones.
+- **Fewer PTV requests for the same live data.** Two screens asking for the same thing at once now share one request,
+  pull to refresh straight after a page loads reuses what just arrived, favourites split from one stop share one
+  departures request, nearby stops and disruptions are kept for longer (stops don't move; disruptions for five
+  minutes), the island shares that disruptions cache, and the map doesn't reload trams and buses for an area it
+  already has. Live times still refresh as often as before.
+- **Map tiles are cached on the phone** (up to 200 MB, oldest cleared first), so places you've looked at load from the
+  phone instead of being downloaded again.
 - For developers: an optional `WEATHER_API_KEY` in `.env` (a free OpenWeatherMap key) is built into release builds for
   the default weather provider. Without it people choose Open-Meteo or paste their own key.
+
+### Removed
+- The satellite map and 3D buildings, which used up far more of the Mapbox free tier. The map is always the flat
+  standard map, with night lighting in the dark theme.
 
 ## [1.2.1-beta.1] - 2026-11-13
 

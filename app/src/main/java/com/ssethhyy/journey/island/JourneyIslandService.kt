@@ -101,7 +101,8 @@ class JourneyIslandService : ComposeIslandProviderService() {
         newScope.launch {
             while (isActive) {
                 delay(DISRUPTION_REFRESH_MS)
-                refreshDisruptions(force = true)
+                // Shares the app's five-minute disruptions cache rather than always asking PTV again.
+                refreshDisruptions(force = false)
             }
         }
     }
@@ -261,7 +262,7 @@ class JourneyIslandService : ComposeIslandProviderService() {
     )
 
     companion object {
-        private const val DISRUPTION_REFRESH_MS = 4 * 60_000L
+        private const val DISRUPTION_REFRESH_MS = 5 * 60_000L + 5_000L
 
         // Essentials allows one peek per 10 s, 8 s at most.
         private const val PEEK_GAP_MS = 10_500L

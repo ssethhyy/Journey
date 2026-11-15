@@ -52,7 +52,7 @@ Live departures, journey planning, a live map, myki balance and trip tracking fo
 - Your favourite stops with **live departures**, first on the page and grouped by mode (trains, trams, buses). Choose how many departures, the order, and whether stops with nothing coming show.
 - **Favourite just the lines you use:** keep every departure from a stop, or pick lines and directions such as *Frankston to City*.
 - **Disruptions that matter:** collapsed to one quiet line, and only when there's a major disruption (closures, replacement buses, changed timetables) at your stops or on your lines.
-- Saved places (Home, Work and your own) one tap away from planning a trip.
+- Saved places one tap away from planning a trip, each with its own name and icon (Home, Work, School, Gym and more).
 - **Commutes:** the trips you make most (learned from your planning, or added by you) with when to leave, a backup if you miss it, and one-tap tracking or planning.
 - **Near you:** the closest stops and their next departures.
 - Mode filters, pull to refresh and auto refresh.

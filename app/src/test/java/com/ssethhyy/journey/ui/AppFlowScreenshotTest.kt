@@ -37,7 +37,7 @@ import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
 import org.robolectric.annotation.GraphicsMode
 import java.io.File
-import kotlin.reflect.KClass
+import java.lang.reflect.Constructor
 
 /** Application that points the PTV client at a local fake server. */
 class TestJourneyApp : JourneyApp() {
@@ -110,9 +110,14 @@ class AppFlowScreenshotTest {
         nodes[index].performClick()
     }
 
-    private fun enumConstant(type: KClass<*>?, name: String): Any? {
-        val raw = type?.java?.enumConstants ?: return null
+    private fun enumConstant(type: Class<*>, name: String): Any? {
+        val raw = type.enumConstants ?: return null
         return raw.firstOrNull { (it as Enum<*>).name == name } ?: raw.firstOrNull()
+    }
+
+    @Suppress("SpreadOperator")
+    private fun construct(ctor: Constructor<*>, vararg args: Any?): SavedPlace {
+        return ctor.newInstance(*args) as SavedPlace
     }
 
     private fun savedPlace(
@@ -124,20 +129,29 @@ class AppFlowScreenshotTest {
         kindName: String,
         iconName: String,
     ): SavedPlace {
-        val ctor = SavedPlace::class.constructors.first()
-        val args = ctor.parameters.associateWith { parameter ->
-            when (parameter.name) {
-                "id" -> id
-                "kind" -> enumConstant(parameter.type.classifier as? KClass<*>, kindName)
-                "name" -> name
-                "address" -> address
-                "latitude" -> latitude
-                "longitude" -> longitude
-                "icon" -> enumConstant(parameter.type.classifier as? KClass<*>, iconName)
-                else -> null
-            }
-        }.filterValues { it != null }
-        return ctor.callBy(args)
+        val ctor = SavedPlace::class.java.declaredConstructors.first()
+        return when (ctor.parameterCount) {
+            7 -> construct(
+                ctor,
+                id,
+                enumConstant(ctor.parameterTypes[1], kindName),
+                name,
+                address,
+                latitude,
+                longitude,
+                enumConstant(ctor.parameterTypes[6], iconName),
+            )
+            6 -> construct(
+                ctor,
+                id,
+                name,
+                address,
+                latitude,
+                longitude,
+                enumConstant(ctor.parameterTypes[5], iconName),
+            )
+            else -> error("Unsupported SavedPlace constructor with ${ctor.parameterCount} parameters")
+        }
     }
 
     private fun seedFavourites(container: AppContainer) = runBlocking {

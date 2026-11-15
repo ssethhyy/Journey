@@ -144,7 +144,7 @@ fun MapScreen(isActive: Boolean, modifier: Modifier = Modifier) {
         }
     }
     var hasCenteredOnUser by rememberSaveable { mutableStateOf(false) }
-    val nearbyVm = appViewModel(key = "map_nearby") { NearbyViewModel(it) }
+    val nearbyVm = appViewModel(key = "map_nearby") { NearbyViewModel(it, maxResults = NEARBY_MAX_STOPS) }
     val nearbyState by nearbyVm.state.collectAsStateWithLifecycle()
     // The Nearby panel opens expanded the first time the map is shown.
     var showNearby by rememberSaveable { mutableStateOf(true) }
@@ -152,6 +152,10 @@ fun MapScreen(isActive: Boolean, modifier: Modifier = Modifier) {
     var nearbyLoaded by rememberSaveable { mutableStateOf(false) }
     // How open the Nearby panel is while it moves, for the map's small zoom as it does.
     var nearbyProgress by remember { mutableFloatStateOf(if (nearbyExpanded) 1f else 0f) }
+    // Pulled all the way up, the panel fills the screen with every stop nearby; Back brings it down to open.
+    var nearbyFull by rememberSaveable { mutableStateOf(false) }
+    var nearbyFullProgress by remember { mutableFloatStateOf(0f) }
+    androidx.activity.compose.BackHandler(enabled = isActive && nearbyFull) { nearbyFull = false }
     var locationEnabled by remember { mutableStateOf(vm.hasLocationPermission()) }
 
     // The part of the map not covered by the filters at the top or the panel and toolbar at the bottom, kept up
@@ -261,7 +265,7 @@ fun MapScreen(isActive: Boolean, modifier: Modifier = Modifier) {
         else -> 0.dp
     }
     // The row of map control pills sits just above whichever panel is showing.
-    val controlsVisible = roulette is RouletteState.Idle || state.selected == null
+    val controlsVisible = (roulette is RouletteState.Idle || state.selected == null) && !(nearbyVisible && nearbyFullProgress > 0.6f)
     val controlsClearance = if (controlsVisible) ControlRowHeight + 8.dp else 0.dp
 
     val statusTopPx = WindowInsets.statusBars.getTop(density)
@@ -269,6 +273,8 @@ fun MapScreen(isActive: Boolean, modifier: Modifier = Modifier) {
     val bottomCoveredPx = navBottomPx + with(density) { (ToolbarClearance + previewClearance + controlsClearance).toPx() }
     val topCoveredPx = statusTopPx + with(density) { 72.dp.toPx() }
     LaunchedEffect(bottomCoveredPx, topCoveredPx) {
+        // A panel filling the screen leaves no map to centre in.
+        if (nearbyVisible && nearbyFullProgress > 0f) return@LaunchedEffect
         visiblePadding = EdgeInsets(topCoveredPx.toDouble(), 0.0, bottomCoveredPx.toDouble(), 0.0)
         // Wait for the panel to stop moving (each new height restarts this) so dragging it doesn't nudge the camera
         // every frame.
@@ -478,6 +484,7 @@ fun MapScreen(isActive: Boolean, modifier: Modifier = Modifier) {
         if (controlsVisible) BoxWithConstraints(
             Modifier
                 .align(Alignment.BottomCenter)
+                .graphicsLayer { alpha = if (nearbyVisible) (1f - nearbyFullProgress / 0.6f).coerceIn(0f, 1f) else 1f }
                 .fillMaxWidth()
                 .windowInsetsPadding(WindowInsets.navigationBars)
                 .padding(bottom = ToolbarClearance + previewClearance + 4.dp),
@@ -578,12 +585,21 @@ fun MapScreen(isActive: Boolean, modifier: Modifier = Modifier) {
             NearbyPanel(
                 state = nearbyState,
                 expanded = nearbyExpanded,
+                full = nearbyFull,
                 now = now,
                 onExpandedChange = { nearbyExpanded = it },
-                onOpenAll = navigator::openNearby,
+                onFullChange = { nearbyFull = it },
                 onProgress = { nearbyProgress = it },
-                onClose = { showNearby = false },
+                onFullProgress = { nearbyFullProgress = it },
+                onVisibleStops = { nearbyVm.loadBoards(it) },
+                // Up to just under the status bar, above the toolbar.
+                maxHeight = heightDp.dp - with(density) { (statusTopPx + navBottomPx).toDp() } - ToolbarClearance,
+                onClose = {
+                    nearbyFull = false
+                    showNearby = false
+                },
                 onSelect = { stop ->
+                    nearbyFull = false
                     nearbyExpanded = false
                     vm.focusStop(stop)
                     flyTo(stop.latitude, stop.longitude, 16.5)
@@ -744,3 +760,6 @@ private fun MissingTokenCard() {
 
 /** Height of the row of map control pills. */
 private val ControlRowHeight = 48.dp
+
+/** Enough stops for the Nearby panel at full screen (everything within the search radius in the city). */
+const val NEARBY_MAX_STOPS = 100

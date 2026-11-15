@@ -59,10 +59,6 @@ data object SearchKey : NavKey
 @Serializable
 data object SettingsKey : NavKey
 
-/** Every stop within a kilometre, opened by pulling the Map tab's Nearby panel all the way up. */
-@Serializable
-data object NearbyKey : NavKey
-
 @Serializable
 data object DisruptionsKey : NavKey
 
@@ -111,7 +107,6 @@ class Navigator(
 
     fun openSettings() = open(SettingsKey)
     fun openSearch() = open(SearchKey)
-    fun openNearby() = open(NearbyKey)
     fun openDisruptions() = open(DisruptionsKey)
     fun openIslandSettings() = open(IslandSettingsKey)
     fun openMyki() = open(MykiWalletKey)

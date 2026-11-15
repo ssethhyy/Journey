@@ -4,12 +4,17 @@
  * Description: Floating Nearby panel over the map that you drag between collapsed and open.
  *
  * Open, it shows about three stops (the list scrolls for more). Drag the handle (or the list) down to collapse it and
- * up to open it; let go and it springs to whichever step is closer, or the way you flicked. Keep pulling up past open
- * and it opens the full Nearby page instead.
+ * up to open it; keep dragging up and it grows with your finger until it fills the screen, listing every stop
+ * nearby. Let go and it springs to whichever step is closer (collapsed, open or full screen), or the way you flicked.
  */
 
 package com.ssethhyy.journey.ui.screens.map
 
+import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.runtime.snapshotFlow
+import androidx.compose.ui.layout.onSizeChanged
+import androidx.compose.ui.unit.Dp
+import kotlinx.coroutines.flow.distinctUntilChanged
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animate
 import androidx.compose.animation.core.spring
@@ -86,29 +91,37 @@ import java.time.Instant
 
 /** Room for about three stops when open. */
 private val ListHeight = 204.dp
-/** How far past open you pull before letting go opens the full Nearby page. */
-private val PullToOpenAll = 110.dp
 
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 fun NearbyPanel(
     state: NearbyUiState,
     expanded: Boolean,
+    /** Pulled all the way up: the panel fills the screen and lists every stop nearby. */
+    full: Boolean,
     now: Instant,
     onExpandedChange: (Boolean) -> Unit,
-    onOpenAll: () -> Unit,
+    onFullChange: (Boolean) -> Unit,
     onClose: () -> Unit,
     onSelect: (Stop) -> Unit,
     onAllowLocation: () -> Unit,
+    /** The tallest the whole panel can be, header included (the screen above the toolbar). */
+    maxHeight: Dp,
     modifier: Modifier = Modifier,
     /** How open the panel is, 0 (collapsed) to 1 (open), as it moves; for the map's zoom effect. */
     onProgress: (Float) -> Unit = {},
+    /** How far from open to full screen it is, 0 to 1, so the map can tuck its controls away. */
+    onFullProgress: (Float) -> Unit = {},
+    /** The stops scrolled into view, so their departures can be loaded. */
+    onVisibleStops: (List<Stop>) -> Unit = {},
 ) {
     val view = LocalView.current
     val density = LocalDensity.current
     val scope = rememberCoroutineScope()
     val openPx = with(density) { ListHeight.toPx() }
-    val maxPx = openPx + with(density) { PullToOpenAll.toPx() }
+    var headerPx by remember { mutableFloatStateOf(with(density) { 84.dp.toPx() }) }
+    // Full screen: the whole height the panel may take, less its header.
+    val fullPx = (with(density) { maxHeight.toPx() } - headerPx).coerceAtLeast(openPx + 1f)
     val stops = state.stops.dataOrNull.orEmpty()
     val summary = when {
         state.stops is LoadState.Loading -> "Finding stops near you…"
@@ -119,69 +132,75 @@ fun NearbyPanel(
         else -> "${stops.size} stops within ${DistanceFormatter.distance(state.settings.nearbyRadiusMeters.toDouble())}"
     }
 
-    // The list's visible height: 0 collapsed, ListHeight open, more while pulling towards the full page.
-    var height by remember { mutableFloatStateOf(if (expanded) openPx else 0f) }
+    fun targetFor(expanded: Boolean, full: Boolean) = when {
+        full -> fullPx
+        expanded -> openPx
+        else -> 0f
+    }
+
+    // The list's visible height: 0 collapsed, ListHeight open, up to fullPx at full screen. Dragging moves it
+    // directly, so the panel follows your finger all the way to full screen.
+    var height by remember { mutableFloatStateOf(targetFor(expanded, full)) }
     var dragging by remember { mutableStateOf(false) }
     var settleJob by remember { mutableStateOf<Job?>(null) }
     val progress = (height / openPx).coerceIn(0f, 1f)
+    val fullProgress = ((height - openPx) / (fullPx - openPx)).coerceIn(0f, 1f)
     val report by rememberUpdatedState(onProgress)
+    val reportFull by rememberUpdatedState(onFullProgress)
     LaunchedEffect(progress) { report(progress) }
+    LaunchedEffect(fullProgress) { reportFull(fullProgress) }
 
     fun animateTo(target: Float, velocity: Float = 0f) {
         settleJob?.cancel()
         settleJob = scope.launch {
-            animate(height, target, initialVelocity = -velocity, animationSpec = spring(dampingRatio = 0.82f, stiffness = Spring.StiffnessMediumLow)) { value, _ ->
+            animate(height, target, initialVelocity = -velocity, animationSpec = spring(dampingRatio = 0.86f, stiffness = Spring.StiffnessMediumLow)) { value, _ ->
                 height = value
             }
         }
     }
 
-    // Expanded or collapsed from outside (picking a stop collapses it): follow along unless a finger is on it.
-    LaunchedEffect(expanded) {
-        val target = if (expanded) openPx else 0f
+    // Changed from outside (picking a stop collapses it, Back leaves full screen): follow along unless a finger is on it.
+    LaunchedEffect(expanded, full, fullPx) {
+        val target = targetFor(expanded, full)
         if (!dragging && height != target) animateTo(target)
     }
 
     fun dragBy(delta: Float) {
         settleJob?.cancel()
-        // Past open the pull gets heavier, so the full page doesn't open by accident.
-        val resisted = if (delta < 0 && height >= openPx) delta * 0.5f else delta
-        height = (height - resisted).coerceIn(0f, maxPx)
+        height = (height - delta).coerceIn(0f, fullPx)
     }
 
-    /** Lets go: open the full page if pulled far enough, otherwise spring to the nearer step or the flick's way. */
+    /** Lets go: spring to the nearest step (collapsed, open or full screen), or on in the direction of a flick. */
     fun settle(velocity: Float) {
         dragging = false
-        val open = when {
-            height >= maxPx * 0.92f || (height > openPx + 24f && velocity < -1_500f) -> {
-                HapticUtil.performUIHaptic(view)
-                onOpenAll()
-                true
-            }
-            velocity < -800f -> true
-            velocity > 800f -> false
-            else -> height > openPx / 2
+        val anchors = listOf(0f, openPx, fullPx)
+        val target = when {
+            velocity < -800f -> anchors.firstOrNull { it > height + 1f } ?: fullPx
+            velocity > 800f -> anchors.lastOrNull { it < height - 1f } ?: 0f
+            else -> anchors.minBy { kotlin.math.abs(it - height) }
         }
-        if (open != expanded) {
-            HapticUtil.performUIHaptic(view)
-            onExpandedChange(open)
-        }
-        animateTo(if (open) openPx else 0f, velocity)
+        val nowFull = target == fullPx
+        val nowExpanded = target != 0f
+        if (nowFull != full || nowExpanded != expanded) HapticUtil.performUIHaptic(view)
+        if (nowFull != full) onFullChange(nowFull)
+        if (nowExpanded != expanded) onExpandedChange(nowExpanded)
+        animateTo(target, velocity)
     }
 
+    fun atAnchor() = listOf(0f, openPx, fullPx).any { kotlin.math.abs(it - height) < 0.5f }
+
     val dragState = rememberDraggableState { dragBy(it) }
-    // The list hands its drags to the panel: pulling down at its top collapses it, pushing up while it's partly open
-    // opens it first, and pulling up at its end keeps going towards the full page.
+    // The list hands drags to the panel: once the panel is moving it keeps the whole gesture, pulling down at the top
+    // of the list shrinks it, and pulling up at the end of the list grows it towards full screen.
     val listScroll = remember(openPx) {
         object : NestedScrollConnection {
             override fun onPreScroll(available: Offset, source: NestedScrollSource): Offset {
                 if (source != NestedScrollSource.UserInput) return Offset.Zero
-                if (available.y < 0 && height < openPx) {
-                    dragging = true
+                if (dragging && !atAnchor()) {
                     dragBy(available.y)
                     return available
                 }
-                if (available.y > 0 && height > openPx) {
+                if (available.y < 0 && height < openPx - 0.5f) {
                     dragging = true
                     dragBy(available.y)
                     return available
@@ -216,10 +235,11 @@ fun NearbyPanel(
         shadowElevation = 6.dp,
     ) {
         Column {
-            // Header: drag it to open or collapse the panel, or tap it.
+            // Header: drag it to open, collapse or fill the screen with the panel, or tap it.
             Column(
                 Modifier
                     .fillMaxWidth()
+                    .onSizeChanged { headerPx = it.height.toFloat() }
                     .draggable(
                         state = dragState,
                         orientation = Orientation.Vertical,
@@ -228,7 +248,7 @@ fun NearbyPanel(
                     )
                     .clickable(role = Role.Button, onClickLabel = if (expanded) "Collapse nearby" else "Expand nearby") {
                         HapticUtil.performUIHaptic(view)
-                        onExpandedChange(!expanded)
+                        if (full) onFullChange(false) else onExpandedChange(!expanded)
                     }
                     .semantics { stateDescription = if (expanded) "Expanded" else "Collapsed" }
                     .padding(start = 16.dp, end = 4.dp, top = 8.dp, bottom = 8.dp),
@@ -271,7 +291,15 @@ fun NearbyPanel(
             if (height > 0.5f) {
                 val listHeight = with(density) { height.toDp() }
                 Box(Modifier.fillMaxWidth().height(listHeight).clipToBounds()) {
+                    val listState = rememberLazyListState()
+                    val visible by rememberUpdatedState(onVisibleStops)
+                    LaunchedEffect(listState, stops) {
+                        snapshotFlow { listState.layoutInfo.visibleItemsInfo.mapNotNull { info -> stops.firstOrNull { it.key == info.key } } }
+                            .distinctUntilChanged()
+                            .collect { if (it.isNotEmpty()) visible(it) }
+                    }
                     LazyColumn(
+                        state = listState,
                         modifier = Modifier
                             .fillMaxWidth()
                             .height(maxOf(listHeight, ListHeight))
@@ -309,28 +337,6 @@ fun NearbyPanel(
                                 HapticUtil.performUIHaptic(view)
                                 onSelect(stop)
                             })
-                        }
-                    }
-                    // Pulling past open: say what letting go will do.
-                    val pull = ((height - openPx) / (maxPx - openPx)).coerceIn(0f, 1f)
-                    if (pull > 0.02f) {
-                        Surface(
-                            shape = CircleShape,
-                            color = MaterialTheme.colorScheme.inverseSurface,
-                            contentColor = MaterialTheme.colorScheme.inverseOnSurface,
-                            modifier = Modifier
-                                .align(Alignment.BottomCenter)
-                                .padding(bottom = 12.dp)
-                                .graphicsLayer { alpha = (pull * 2f).coerceAtMost(1f) },
-                        ) {
-                            Row(Modifier.padding(horizontal = 14.dp, vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
-                                Icon(Sym.KeyboardArrowUp, null, Modifier.size(18.dp))
-                                Spacer(Modifier.width(6.dp))
-                                Text(
-                                    if (height >= maxPx * 0.92f) "Let go for every stop within 1 km" else "Keep pulling for every stop nearby",
-                                    style = MaterialTheme.typography.labelLarge,
-                                )
-                            }
                         }
                     }
                 }

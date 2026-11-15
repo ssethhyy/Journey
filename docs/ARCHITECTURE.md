@@ -220,9 +220,10 @@ panning or zooming within an area already loaded asks PTV nothing (a load that h
 nor is anything after the marker cap trims stops). The flat Mapbox Standard style is used without 3D objects, and there is no
 satellite style, to keep within the Mapbox free tier.
 
-The Nearby panel (`NearbyPanel`) keeps its list height in a float that drags change directly; letting go springs it
-to collapsed or open by distance and fling, or opens `NearbyScreen` (every stop within 1 km) when pulled 110 dp past
-open. Its list hands drags to the panel through a `NestedScrollConnection`. While it moves, `nearbyZoomScale` scales
+The Nearby panel (`NearbyPanel`) keeps its list height in a float that drags change directly, from 0 (collapsed)
+through open (about three stops) to full screen (the height `MapScreen` gives it, less the header); letting go
+springs it to the nearest of the three, or on in the direction of a fling. At full screen the departures of the stops
+scrolled into view are loaded, the control pills fade away and Back returns it to open. Its list hands drags to the panel through a `NestedScrollConnection`. While it moves, `nearbyZoomScale` scales
 the map's layer a little (peaking half-way, 1 at rest) around the middle of the visible map, and the camera only
 re-centres once the panel has stopped moving.
 

@@ -68,8 +68,9 @@ All notable changes to Journey are documented here. The format follows
   in view is drawn, so there's no more *Zoom in to see stops*.
 - **A draggable Nearby panel on the map.** It's shorter, with room for about three stops, and you drag it: down to
   collapse it, up to open it, and it springs to whichever step is closer (or the way you flicked) when you let go.
-  Keep pulling up past open and it opens a new **Nearby page** listing every stop within a kilometre, closest first,
-  with live departures. The map leans in with a small zoom while the panel moves.
+  Keep dragging up and the panel grows with your finger until it fills the screen, listing every nearby stop with
+  live departures; let go and it snaps to full screen or back to open. Back brings it down again. The map leans in
+  with a small zoom while the panel moves.
 - **Map controls are pills in a row** resting on top of the Nearby panel (or the stop preview): *My location*,
   *Roll a stop* and *Nearby* when the panel is hidden. If they don't all fit, the row scrolls sideways.
 - **Search lists stops and lines by transport type**: V/Line first, then trains, trams, buses and night buses. Good

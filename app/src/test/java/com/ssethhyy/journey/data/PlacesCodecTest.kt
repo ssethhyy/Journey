@@ -1,7 +1,6 @@
 package com.ssethhyy.journey.data
 
 import com.ssethhyy.journey.data.repository.PlaceIcon
-import com.ssethhyy.journey.data.repository.PlaceKind
 import com.ssethhyy.journey.data.repository.PlacesCodec
 import com.ssethhyy.journey.data.repository.RecentTrip
 import com.ssethhyy.journey.data.repository.SavedPlace
@@ -10,45 +9,47 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class PlacesCodecTest {
-    private fun place(id: String, kind: PlaceKind, name: String = id) = SavedPlace(id, kind, name, "Addr $id", -37.8, 144.9, PlaceIcon.STAR)
+    private fun place(
+        id: String,
+        icon: PlaceIcon = PlaceIcon.STAR,
+        name: String = id,
+    ) = SavedPlace(
+        id = id,
+        name = name,
+        address = "Addr $id",
+        latitude = -37.8,
+        longitude = 144.9,
+        icon = icon,
+    )
 
     @Test
-    fun homeAndWorkAreUnique() {
-        val home1 = place("h1", PlaceKind.HOME)
-        val gym = place("g", PlaceKind.CUSTOM, "Gym")
-        val home2 = place("h2", PlaceKind.HOME)
-        val list = PlacesCodec.upsert(PlacesCodec.upsert(listOf(home1), gym), home2)
-        assertEquals(listOf("h2", "g"), list.map { it.id })
-    }
-
-    @Test
-    fun customPlacesUpsertById() {
-        val gym = place("g", PlaceKind.CUSTOM, "Gym")
-        val uni = place("u", PlaceKind.CUSTOM, "Uni")
+    fun placesUpsertById() {
+        val gym = place("g", name = "Gym")
+        val uni = place("u", name = "Uni")
         val renamed = gym.copy(name = "Pool")
+
         val list = PlacesCodec.upsert(listOf(gym, uni), renamed)
-        assertEquals(listOf("Pool", "Uni"), list.map { it.label })
-        assertEquals(3, PlacesCodec.upsert(list, place("x", PlaceKind.CUSTOM)).size)
+        assertEquals(listOf("Pool", "Uni"), list.map { it.name })
+
+        // A brand-new id appends rather than replaces.
+        assertEquals(3, PlacesCodec.upsert(list, place("x")).size)
     }
 
     @Test
-    fun changingKindOfExistingPlaceReplacesPreviousHome() {
-        val home = place("h", PlaceKind.HOME)
-        val gym = place("g", PlaceKind.CUSTOM, "Gym")
-        val list = PlacesCodec.upsert(listOf(home, gym), gym.copy(kind = PlaceKind.HOME))
-        assertEquals(listOf("g"), list.map { it.id })
-        assertEquals("Home", list.single().label)
-    }
-
-    @Test
-    fun sortedPutsHomeThenWorkFirst() {
-        val sorted = PlacesCodec.sorted(listOf(place("c", PlaceKind.CUSTOM), place("w", PlaceKind.WORK), place("h", PlaceKind.HOME)))
-        assertEquals(listOf("h", "w", "c"), sorted.map { it.id })
+    fun savingASecondPlaceWithHomeIconKeepsBoth() {
+        // Icons are cosmetic now: two places may both use the Home icon.
+        val home1 = place("h1", icon = PlaceIcon.HOME, name = "Home")
+        val home2 = place("h2", icon = PlaceIcon.HOME, name = "Mum's")
+        val list = PlacesCodec.upsert(PlacesCodec.upsert(emptyList(), home1), home2)
+        assertEquals(listOf("h1", "h2"), list.map { it.id })
     }
 
     @Test
     fun roundTripAndGarbage() {
-        val list = listOf(place("h", PlaceKind.HOME), place("c", PlaceKind.CUSTOM))
+        val list = listOf(
+            place("h", icon = PlaceIcon.HOME, name = "Home"),
+            place("c", name = "Gym"),
+        )
         assertEquals(list, PlacesCodec.decodePlaces(PlacesCodec.encodePlaces(list)))
         assertTrue(PlacesCodec.decodePlaces("nope").isEmpty())
         assertTrue(PlacesCodec.decodeRecents(null).isEmpty())

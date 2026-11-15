@@ -17,8 +17,12 @@ All notable changes to Journey are documented here. The format follows
   - Settings → *Customise For You* opens edit mode too.
 - **Weather on For You.** The Greeting widget now shows the temperature and an icon for the conditions, in the style
   of the new header design: a big thin temperature with the weather icon just beside it, centred on the figures, a bold greeting and today's
-  date. After a few seconds it collapses into a small bar so you see more of the page. Scrolling down collapses it
-  too, and scrolling up (even when the page is already at the top) or tapping the bar expands it again. Choose what
+  date. It stays pinned at the top of the page as its top bar: scrolling down shrinks it into a slim bar right under
+  your finger, with the page fading softly beneath it, and pulling down at the top grows it back. Let go part-way and
+  it settles open or closed, whichever is closer or the way you flicked. Every part of it (temperature, icon,
+  greeting, date and the bar's time and date) moves together from one value, so nothing lags behind. It also shrinks
+  on its own after a few seconds, and tapping it toggles it. The slim bar stays at the top even with widget titles
+  turned off. Choose what
   the collapsed bar shows: the weather on the left (the default), the time in the middle and the date on the right.
   In the Greeting settings you can also turn the weather or collapsing off, choose how long before it collapses, how
   big the temperature is (small to huge), Celsius or Fahrenheit, show the conditions, feels-like and today's high and

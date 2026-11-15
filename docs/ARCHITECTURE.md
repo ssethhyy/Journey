@@ -251,10 +251,15 @@ matching alerts and then the rest under *Other updates*.
   major types, or titles that mention closures, replacement buses, suspensions or timetable changes) on the routes of
   favourite stops (only the chosen lines for a favourite limited to some) or naming a favourite stop.
 - `ForYouHeader` is the Greeting widget, drawn from `for-you-page-top`: the temperature is Google Sans Flex at weight
-  220, width 40 and optical size 144 (`FlexType.single`, sized by `WeatherSize`), and one animated value shrinks it
-  into the collapsed bar. The bar centres the time between
-  two equal-weight halves. A `NestedScrollConnection` on the list collapses the header after 24 dp of scrolling down
-  and expands it on scrolling up while it's on screen, including a pull at the top of the list.
+  220, width 40 and optical size 144 (`FlexType.single`, sized by `WeatherSize`). One `progress` value (0 slim bar,
+  1 open) drives every part of it: the temperature is laid out once at full size and scaled as a layer, and the
+  greeting and date are measured once and shown at `progress` of their height and opacity. The bar centres the time
+  between two equal-weight halves.
+- With the Greeting first, `FavouritesScreen` pins the header above the list as the page's top bar (the top pill is
+  hidden). A `NestedScrollConnection` on the list feeds scrolling into an `Animatable`: scrolling down shrinks the
+  header before the list moves, a pull at the top of the list grows it, and on release it springs to 0 or 1 by
+  position and fling. The scroll it takes is the open header's measured height less the bar's. The top of the list
+  fades out under the header (`headerBlend`). A greeting further down the page stays an ordinary list item.
 
 ## Crowding
 

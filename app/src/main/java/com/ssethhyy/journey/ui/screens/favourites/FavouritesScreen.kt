@@ -7,6 +7,10 @@
 
 package com.ssethhyy.journey.ui.screens.favourites
 
+import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.ui.layout.onSizeChanged
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.draw.drawWithContent
 import com.ssethhyy.journey.appContainer
 import com.ssethhyy.journey.ui.components.Sym
 import androidx.compose.foundation.ExperimentalFoundationApi
@@ -123,34 +127,74 @@ fun FavouritesScreen(onAddFromNearby: () -> Unit, onAddFromSearch: () -> Unit) {
     var editing by rememberSaveable { mutableStateOf(false) }
     var settingsFor by rememberSaveable { mutableStateOf<ForYouWidget?>(null) }
     var addingWidget by rememberSaveable { mutableStateOf(false) }
-    // The greeting opens big each time For You is shown, then collapses after a few seconds if set to.
-    var headerExpanded by rememberSaveable { mutableStateOf(true) }
-    // Scrolling down collapses it; scrolling up while it's on screen expands it again.
-    val collapseDistance = with(density) { 24.dp.toPx() }
-    val headerScroll = remember(listState) {
+    // With the Greeting first, its header is pinned above the list and is the page's top bar: it shrinks to a slim
+    // bar as you scroll down and grows back as you pull down at the top, following your finger, then settles to
+    // whichever is closer (or the way you flicked) when you let go. One value drives all of it.
+    val pinnedHeader = layout.widgets.firstOrNull() == ForYouWidget.GREETING
+    val header = remember { androidx.compose.animation.core.Animatable(1f) }
+    // How far the list scrolls to fully collapse it: the big header's height less the slim bar's.
+    var headerRangePx by remember { mutableFloatStateOf(with(density) { 180.dp.toPx() }) }
+    var settleJob by remember { mutableStateOf<kotlinx.coroutines.Job?>(null) }
+    var fingerOnList by remember { mutableStateOf(false) }
+    fun settleHeader(target: Float, velocity: Float = 0f) {
+        settleJob?.cancel()
+        settleJob = scope.launch {
+            header.animateTo(target, androidx.compose.animation.core.spring(dampingRatio = 0.9f, stiffness = 500f), initialVelocity = velocity / headerRangePx)
+        }
+    }
+    val headerScroll = remember(pinnedHeader) {
         object : androidx.compose.ui.input.nestedscroll.NestedScrollConnection {
-            var travelled = 0f
+            fun follow(dy: Float): Float {
+                val before = header.value
+                val after = (before + dy / headerRangePx).coerceIn(0f, 1f)
+                if (after == before) return 0f
+                settleJob?.cancel()
+                fingerOnList = true
+                scope.launch { header.snapTo(after) }
+                return (after - before) * headerRangePx
+            }
 
+            // Scrolling down: the header shrinks first, then the list moves.
             override fun onPreScroll(available: androidx.compose.ui.geometry.Offset, source: androidx.compose.ui.input.nestedscroll.NestedScrollSource): androidx.compose.ui.geometry.Offset {
-                val dy = available.y
-                if (dy < 0f) {
-                    travelled = (travelled.coerceAtMost(0f) + dy)
-                    if (travelled < -collapseDistance && headerExpanded) headerExpanded = false
-                } else if (dy > 0f) {
-                    travelled = (travelled.coerceAtLeast(0f) + dy)
-                    val greetingVisible = listState.firstVisibleItemIndex == 0
-                    if (greetingVisible && travelled > collapseDistance / 2 && !headerExpanded) headerExpanded = true
+                if (!pinnedHeader || source != androidx.compose.ui.input.nestedscroll.NestedScrollSource.UserInput || available.y >= 0f) return androidx.compose.ui.geometry.Offset.Zero
+                return androidx.compose.ui.geometry.Offset(0f, follow(available.y))
+            }
+
+            // Pulling down at the top of the list: the header grows back.
+            override fun onPostScroll(consumed: androidx.compose.ui.geometry.Offset, available: androidx.compose.ui.geometry.Offset, source: androidx.compose.ui.input.nestedscroll.NestedScrollSource): androidx.compose.ui.geometry.Offset {
+                if (!pinnedHeader || source != androidx.compose.ui.input.nestedscroll.NestedScrollSource.UserInput || available.y <= 0f) return androidx.compose.ui.geometry.Offset.Zero
+                return androidx.compose.ui.geometry.Offset(0f, follow(available.y))
+            }
+
+            // Let go: settle to the nearer state, or the way you flicked.
+            override suspend fun onPreFling(available: androidx.compose.ui.unit.Velocity): androidx.compose.ui.unit.Velocity {
+                if (!pinnedHeader || !fingerOnList) return androidx.compose.ui.unit.Velocity.Zero
+                fingerOnList = false
+                val v = available.y
+                val target = when {
+                    v < -600f -> 0f
+                    v > 600f && listState.firstVisibleItemIndex == 0 && listState.firstVisibleItemScrollOffset == 0 -> 1f
+                    else -> if (header.value > 0.5f) 1f else 0f
                 }
-                return androidx.compose.ui.geometry.Offset.Zero
+                if (header.value != target) settleHeader(target, v)
+                return androidx.compose.ui.unit.Velocity.Zero
             }
         }
     }
-    LaunchedEffect(headerExpanded, layout.greeting.collapses, layout.greeting.collapseAfterSeconds, editing) {
-        if (headerExpanded && layout.greeting.collapses && !editing) {
+    // It opens big each time For You is shown, then collapses after a few seconds if set to.
+    LaunchedEffect(header.targetValue, layout.greeting.collapses, layout.greeting.collapseAfterSeconds, editing, pinnedHeader) {
+        if (pinnedHeader && header.targetValue == 1f && layout.greeting.collapses && !editing) {
             delay(layout.greeting.collapseAfterSeconds * 1000L)
-            headerExpanded = false
+            if (!fingerOnList && header.value == 1f) settleHeader(0f)
         }
     }
+    // A greeting further down the page stays a normal widget you can tap to collapse.
+    var inlineHeaderExpanded by rememberSaveable { mutableStateOf(true) }
+    val inlineHeader by androidx.compose.animation.core.animateFloatAsState(
+        if (inlineHeaderExpanded) 1f else 0f,
+        androidx.compose.animation.core.spring(dampingRatio = 0.9f, stiffness = 500f),
+        label = "inline_header",
+    )
     androidx.activity.compose.BackHandler(enabled = editing) { editing = false }
     val editRequest by container.forYouEditRequest.collectAsStateWithLifecycle()
     LaunchedEffect(editRequest) {
@@ -161,7 +205,7 @@ fun FavouritesScreen(onAddFromNearby: () -> Unit, onAddFromSearch: () -> Unit) {
     }
 
     // Shared with the Map tab's Nearby panel (same key), so both show the same stops.
-    val nearbyVm = appViewModel(key = "map_nearby") { com.ssethhyy.journey.ui.screens.nearby.NearbyViewModel(it) }
+    val nearbyVm = appViewModel(key = "map_nearby") { com.ssethhyy.journey.ui.screens.nearby.NearbyViewModel(it, maxResults = com.ssethhyy.journey.ui.screens.map.NEARBY_MAX_STOPS) }
     val nearby by nearbyVm.state.collectAsStateWithLifecycle()
     val showNearby = state.isLoaded && ForYouWidget.NEAR_YOU in layout.widgets
     LaunchedEffect(showNearby) {
@@ -230,7 +274,7 @@ fun FavouritesScreen(onAddFromNearby: () -> Unit, onAddFromSearch: () -> Unit) {
                 isTabRoot = true,
                 title = "For You",
                 subtitle = TimeFormatter.shortToday(now),
-                visible = (headerGone || !state.isLoaded) && !editing,
+                visible = (headerGone || !state.isLoaded) && !editing && !pinnedHeader,
                 actions = { HapticIconButton(Sym.Edit, "Edit For You", onClick = { editing = true }) },
             )
         },
@@ -264,10 +308,52 @@ fun FavouritesScreen(onAddFromNearby: () -> Unit, onAddFromSearch: () -> Unit) {
             ) {
                 when {
                     !state.isLoaded -> LoadingState()
-                    else -> LazyColumn(
+                    else -> Column(Modifier.fillMaxSize()) {
+                    if (pinnedHeader) {
+                        val g = layout.greeting
+                        val collapsedPx = with(density) { 48.dp.toPx() }
+                        ForYouHeader(
+                            greeting = if (g.showGreeting) ForYouDates.greeting(state.settings.userName, now) else null,
+                            date = if (g.showDate) ForYouDates.format(g.dateStyle, now) else null,
+                            weather = if (g.showWeather) state.weather ?: LoadState.Loading else null,
+                            unit = g.unit,
+                            showDetails = g.showWeatherDetails,
+                            progress = header.value,
+                            onToggle = { settleHeader(if (header.targetValue > 0.5f) 0f else 1f) },
+                            onEdit = { editing = true },
+                            onSetUpWeather = {
+                                editing = true
+                                settingsFor = ForYouWidget.GREETING
+                            },
+                            onRetryWeather = { vm.loadWeather(force = true) },
+                            barTime = if (g.barTime) TimeFormatter.clock(now) else null,
+                            barDate = if (g.barDate) ForYouDates.format(DateStyle.NUMERIC, now) else null,
+                            barWeather = g.barWeather,
+                            temperatureSp = g.weatherSize.temperatureSp,
+                            onAddName = if (state.settings.userName.isBlank()) {
+                                { askingName = true }
+                            } else null,
+                            modifier = Modifier
+                                .padding(top = innerPadding.calculateTopPadding() + 4.dp, start = 16.dp, end = 16.dp)
+                                .onSizeChanged { size ->
+                                    // Measured while fully open: that height, less the slim bar, is the scroll it takes.
+                                    if (header.value == 1f) headerRangePx = (size.height - collapsedPx).coerceAtLeast(collapsedPx)
+                                },
+                        )
+                    }
+                    Box(Modifier.weight(1f)) {
+                    LazyColumn(
                         state = listState,
-                        modifier = Modifier.fillMaxSize().nestedScroll(headerScroll).floatingBarBlur(innerPadding.calculateTopPadding()),
-                        contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = innerPadding.calculateTopPadding() + 4.dp, bottom = ToolbarClearance + innerPadding.calculateBottomPadding()),
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .nestedScroll(headerScroll)
+                            .then(if (pinnedHeader) Modifier.headerBlend() else Modifier.floatingBarBlur(innerPadding.calculateTopPadding())),
+                        contentPadding = PaddingValues(
+                            start = 16.dp,
+                            end = 16.dp,
+                            top = if (pinnedHeader) 12.dp else innerPadding.calculateTopPadding() + 4.dp,
+                            bottom = ToolbarClearance + innerPadding.calculateBottomPadding(),
+                        ),
                         verticalArrangement = Arrangement.spacedBy(12.dp),
                     ) {
                         // The edit button lives in the greeting; without that at the top, a slim row carries it.
@@ -290,7 +376,7 @@ fun FavouritesScreen(onAddFromNearby: () -> Unit, onAddFromSearch: () -> Unit) {
                         }
                         layout.widgets.forEach { widget ->
                             when (widget) {
-                                ForYouWidget.GREETING -> {
+                                ForYouWidget.GREETING -> if (!pinnedHeader) {
                                     val g = layout.greeting
                                     item(key = "w_greeting") {
                                         ForYouHeader(
@@ -299,8 +385,8 @@ fun FavouritesScreen(onAddFromNearby: () -> Unit, onAddFromSearch: () -> Unit) {
                                             weather = if (g.showWeather) state.weather ?: LoadState.Loading else null,
                                             unit = g.unit,
                                             showDetails = g.showWeatherDetails,
-                                            expanded = headerExpanded,
-                                            onExpandedChange = { headerExpanded = it },
+                                            progress = inlineHeader,
+                                            onToggle = { inlineHeaderExpanded = !inlineHeaderExpanded },
                                             onEdit = { editing = true },
                                             onSetUpWeather = {
                                                 editing = true
@@ -409,6 +495,8 @@ fun FavouritesScreen(onAddFromNearby: () -> Unit, onAddFromSearch: () -> Unit) {
                                 }
                             }
                         }
+                    }
+                    }
                     }
                 }
             }
@@ -813,3 +901,24 @@ private fun NameDialog(onDismiss: () -> Unit, onConfirm: (String) -> Unit) {
         dismissButton = { TextButton(onClick = onDismiss) { Text("Not now") } },
     )
 }
+
+/**
+ * Fades the top of the list as it scrolls up under the pinned greeting header, so content melts into the header
+ * instead of being cut off by a hard edge.
+ */
+private fun Modifier.headerBlend(): Modifier = this
+    .graphicsLayer { compositingStrategy = androidx.compose.ui.graphics.CompositingStrategy.Offscreen }
+    .drawWithContent {
+        drawContent()
+        val fade = 20.dp.toPx()
+        drawRect(
+            brush = androidx.compose.ui.graphics.Brush.verticalGradient(
+                0f to androidx.compose.ui.graphics.Color.Transparent,
+                1f to androidx.compose.ui.graphics.Color.Black,
+                startY = 0f,
+                endY = fade,
+            ),
+            size = androidx.compose.ui.geometry.Size(size.width, fade),
+            blendMode = androidx.compose.ui.graphics.BlendMode.DstIn,
+        )
+    }

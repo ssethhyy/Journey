@@ -58,13 +58,11 @@ class ForYouScrollTest {
     }
 
     @Test
-    fun scrollsFullyBackToTheTopAndTheHeaderExpands() {
+    fun theHeaderCollapsesIntoAPinnedBarAndComesBack() {
         val container = rule.activity.appContainer
         runBlocking {
-            // This test covers the original top-pill style, whose pill appears once the greeting scrolls away.
-            container.settingsRepository.setBarStyle(com.ssethhyy.journey.data.repository.BarStyle.TOP_PILL)
             // Keep the greeting open: it collapses after a few seconds by default.
-            container.forYouRepository.update { it.copy(greeting = it.greeting.copy(collapses = false)) }
+            container.forYouRepository.update { it.copy(greeting = it.greeting.copy(collapses = false), showTitles = false) }
             container.favouritesRepository.clear()
             container.favouritesRepository.add(Stop(1071, TransportMode.TRAIN, "Flinders Street Station", "Melbourne City", -37.8183, 144.9671))
             container.favouritesRepository.add(Stop(2258, TransportMode.TRAM, "Bourke St/Spencer St #1", "Melbourne City", -37.8166, 144.9548))
@@ -72,19 +70,20 @@ class ForYouScrollTest {
         }
         rule.waitUntil(15_000) { rule.onAllNodesWithText("Flinders Street Station", substring = true).fetchSemanticsNodes().isNotEmpty() }
         val expandedTop = titleTop()
-        val pillsAtRest = pillCount()
         snap("topbar_for_you_rest")
 
         val list = rule.onAllNodes(SemanticsMatcher.keyIsDefined(SemanticsProperties.VerticalScrollAxisRange)).onFirst()
         repeat(3) { list.performTouchInput { swipeUp() } }
         rule.waitForIdle()
-        rule.waitUntil(5_000) { pillCount() > pillsAtRest }
+        // Scrolled past the greeting, with widget titles off: the slim bar (with its Edit pill) is still at the top
+        // and the greeting has folded into it.
+        rule.waitUntil(5_000) { rule.onAllNodesWithText("Good", substring = true).fetchSemanticsNodes().isEmpty() }
+        rule.onAllNodesWithText("Edit").onFirst().fetchSemanticsNode()
         snap("topbar_for_you_scrolled")
+
         repeat(6) { list.performTouchInput { swipeDown() } }
         rule.waitForIdle()
-
+        rule.waitUntil(5_000) { rule.onAllNodesWithText("Good", substring = true).fetchSemanticsNodes().isNotEmpty() }
         assertEquals("greeting is back where it started", expandedTop, titleTop(), 2f)
-        // And the pill goes away again once the greeting is back.
-        rule.waitUntil(5_000) { pillCount() <= pillsAtRest }
     }
 }

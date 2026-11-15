@@ -10,6 +10,11 @@
 
 package com.ssethhyy.journey.ui.screens.favourites
 
+import androidx.compose.ui.draw.clipToBounds
+import androidx.compose.ui.graphics.TransformOrigin
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.unit.Constraints
+import kotlin.math.roundToInt
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animateFloatAsState
@@ -137,8 +142,12 @@ fun ForYouHeader(
     weather: LoadState<WeatherNow>?,
     unit: TemperatureUnit,
     showDetails: Boolean,
-    expanded: Boolean,
-    onExpandedChange: (Boolean) -> Unit,
+    /**
+     * How expanded the header is, 0 (the slim bar) to 1 (big temperature, greeting and date). One value drives every
+     * part of it, so they all move together; it follows the list's scroll and settles when you let go.
+     */
+    progress: Float,
+    onToggle: () -> Unit,
     onEdit: () -> Unit,
     onSetUpWeather: () -> Unit,
     onRetryWeather: () -> Unit,
@@ -155,13 +164,7 @@ fun ForYouHeader(
     onAddName: (() -> Unit)? = null,
 ) {
     val view = LocalView.current
-    val springy by animateFloatAsState(
-        targetValue = if (expanded) 1f else 0f,
-        animationSpec = spring(dampingRatio = 0.8f, stiffness = Spring.StiffnessMediumLow),
-        label = "header_expand",
-    )
-    // The spring overshoots a little; sizes and padding can't go below zero.
-    val progress = springy.coerceIn(0f, 1f)
+    val expanded = progress > 0.5f
     val reading = (weather as? LoadState.Success)?.data
     val onSurface = MaterialTheme.colorScheme.onSurface
     val bigSize = temperatureSp.sp
@@ -178,7 +181,7 @@ fun ForYouHeader(
                 onClickLabel = if (expanded) "Collapse the greeting" else "Expand the greeting",
             ) {
                 HapticUtil.performUIHaptic(view)
-                onExpandedChange(!expanded)
+                onToggle()
             }
             .padding(top = lerp(0.dp, 4.dp, progress), bottom = lerp(0.dp, 8.dp, progress)),
     ) {
@@ -194,16 +197,20 @@ fun ForYouHeader(
                             style = TextStyle(
                                 fontFamily = TemperatureFamily,
                                 fontWeight = FontWeight(220),
-                                fontSize = lerp(32.sp, bigSize, progress),
+                                fontSize = bigSize,
                                 // Trimmed to the figures, so the greeting sits close underneath like the design.
-                                lineHeight = lerp(32.sp, bigSize * 0.81f, progress),
+                                lineHeight = bigSize * 0.81f,
                                 lineHeightStyle = LineHeightStyle(LineHeightStyle.Alignment.Center, LineHeightStyle.Trim.Both),
                                 letterSpacing = (-0.02).em,
                             ),
                             color = onSurface,
+                            maxLines = 1,
+                            softWrap = false,
                             modifier = Modifier
                                 .align(Alignment.CenterVertically)
                                 .semantics { contentDescription = "${unit.format(reading.temperatureC)}, ${reading.description}" }
+                                // Laid out once at full size and scaled as a layer, so following the scroll stays smooth.
+                                .scaledFromTopStart(SmallTemperature / temperatureSp + (1f - SmallTemperature / temperatureSp) * progress)
                                 // Figures have no descenders: drop the empty space under them so the greeting sits close.
                                 .layout { measurable, constraints ->
                                     val placeable = measurable.measure(constraints)
@@ -239,11 +246,14 @@ fun ForYouHeader(
                         style = TextStyle(
                             fontFamily = TemperatureFamily,
                             fontWeight = FontWeight(220),
-                            fontSize = lerp(32.sp, bigSize, progress),
-                            lineHeight = lerp(32.sp, bigSize * 0.81f, progress),
+                            fontSize = bigSize,
+                            lineHeight = bigSize * 0.81f,
                             lineHeightStyle = LineHeightStyle(LineHeightStyle.Alignment.Center, LineHeightStyle.Trim.Both),
                         ),
                         color = onSurface.copy(alpha = 0.3f),
+                        maxLines = 1,
+                        softWrap = false,
+                        modifier = Modifier.scaledFromTopStart(SmallTemperature / temperatureSp + (1f - SmallTemperature / temperatureSp) * progress),
                     )
                 }
             }
@@ -260,12 +270,18 @@ fun ForYouHeader(
                 }
             }
         }
-        AnimatedVisibility(
-            visible = expanded,
-            enter = expandVertically(spring(dampingRatio = 0.85f, stiffness = Spring.StiffnessMediumLow)) + fadeIn(),
-            exit = shrinkVertically(spring(dampingRatio = 1f, stiffness = Spring.StiffnessMediumLow)) + fadeOut(),
-        ) {
-            Column(Modifier.padding(top = 12.dp)) {
+        // The greeting and date grow and fade with the same progress as everything else, so they never lag behind.
+        if (progress > 0.001f) {
+            Column(
+                Modifier
+                    .clipToBounds()
+                    .layout { measurable, constraints ->
+                        val placeable = measurable.measure(constraints)
+                        layout(placeable.width, (placeable.height * progress).roundToInt()) { placeable.place(0, 0) }
+                    }
+                    .graphicsLayer { alpha = progress }
+                    .padding(top = 12.dp),
+            ) {
                 if (showDetails && reading != null) {
                     val details = listOfNotNull(
                         reading.description,
@@ -300,6 +316,24 @@ fun ForYouHeader(
                     )
                 }
             }
+        }
+    }
+}
+
+/** The temperature's size in the slim bar. */
+private const val SmallTemperature = 32f
+
+/**
+ * Draws the content [scale] times its size from its top-left corner and takes up only that much room, without laying
+ * it out again (cheap enough to change every frame).
+ */
+private fun Modifier.scaledFromTopStart(scale: Float): Modifier = layout { measurable, constraints ->
+    val placeable = measurable.measure(constraints.copy(minWidth = 0, minHeight = 0, maxWidth = Constraints.Infinity))
+    layout((placeable.width * scale).roundToInt(), (placeable.height * scale).roundToInt()) {
+        placeable.placeWithLayer(0, 0) {
+            scaleX = scale
+            scaleY = scale
+            transformOrigin = TransformOrigin(0f, 0f)
         }
     }
 }

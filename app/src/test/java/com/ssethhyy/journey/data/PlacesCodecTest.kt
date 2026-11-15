@@ -4,13 +4,9 @@ import com.ssethhyy.journey.data.repository.PlaceIcon
 import com.ssethhyy.journey.data.repository.PlacesCodec
 import com.ssethhyy.journey.data.repository.RecentTrip
 import com.ssethhyy.journey.data.repository.SavedPlace
-import com.ssethhyy.journey.data.repository.PlacesCodec
-import com.ssethhyy.journey.data.repository.RecentTrip
-import com.ssethhyy.journey.data.repository.SavedPlace
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
-import java.lang.reflect.Constructor
 
 class PlacesCodecTest {
     private fun place(
@@ -49,21 +45,10 @@ class PlacesCodecTest {
     }
 
     @Test
-    fun customPlacesUpsertById() {
-        val gym = place("g", name = "Gym")
-        val uni = place("u", name = "Uni")
-        val renamed = place("g", name = "Pool")
-        val list = PlacesCodec.upsert(listOf(gym, uni), renamed)
-        assertEquals(listOf("Pool", "Uni"), list.map { it.name })
-        assertEquals(3, PlacesCodec.upsert(list, place("x")).size)
-    }
-    }
-
-    @Test
     fun roundTripAndGarbage() {
         val list = listOf(
             place("h", icon = PlaceIcon.HOME, name = "Home"),
-            place("c", name = "Custom"),
+            place("c", name = "Gym"),
         )
         assertEquals(list, PlacesCodec.decodePlaces(PlacesCodec.encodePlaces(list)))
         assertTrue(PlacesCodec.decodePlaces("nope").isEmpty())

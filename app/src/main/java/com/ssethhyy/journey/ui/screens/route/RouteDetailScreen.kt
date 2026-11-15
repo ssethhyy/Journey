@@ -119,7 +119,20 @@ class RouteDetailViewModel(private val container: AppContainer, private val rout
     private fun loadStops() = viewModelScope.launch {
         local.update { it.copy(stops = LoadState.Loading) }
         val dir = local.value.directionId
-        local.update { it.copy(stops = loadCatching { container.ptvRepository.stopsOnRoute(routeId, mode, dir) }) }
+        val loaded = loadCatching { container.ptvRepository.stopsOnRoute(routeId, mode, dir) }
+        // PTV leaves some routes' stops unnumbered; order those along the route's path line instead.
+        val details = local.value.details.dataOrNull
+        val ordered = if (loaded is LoadState.Success && details != null) {
+            LoadState.Success(
+                com.ssethhyy.journey.data.model.RouteStopOrder.order(
+                    loaded.data,
+                    details.geopaths,
+                    dir,
+                    details.directions.firstOrNull { it.id == dir }?.name,
+                ),
+            )
+        } else loaded
+        local.update { it.copy(stops = ordered) }
     }
 }
 

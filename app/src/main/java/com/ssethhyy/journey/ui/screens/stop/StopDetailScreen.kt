@@ -61,6 +61,8 @@ import com.ssethhyy.journey.ui.components.AutoRefreshEffect
 import com.ssethhyy.journey.ui.components.DepartureRow
 import com.ssethhyy.journey.ui.components.DepartureSkeleton
 import com.ssethhyy.journey.ui.components.DisruptionCard
+import com.ssethhyy.journey.ui.components.serviceUpdates
+import androidx.compose.runtime.setValue
 import com.ssethhyy.journey.ui.components.ErrorState
 import com.ssethhyy.journey.ui.components.FavouriteToggle
 import com.ssethhyy.journey.ui.components.HapticIconButton
@@ -82,6 +84,8 @@ import com.ssethhyy.journey.utils.TimeFormatter
 fun StopDetailScreen(key: StopDetailKey) {
     val vm = appViewModel(key = "stop_${key.routeType}_${key.stopId}") { StopDetailViewModel(it, key.toStop()) }
     val state by vm.state.collectAsStateWithLifecycle()
+    // Null until tapped: follows the "Start collapsed" setting.
+    var updatesCollapsed by androidx.compose.runtime.saveable.rememberSaveable { androidx.compose.runtime.mutableStateOf<Boolean?>(null) }
     val navigator = currentNavigator
     val now by rememberNow()
     val stop = state.stop
@@ -148,10 +152,13 @@ fun StopDetailScreen(key: StopDetailKey) {
             ) {
                 item(key = "header") { StopHeader(state.stop.mode, routes.size, state.details.dataOrNull?.stationDescription) }
 
-                if (state.disruptions.isNotEmpty()) {
-                    item(key = "disruptions_label") { SectionLabel("Service updates") }
-                    items(state.disruptions, key = { "d${it.id}" }) { DisruptionCard(it) }
-                }
+                // Only alerts that matter bring the card up; expanding it shows every alert.
+                serviceUpdates(
+                    state.disruptions,
+                    level = state.settings.stopDisruptionLevel,
+                    collapsed = updatesCollapsed ?: state.settings.stopDisruptionsCollapsed,
+                    onToggle = { updatesCollapsed = !(updatesCollapsed ?: state.settings.stopDisruptionsCollapsed) },
+                )
 
                 item(key = "departures_label") {
                     SectionLabel("Departures") {

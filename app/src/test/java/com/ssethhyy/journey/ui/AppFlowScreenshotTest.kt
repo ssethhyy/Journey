@@ -37,6 +37,7 @@ import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
 import org.robolectric.annotation.GraphicsMode
 import java.io.File
+import java.lang.reflect.Constructor
 
 /** Application that points the PTV client at a local fake server. */
 class TestJourneyApp : JourneyApp() {
@@ -107,6 +108,50 @@ class AppFlowScreenshotTest {
         }
         check(index >= 0) { "No on-screen node with text $text" }
         nodes[index].performClick()
+    }
+
+    private fun enumConstant(type: Class<*>, name: String): Any? {
+        val raw = type.enumConstants ?: return null
+        return raw.firstOrNull { (it as Enum<*>).name == name } ?: raw.firstOrNull()
+    }
+
+    @Suppress("SpreadOperator")
+    private fun construct(ctor: Constructor<*>, vararg args: Any?): SavedPlace {
+        return ctor.newInstance(*args) as SavedPlace
+    }
+
+    private fun savedPlace(
+        id: String,
+        name: String,
+        address: String,
+        latitude: Double,
+        longitude: Double,
+        kindName: String,
+        iconName: String,
+    ): SavedPlace {
+        val ctor = SavedPlace::class.java.declaredConstructors.first()
+        return when (ctor.parameterCount) {
+            7 -> construct(
+                ctor,
+                id,
+                enumConstant(ctor.parameterTypes[1], kindName),
+                name,
+                address,
+                latitude,
+                longitude,
+                enumConstant(ctor.parameterTypes[6], iconName),
+            )
+            6 -> construct(
+                ctor,
+                id,
+                name,
+                address,
+                latitude,
+                longitude,
+                enumConstant(ctor.parameterTypes[5], iconName),
+            )
+            else -> error("Unsupported SavedPlace constructor with ${ctor.parameterCount} parameters")
+        }
     }
 
     private fun seedFavourites(container: AppContainer) = runBlocking {
@@ -183,7 +228,6 @@ class AppFlowScreenshotTest {
 
         // Stop details.
         rule.onNodeWithText("Commute").performClick()
-        waitForText("Service updates")
         waitForText("Departures")
         snap("04_stop_detail")
 

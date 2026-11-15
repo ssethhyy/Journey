@@ -48,7 +48,7 @@ Live departures, journey planning, a live map, myki balance and trip tracking fo
 
 ### 🏠 For You
 - **Arrange it your way:** For You is made of widgets. Tap *Edit* to drag them into any order (they snap into place), remove them, add others (*Network status*, *Shortcuts*) and open each one's own settings. Every widget has a small title with an arrow to collapse it, or turn titles off altogether.
-- **Weather and a greeting:** a big temperature with an icon for the conditions, "Good morning" with your name and today's date. It collapses into a small bar (weather, and optionally the time and date) after a few seconds or as you scroll down, and expands again when you scroll up. Weather comes from OpenWeatherMap (built in), WeatherAPI.com or Open-Meteo.
+- **Weather and a greeting:** a big temperature with an icon for the conditions, "Good morning" with your name and today's date. It's pinned at the top and shrinks into a slim bar (weather, and optionally the time and date) as you scroll, following your finger and settling when you let go, then grows back when you pull down at the top. Weather comes from OpenWeatherMap (built in), WeatherAPI.com or Open-Meteo.
 - Your favourite stops with **live departures**, first on the page and grouped by mode (trains, trams, buses). Choose how many departures, the order, and whether stops with nothing coming show.
 - **Favourite just the lines you use:** keep every departure from a stop, or pick lines and directions such as *Frankston to City*.
 - **Disruptions that matter:** collapsed to one quiet line, and only when there's a major disruption (closures, replacement buses, changed timetables) at your stops or on your lines.
@@ -69,6 +69,8 @@ Live departures, journey planning, a live map, myki balance and trip tracking fo
 
 ### 🗺️ Map
 - Full-screen edge-to-edge Mapbox map of stops for every mode, a stop preview and a floating *Nearby* panel that keeps you centred in the part of the map you can see.
+- **Stops by zoom level:** V/Line stations across the state when zoomed out, then trains, trams, and buses closest in, every one in view.
+- **Drag the Nearby panel** down to collapse it or up to open it, or keep dragging until it fills the screen with every stop nearby. Map controls sit in a row of pills just above it.
 - Search stops, routes and lines, and *Plan a trip here* from any stop.
 - **Stop roulette** (from MelbourneTrainGame): roll a random station within a radius, with an optional travel challenge.
 

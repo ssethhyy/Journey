@@ -20,8 +20,24 @@ object ForYouDisruptions {
         "not run", "no trains", "no trams", "no buses", "altered", "modified",
     )
 
+    /** Words that mean the trains, trams or buses themselves change, not just the station around them. */
+    private val SERVICE_WORDS = listOf(
+        "suspend", "cancel", "replace", "replacement", "timetable", "not stop", "bypass", "not run",
+        "no trains", "no trams", "no buses", "line closure", "station closure", "station closed", "stop closed",
+    )
+
+    /** Notices about the station's facilities, filed as closures but not changing any service. */
+    private val FACILITY_WORDS = listOf(
+        "car park", "carpark", "parking", "pedestrian", "lift", "escalator", "toilet", "entrance", "exit",
+        "footpath", "path ", "ticket office", "bike", "waiting room", "concourse", "kiosk", "myki machine", "accessib",
+        "stairs", "ramp", "underpass", "overpass", "footbridge", "shelter",
+    )
+
     /** Closures, suspensions, replacement buses and changed timetables, whatever PTV filed them under. */
     fun isMajor(d: Disruption): Boolean {
+        val title = d.title.lowercase()
+        // "Temporary car park closures" is a Planned Closure to PTV, but no service changes.
+        if (FACILITY_WORDS.any { it in title } && SERVICE_WORDS.none { it in title }) return false
         if (d.severity == DisruptionSeverity.SEVERE || d.severity == DisruptionSeverity.MAJOR) return true
         val text = "${d.type.orEmpty()} ${d.title}".lowercase()
         return MAJOR_WORDS.any { it in text }

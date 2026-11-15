@@ -283,8 +283,8 @@ fun SettingsScreen() {
                         items = com.ssethhyy.journey.data.foryou.DisruptionLevel.entries,
                         selectedItem = settings.stopDisruptionLevel,
                         onItemSelected = { vm.update { setStopDisruptionLevel(it) } },
-                        labelProvider = { it.label },
-                        description = settings.stopDisruptionLevel.detail + ". Expand the card to see every alert",
+                        labelProvider = { it.shortLabel },
+                        description = settings.stopDisruptionLevel.label + ": " + settings.stopDisruptionLevel.detail.replaceFirstChar { it.lowercase() } + ". Expand the card to see every alert",
                     )
                     IconToggleItem(
                         icon = Sym.ExpandLess,
@@ -470,7 +470,8 @@ fun SettingsScreen() {
                             items = com.ssethhyy.journey.data.model.TransportMode.entries,
                             selectedItem = settings.gameMode,
                             onItemSelected = { vm.update { setGameMode(it) } },
-                            labelProvider = { it.label },
+                            // Five across: "Night" keeps Night Bus readable.
+                            labelProvider = { if (it == com.ssethhyy.journey.data.model.TransportMode.NIGHT_BUS) "Night" else it.label },
                         )
                         SliderItem(
                             icon = Sym.NearMe,

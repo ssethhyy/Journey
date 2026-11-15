@@ -6,6 +6,7 @@
 
 package com.ssethhyy.journey.ui.components
 
+import androidx.compose.ui.unit.sp
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -262,12 +263,21 @@ fun <T> SegmentedPicker(
                 colors = ToggleButtonDefaults.colors(
                     containerColor = MaterialTheme.colorScheme.surfaceContainerHighest,
                 ),
+                // Four or more options share the row: less side padding keeps labels like "Medium" whole.
+                contentPadding = if (items.size >= 4) PaddingValues(horizontal = 6.dp, vertical = 8.dp) else ButtonDefaults.ContentPadding,
             ) {
                 iconProvider?.invoke(item)?.let {
                     Icon(it, contentDescription = null, modifier = Modifier.size(18.dp))
                     Spacer(Modifier.width(6.dp))
                 }
-                Text(labelProvider(item), maxLines = 1, overflow = TextOverflow.Ellipsis)
+                // A crowded row shrinks its labels a little rather than cut them off.
+                androidx.compose.foundation.text.BasicText(
+                    labelProvider(item),
+                    style = androidx.compose.material3.LocalTextStyle.current.copy(color = androidx.compose.material3.LocalContentColor.current),
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    autoSize = androidx.compose.foundation.text.TextAutoSize.StepBased(minFontSize = 11.sp, maxFontSize = 14.sp, stepSize = 0.5.sp),
+                )
             }
         }
     }

@@ -1,63 +1,55 @@
 package com.ssethhyy.journey.data
 
+import com.ssethhyy.journey.data.repository.PlaceIcon
 import com.ssethhyy.journey.data.repository.PlacesCodec
 import com.ssethhyy.journey.data.repository.RecentTrip
 import com.ssethhyy.journey.data.repository.SavedPlace
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
-import java.lang.reflect.Constructor
 
 class PlacesCodecTest {
-    private fun enumConstant(type: Class<*>, name: String): Any? {
-        val raw = type.enumConstants ?: return null
-        return raw.firstOrNull { (it as Enum<*>).name == name } ?: raw.firstOrNull()
-    }
-
-    @Suppress("SpreadOperator")
-    private fun construct(ctor: Constructor<*>, vararg args: Any?): SavedPlace {
-        return ctor.newInstance(*args) as SavedPlace
-    }
-
-    private fun place(id: String, name: String = id): SavedPlace {
-        val ctor = SavedPlace::class.java.declaredConstructors.first()
-        return when (ctor.parameterCount) {
-            7 -> construct(
-                ctor,
-                id,
-                enumConstant(ctor.parameterTypes[1], "CUSTOM"),
-                name,
-                "Addr $id",
-                -37.8,
-                144.9,
-                enumConstant(ctor.parameterTypes[6], "STAR"),
-            )
-            6 -> construct(
-                ctor,
-                id,
-                name,
-                "Addr $id",
-                -37.8,
-                144.9,
-                enumConstant(ctor.parameterTypes[5], "STAR"),
-            )
-            else -> error("Unsupported SavedPlace constructor with ${ctor.parameterCount} parameters")
-        }
-    }
+    private fun place(
+        id: String,
+        icon: PlaceIcon = PlaceIcon.STAR,
+        name: String = id,
+    ) = SavedPlace(
+        id = id,
+        name = name,
+        address = "Addr $id",
+        latitude = -37.8,
+        longitude = 144.9,
+        icon = icon,
+    )
 
     @Test
-    fun customPlacesUpsertById() {
-        val gym = place("g", "Gym")
-        val uni = place("u", "Uni")
-        val renamed = place("g", "Pool")
-        val list: List<SavedPlace> = PlacesCodec.upsert(listOf(gym, uni), renamed)
+    fun placesUpsertById() {
+        val gym = place("g", name = "Gym")
+        val uni = place("u", name = "Uni")
+        val renamed = gym.copy(name = "Pool")
+
+        val list = PlacesCodec.upsert(listOf(gym, uni), renamed)
         assertEquals(listOf("Pool", "Uni"), list.map { it.name })
+
+        // A brand-new id appends rather than replaces.
         assertEquals(3, PlacesCodec.upsert(list, place("x")).size)
     }
 
     @Test
+    fun savingASecondPlaceWithHomeIconKeepsBoth() {
+        // Icons are cosmetic now: two places may both use the Home icon.
+        val home1 = place("h1", icon = PlaceIcon.HOME, name = "Home")
+        val home2 = place("h2", icon = PlaceIcon.HOME, name = "Mum's")
+        val list = PlacesCodec.upsert(PlacesCodec.upsert(emptyList(), home1), home2)
+        assertEquals(listOf("h1", "h2"), list.map { it.id })
+    }
+
+    @Test
     fun roundTripAndGarbage() {
-        val list: List<SavedPlace> = listOf(place("h", "Home"), place("c", "Custom"))
+        val list = listOf(
+            place("h", icon = PlaceIcon.HOME, name = "Home"),
+            place("c", name = "Gym"),
+        )
         assertEquals(list, PlacesCodec.decodePlaces(PlacesCodec.encodePlaces(list)))
         assertTrue(PlacesCodec.decodePlaces("nope").isEmpty())
         assertTrue(PlacesCodec.decodeRecents(null).isEmpty())

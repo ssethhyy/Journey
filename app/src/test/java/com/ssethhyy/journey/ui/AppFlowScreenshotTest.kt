@@ -170,9 +170,36 @@ class AppFlowScreenshotTest {
     }
 
     private fun seedPlaces(container: AppContainer) = runBlocking {
-        container.placesRepository.save(savedPlace("home", "Home", "12 Smith Street, Fitzroy", -37.80, 144.98, kindName = "HOME", iconName = "HOME"))
-        container.placesRepository.save(savedPlace("work", "Work", "Caulfield", -37.877, 145.042, kindName = "WORK", iconName = "WORK"))
-        container.placesRepository.save(savedPlace("gym", "Gym", "St Kilda", -37.86, 144.98, kindName = "CUSTOM", iconName = PlaceIcon.FITNESS.name))
+        container.placesRepository.save(
+            SavedPlace(
+                id = "home",
+                name = "Home",
+                address = "12 Smith Street, Fitzroy",
+                latitude = -37.80,
+                longitude = 144.98,
+                icon = PlaceIcon.HOME,
+            ),
+        )
+        container.placesRepository.save(
+            SavedPlace(
+                id = "work",
+                name = "Work",
+                address = "Caulfield",
+                latitude = -37.877,
+                longitude = 145.042,
+                icon = PlaceIcon.WORK,
+            ),
+        )
+        container.placesRepository.save(
+            SavedPlace(
+                id = "gym",
+                name = "Gym",
+                address = "St Kilda",
+                latitude = -37.86,
+                longitude = 144.98,
+                icon = PlaceIcon.FITNESS,
+            ),
+        )
     }
 
     @Test

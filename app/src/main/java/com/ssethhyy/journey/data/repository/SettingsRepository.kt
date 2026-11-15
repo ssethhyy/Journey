@@ -99,6 +99,7 @@ data class AppSettings(
     val nearbyModes: Set<TransportMode> = TransportMode.entries.toSet(),
     val mapModes: Set<TransportMode> = TransportMode.entries.toSet(),
     val mapFollowsTheme: Boolean = true,
+    val mapRender3DVehicles: Boolean = false,
     /** Which alerts count as worth showing on stop and line pages; the rest wait behind the expanded list. */
     val stopDisruptionLevel: com.ssethhyy.journey.data.foryou.DisruptionLevel = com.ssethhyy.journey.data.foryou.DisruptionLevel.MAJOR,
     /** Whether the service updates on stop and line pages start collapsed. */
@@ -152,6 +153,8 @@ class SettingsRepository(context: Context) {
         val NEARBY_MODES = stringSetPreferencesKey("nearby_modes")
         val MAP_MODES = stringSetPreferencesKey("map_modes")
         val MAP_FOLLOWS_THEME = booleanPreferencesKey("map_follows_theme")
+
+        val MAP_RENDER_3D_VEHICLES = booleanPreferencesKey("map_render_3d_vehicles")
         val STOP_DISRUPTION_LEVEL = stringPreferencesKey("stop_disruption_level")
         val STOP_DISRUPTIONS_COLLAPSED = booleanPreferencesKey("stop_disruptions_collapsed")
         val PTV_DEV_ID = stringPreferencesKey("ptv_dev_id")
@@ -200,6 +203,7 @@ class SettingsRepository(context: Context) {
             nearbyModes = p[Keys.NEARBY_MODES]?.toModes() ?: TransportMode.entries.toSet(),
             mapModes = p[Keys.MAP_MODES]?.toModes() ?: TransportMode.entries.toSet(),
             mapFollowsTheme = p[Keys.MAP_FOLLOWS_THEME] ?: true,
+            mapRender3DVehicles = p[Keys.MAP_RENDER_3D_VEHICLES] ?: false,
             stopDisruptionLevel = p[Keys.STOP_DISRUPTION_LEVEL].enumOr(com.ssethhyy.journey.data.foryou.DisruptionLevel.MAJOR),
             stopDisruptionsCollapsed = p[Keys.STOP_DISRUPTIONS_COLLAPSED] ?: true,
             ptvDevIdOverride = p[Keys.PTV_DEV_ID].orEmpty(),
@@ -261,6 +265,7 @@ class SettingsRepository(context: Context) {
     suspend fun setNearbyModes(modes: Set<TransportMode>) = store.edit { it[Keys.NEARBY_MODES] = modes.map { m -> m.name }.toSet() }
     suspend fun setMapModes(modes: Set<TransportMode>) = store.edit { it[Keys.MAP_MODES] = modes.map { m -> m.name }.toSet() }
     suspend fun setMapFollowsTheme(enabled: Boolean) = store.edit { it[Keys.MAP_FOLLOWS_THEME] = enabled }
+    suspend fun setMapRender3DVehicles(enabled: Boolean) = store.edit { it[Keys.MAP_RENDER_3D_VEHICLES] = enabled }
     suspend fun setStopDisruptionLevel(level: com.ssethhyy.journey.data.foryou.DisruptionLevel) = store.edit { it[Keys.STOP_DISRUPTION_LEVEL] = level.name }
     suspend fun setStopDisruptionsCollapsed(enabled: Boolean) = store.edit { it[Keys.STOP_DISRUPTIONS_COLLAPSED] = enabled }
 

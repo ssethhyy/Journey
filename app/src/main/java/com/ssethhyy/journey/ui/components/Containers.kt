@@ -17,12 +17,14 @@ import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.AssistChip
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.ButtonGroupDefaults
@@ -121,6 +123,7 @@ fun IconToggleItem(
     isChecked: Boolean,
     onCheckedChange: (Boolean) -> Unit,
     modifier: Modifier = Modifier,
+    experimental: Boolean? = false,
     description: String? = null,
     enabled: Boolean = true,
     showToggle: Boolean = true,
@@ -148,7 +151,18 @@ fun IconToggleItem(
         LeadingIcon(icon)
         Spacer(Modifier.width(16.dp))
         Column(Modifier.weight(1f)) {
-            Text(title, style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.onSurface)
+            if (experimental == true) {
+                ExperimentalChip()
+                Spacer(Modifier.height(4.dp))
+            }
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(
+                    title,
+                    style = MaterialTheme.typography.titleMedium,
+                    color = MaterialTheme.colorScheme.onSurface,
+                    modifier = Modifier.weight(1f, fill = false),
+                )
+            }
             if (description != null) {
                 Text(description, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
@@ -165,6 +179,17 @@ fun IconToggleItem(
             )
         }
     }
+}
+
+@Composable
+private fun ExperimentalChip(modifier: Modifier = Modifier) {
+    AssistChip(
+        onClick = {},
+        enabled = false, // purely a label, not interactive
+        label = { Text("Experimental", style = MaterialTheme.typography.labelSmall) },
+        modifier = modifier.height(24.dp),
+        
+    )
 }
 
 /** Tappable row with an optional trailing value and chevron. */

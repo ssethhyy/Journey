@@ -348,6 +348,14 @@ fun SettingsScreen() {
                         isChecked = settings.mapFollowsTheme,
                         onCheckedChange = { vm.update { setMapFollowsTheme(it) } },
                     )
+                    IconToggleItem(
+                        icon = Sym.ViewInAr,
+                        title = "Render 3D Vehicles",
+                        description = "Use 3D models for vehicle live-tracking",
+                        experimental = true,
+                        isChecked = settings.mapRender3DVehicles,
+                        onCheckedChange = { vm.update { setMapRender3DVehicles(it) } },
+                    )
                 }
             }
 

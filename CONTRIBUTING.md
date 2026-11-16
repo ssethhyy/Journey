@@ -151,6 +151,20 @@ Journey has a consistent design language. New UI should feel like it belongs.
   or more, don't rely on colour alone, and check large font sizes.
 - The UI follows the design language in [sameerasw/android-common](https://github.com/sameerasw/android-common) (floating toolbar, progressive blur, edge-to-edge, theming). Read it before large UI changes.
 
+### Adding a setting
+
+1. Define it in `Prefs` in `data/repository/SettingsRepository.kt`, next to its neighbours:
+   `val SHOW_PLATFORMS = BoolPref("show_platforms", true)`. The name is the DataStore key and is permanent.
+   Use `IntPref` (with a range), `StringPref`, `EnumPref`, `ModesPref` or `StringListPref` for other kinds.
+2. Show it on the Settings page with one item in its category in `ui/screens/settings/SettingsCatalog.kt`:
+   `Toggle(Prefs.SHOW_PLATFORMS, "Platforms", Sym.Train, "Show the platform beside each departure")`.
+   The renderer saves it and keeps it up to date; `visible = { it[Prefs.OTHER] }` shows it only sometimes.
+3. Read it where it's used with `settingsRepository.flow(Prefs.SHOW_PLATFORMS)` (or add it to `AppSettings` if lots
+   of screens need it alongside other settings).
+
+Sections are the `SettingsCategory` enum, in on-screen order: add an entry there for a new section, or move one to
+reorder the page. A row that isn't a standard type can be a `Custom` item with its own composable.
+
 ### Data and networking
 
 - All PTV calls go through `PtvApi` / `PtvRepository` (requests are HMAC-signed and cached with short TTLs). Don't

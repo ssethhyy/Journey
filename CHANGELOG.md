@@ -78,7 +78,18 @@ All notable changes to Journey are documented here. The format follows
 - **Map controls are pills in a row** resting on top of the Nearby panel (or the stop preview): *My location*,
   *Roll a stop* and *Nearby* when the panel is hidden. If they don't all fit, the row scrolls sideways.
 - **Search lists stops and lines by transport type**: V/Line first, then trains, trams, buses and night buses. Good
-  matches still come before loose ones.
+  matches still come before loose ones. Stations and stops now come before lines, since they're what most searches
+  are for.
+- **Settings for the home screen widget** (Settings → Home screen widget): put your favourites in the widget's own
+  order by dragging, switch off any you'd rather leave off it, and choose what each row shows: the distance, the
+  suburb or nothing under the stop, the destination, and the live indicator. The widget redraws straight away.
+- **A tidier Settings page**, in clear sections (For You, Appearance, Departures, Service updates, Nearby stops, Map,
+  Home screen widget, Stop alerts, Crowding, Game, Essentials island, myki, Interaction, Updates, API access, Data and
+  About). Everything you've set carries over. Option pickers whose labels didn't fit (the crowding level) use short
+  labels with the full one spelt out underneath.
+- For developers: every setting is now one typed definition in `Prefs` (`SettingsRepository.kt`), and the Settings
+  page is declared in `SettingsCatalog` as Toggle, Choice, Slider, TextInput, Modes, Action, Info and Custom rows that
+  `SettingsRenderer` draws. Adding a setting takes two lines; see CONTRIBUTING.
 - **Fewer PTV requests for the same live data.** Two screens asking for the same thing at once now share one request,
   pull to refresh straight after a page loads reuses what just arrived, favourites split from one stop share one
   departures request, nearby stops and disruptions are kept for longer (stops don't move; disruptions for five

@@ -62,7 +62,8 @@ class ForYouScrollTest {
         val container = rule.activity.appContainer
         runBlocking {
             // Keep the greeting open: it collapses after a few seconds by default.
-            container.forYouRepository.update { it.copy(greeting = it.greeting.copy(collapses = false), showTitles = false) }
+            // Weather off: a reading arriving mid-test would change the header's height under the measurement.
+            container.forYouRepository.update { it.copy(greeting = it.greeting.copy(collapses = false, showWeather = false), showTitles = false) }
             container.favouritesRepository.clear()
             container.favouritesRepository.add(Stop(1071, TransportMode.TRAIN, "Flinders Street Station", "Melbourne City", -37.8183, 144.9671))
             container.favouritesRepository.add(Stop(2258, TransportMode.TRAM, "Bourke St/Spencer St #1", "Melbourne City", -37.8166, 144.9548))

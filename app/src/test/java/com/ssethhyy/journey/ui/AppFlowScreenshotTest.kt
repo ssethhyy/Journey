@@ -1,5 +1,7 @@
 package com.ssethhyy.journey.ui
 
+import androidx.compose.ui.test.performTouchInput
+import androidx.compose.ui.test.swipeDown
 import android.graphics.Bitmap
 import androidx.compose.ui.graphics.asAndroidBitmap
 import androidx.compose.ui.test.ExperimentalTestApi
@@ -258,7 +260,11 @@ class AppFlowScreenshotTest {
             .onFirst().performScrollToIndex(0)
         rule.waitForIdle()
 
-        // Plan tab: saved places and recent journeys.
+        // Plan tab: saved places and recent journeys. Scrolling down the page tucked the toolbar away; a small pull
+        // brings it back, as it would for anyone.
+        rule.onAllNodes(androidx.compose.ui.test.SemanticsMatcher.keyIsDefined(androidx.compose.ui.semantics.SemanticsProperties.VerticalScrollAxisRange))
+            .onFirst().performTouchInput { swipeDown() }
+        rule.waitUntil(5_000) { rule.onAllNodes(hasContentDescription("Plan")).fetchSemanticsNodes().isNotEmpty() }
         rule.onNode(hasContentDescription("Plan")).performClick()
         waitForText("Plan a journey")
         snap("07_plan")

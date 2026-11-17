@@ -183,6 +183,7 @@ object Prefs {
     val SEARCH_REGION = EnumPref("search_region", SearchRegion.VICTORIA, SearchRegion.entries)
     val MAP_FOLLOWS_THEME = BoolPref("map_follows_theme", true)
     val MAP_MODES = ModesPref("map_modes")
+    val MAP_RENDER_3D_VEHICLES = BoolPref("map_render_3d_vehicles", false)
 
     // Home screen widget
     /** The widget's own order of favourites (keys); favourites not listed follow in their usual order. */
@@ -287,6 +288,7 @@ data class AppSettings(
     val nearbyModes: Set<TransportMode> = Prefs.NEARBY_MODES.default,
     val mapModes: Set<TransportMode> = Prefs.MAP_MODES.default,
     val mapFollowsTheme: Boolean = Prefs.MAP_FOLLOWS_THEME.default,
+    val mapRender3dVehicles: Boolean = Prefs.MAP_RENDER_3D_VEHICLES.default,
     /** Which alerts count as worth showing on stop and line pages; the rest wait behind the expanded list. */
     val stopDisruptionLevel: DisruptionLevel = Prefs.STOP_DISRUPTION_LEVEL.default,
     /** Whether the service updates on stop and line pages start collapsed. */
@@ -386,6 +388,7 @@ class SettingsRepository(context: Context) {
             nearbyModes = Prefs.NEARBY_MODES.read(p),
             mapModes = Prefs.MAP_MODES.read(p),
             mapFollowsTheme = Prefs.MAP_FOLLOWS_THEME.read(p),
+            mapRender3dVehicles = Prefs.MAP_RENDER_3D_VEHICLES.read(p),
             stopDisruptionLevel = Prefs.STOP_DISRUPTION_LEVEL.read(p),
             stopDisruptionsCollapsed = Prefs.STOP_DISRUPTIONS_COLLAPSED.read(p),
             ptvDevIdOverride = Prefs.PTV_DEV_ID.read(p),
@@ -453,6 +456,7 @@ class SettingsRepository(context: Context) {
     suspend fun setNearbyModes(modes: Set<TransportMode>) = set(Prefs.NEARBY_MODES, modes)
     suspend fun setMapModes(modes: Set<TransportMode>) = set(Prefs.MAP_MODES, modes)
     suspend fun setMapFollowsTheme(enabled: Boolean) = set(Prefs.MAP_FOLLOWS_THEME, enabled)
+    suspend fun setMapRender3dTheme(enabled: Boolean) = set(Prefs.MAP_RENDER_3D_VEHICLES, enabled)
     suspend fun setStopDisruptionLevel(level: DisruptionLevel) = set(Prefs.STOP_DISRUPTION_LEVEL, level)
     suspend fun setStopDisruptionsCollapsed(enabled: Boolean) = set(Prefs.STOP_DISRUPTIONS_COLLAPSED, enabled)
     suspend fun setMapboxToken(token: String) = set(Prefs.MAPBOX_TOKEN, token)

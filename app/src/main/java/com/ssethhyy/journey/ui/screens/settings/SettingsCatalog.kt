@@ -69,6 +69,8 @@ sealed interface SettingItem {
     /** Stable identity for the list. */
     val id: String
     val visible: (SettingsSnapshot) -> Boolean
+    val experimental : Boolean?
+        get() = null
 }
 
 /** On or off. */
@@ -85,6 +87,7 @@ data class Toggle(
     /** Runs straight after the change is saved, for settings the app applies at once. */
     val onChanged: ((Boolean) -> Unit)? = null,
     override val visible: (SettingsSnapshot) -> Boolean = { true },
+    override val experimental: Boolean? = false,
 ) : SettingItem {
     override val id get() = pref.name
 }
@@ -98,6 +101,7 @@ data class Choice<E : Enum<E>>(
     /** Explains the current choice, if it needs explaining. */
     val describe: ((E) -> String)? = null,
     override val visible: (SettingsSnapshot) -> Boolean = { true },
+    override val experimental: Boolean? = false,
 ) : SettingItem {
     override val id get() = pref.name
 }
@@ -111,6 +115,7 @@ data class Slider(
     val valueLabel: (Int) -> String,
     val scale: Int = 1,
     override val visible: (SettingsSnapshot) -> Boolean = { true },
+    override val experimental: Boolean? = false,
 ) : SettingItem {
     override val id get() = pref.name
 }
@@ -127,6 +132,7 @@ data class TextInput(
     val validate: (String) -> String? = { null },
     val saveLabel: String = "Save",
     override val visible: (SettingsSnapshot) -> Boolean = { true },
+    override val experimental: Boolean? = false,
 ) : SettingItem {
     override val id get() = pref.name
 }
@@ -136,6 +142,7 @@ data class Modes(
     val pref: ModesPref,
     val title: String,
     override val visible: (SettingsSnapshot) -> Boolean = { true },
+    override val experimental: Boolean? = false,
 ) : SettingItem {
     override val id get() = pref.name
 }
@@ -151,6 +158,7 @@ data class Action(
     /** Whether it leads somewhere (shows a chevron) or acts in place. */
     val opensPage: Boolean = true,
     override val visible: (SettingsSnapshot) -> Boolean = { true },
+    override val experimental: Boolean? = false,
     val onClick: SettingsScope.() -> Unit,
 ) : SettingItem
 
@@ -160,6 +168,7 @@ data class Info(
     val title: String,
     val icon: ImageVector,
     override val visible: (SettingsSnapshot) -> Boolean = { true },
+    override val experimental: Boolean? = false,
     val text: (SettingsScope) -> String,
 ) : SettingItem
 
@@ -167,6 +176,7 @@ data class Info(
 data class Custom(
     override val id: String,
     override val visible: (SettingsSnapshot) -> Boolean = { true },
+    override val experimental: Boolean? = false,
     val content: @Composable (SettingsScope) -> Unit,
 ) : SettingItem
 
@@ -217,6 +227,7 @@ object SettingsCatalog {
         SettingsCategory.MAP -> listOf(
             Choice(Prefs.SEARCH_REGION, "Search and map area", Sym.Search, label = { it.label }),
             Toggle(Prefs.MAP_FOLLOWS_THEME, "Night map in dark theme", Sym.Map, "Switch the map lighting with the app theme"),
+            Toggle(Prefs.MAP_RENDER_3D_VEHICLES, "Render 3D Vehicles", Sym.ViewInAr, "Some tracked vehicles are displayed as a 3D model in the map view", experimental = true)
         )
 
         SettingsCategory.WIDGET -> listOf(

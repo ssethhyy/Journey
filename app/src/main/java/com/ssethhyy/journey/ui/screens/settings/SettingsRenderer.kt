@@ -121,6 +121,7 @@ private fun ToggleRow(item: Toggle, scope: SettingsScope) {
         description = item.description,
         isChecked = checked,
         enabled = enabled,
+        experimental = item.experimental,
         onDisabledClick = { item.disabledReason?.let(scope::toast) },
         onCheckedChange = { value ->
             item.onChanged?.invoke(value)

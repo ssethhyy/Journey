@@ -404,7 +404,7 @@ fun MapScreen(isActive: Boolean, modifier: Modifier = Modifier) {
                     }
                 }
 
-                if(state.settings.mapRender3DVehicles){
+                if(state.settings.mapRender3dVehicles){
                     VehicleModelLayer()
                 }
 

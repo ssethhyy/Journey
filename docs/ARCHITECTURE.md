@@ -130,7 +130,16 @@ The public GitHub API, read without a key, for the in-app updater. See [In-app u
 ## Persistence
 
 Everything is stored with Jetpack DataStore (JSON in preferences): settings, favourites, places, mykis and trip
-history, and fare edits. Map tiles go in Mapbox's own disk cache (the default `TileStore`), which `JourneyApp`
+history, and fare edits.
+
+Settings are typed definitions in `Prefs` (`BoolPref`, `IntPref` with a range, `StringPref`, `EnumPref`, `ModesPref`,
+`StringListPref`), each knowing its DataStore key, default and how to read and write itself. `SettingsRepository`
+offers `flow(pref)`, `get(pref)`, `set(pref, value)` and a `SettingsSnapshot` of them all, and still builds the
+`AppSettings` snapshot most screens read. The Settings page is data: `SettingsCategory` (the sections, in order),
+`SettingsCatalog` (each section's rows as Toggle, Choice, Slider, TextInput, Modes, Action, Info or Custom items) and
+`SettingsRenderer`, which draws each kind of row once. `SettingsScreen` only owns what needs the page (file pickers,
+the clear dialog, update checks), run through `SettingsJob`. The widget's order and contents are `WidgetPrefs`, applied
+by `WidgetSnapshotBuilder` and redrawn whenever they change. Map tiles go in Mapbox's own disk cache (the default `TileStore`), which `JourneyApp`
 limits to 200 MB.
 
 API responses are kept in memory by `TtlCache` (in `PtvRepository`). Besides its time to live it shares one request

@@ -93,21 +93,33 @@ object WidgetStore {
 object WidgetSnapshotBuilder {
     const val MAX_ROWS = 8
 
-    fun row(favourite: FavouriteStop, next: Departure?, distanceMeters: Double?, later: List<Departure> = emptyList()): WidgetRow = WidgetRow(
+    fun row(
+        favourite: FavouriteStop,
+        next: Departure?,
+        distanceMeters: Double?,
+        later: List<Departure> = emptyList(),
+        prefs: com.ssethhyy.journey.data.repository.WidgetPrefs = com.ssethhyy.journey.data.repository.WidgetPrefs(),
+    ): WidgetRow = WidgetRow(
         stopId = favourite.stopId,
         routeType = favourite.routeType,
         name = favourite.displayName,
-        subtitle = distanceMeters?.let(WidgetFormat::distance) ?: favourite.suburb,
+        subtitle = when (prefs.subtitle) {
+            com.ssethhyy.journey.data.repository.WidgetSubtitle.DISTANCE -> distanceMeters?.let(WidgetFormat::distance) ?: favourite.suburb
+            com.ssethhyy.journey.data.repository.WidgetSubtitle.SUBURB -> favourite.suburb
+            com.ssethhyy.journey.data.repository.WidgetSubtitle.NONE -> null
+        },
         departureEpochSec = next?.bestTime?.epochSecond,
-        isLive = next?.isLive == true,
-        headsign = next?.headsign?.takeIf { it.isNotBlank() },
+        isLive = prefs.showLive && next?.isLive == true,
+        headsign = next?.headsign?.takeIf { prefs.showDestination && it.isNotBlank() },
         routeLabel = next?.route?.badgeLabel,
         laterEpochSec = later.mapNotNull { it.bestTime?.epochSecond }.take(3),
     )
 
     /** Fetches the next departure for each favourite (in parallel) and builds a snapshot. */
     suspend fun build(container: AppContainer, now: Instant = Instant.now()): WidgetSnapshot {
-        val favourites = container.favouritesRepository.favourites.first().take(MAX_ROWS)
+        // In the widget's own order (Settings → Home screen widget), without any left off it.
+        val prefs = container.settingsRepository.current().widget
+        val favourites = prefs.arrange(container.favouritesRepository.favourites.first()) { it.key }.take(MAX_ROWS)
         if (favourites.isEmpty()) return WidgetSnapshot(updatedAtEpochSec = now.epochSecond)
         val here = withTimeoutOrNull(4_000) { container.locationProvider.currentLocation() }
         var failure: Throwable? = null
@@ -123,7 +135,7 @@ object WidgetSnapshotBuilder {
                     val next = upcoming.firstOrNull()
                     val distance = here?.let { GeoUtils.haversineMeters(it.latitude, it.longitude, fav.latitude, fav.longitude) }
                         ?.takeIf { fav.latitude != 0.0 }
-                    row(fav, next, distance, later = upcoming.drop(1))
+                    row(fav, next, distance, later = upcoming.drop(1), prefs = prefs)
                 }
             }.awaitAll()
         }

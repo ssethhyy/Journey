@@ -42,6 +42,11 @@ All notable changes to Journey are documented here. The format follows
   that stop, and undo puts back exactly the one you removed.
 
 ### Changed
+- **Saved places all work the same way** (thanks @AstonBolwell, #15). There's no separate Home and Work any more:
+  every place has a name and an icon, and Home, Work and School are icons any place can use, so you can save two
+  homes or none. *Set home* and *Set work* are still suggested until you've saved your first place.
+- **Addresses show the suburb**, not the council (*Northcote*, not *Darebin*), in place search and saved places
+  (thanks @AstonBolwell, #15).
 - **Favourites come first**, straight under your places. Their settings cover departures per stop (moved from
   Settings), grouping by mode, the mode filters, hiding stops with nothing coming, the Add button, and the order of
   your favourites (drag the handles).
@@ -55,8 +60,7 @@ All notable changes to Journey are documented here. The format follows
   settings. There's no prompt asking for your name any more: until one is saved, tap the greeting to add it (or set it
   in the Greeting settings).
 - Your name, departures per stop and the Near you options moved from Settings into the widgets' own settings.
-  Commutes can hide suggested commutes and the backup trip and limit how many show; Places can hide the Home and Work
-  suggestions and the Add tile.
+  Commutes can hide suggested commutes and the backup trip and limit how many show; Places can hide the Add tile.
 - **Service updates on stop and line pages are quieter too.** Instead of a long list of every notice, a stop or line
   page shows one collapsed line (for example *2 major disruptions · Buses replace trains…*) only when there's a closure,
   suspension, buses replacing trains or a changed timetable (station notices such as car park or lift closures don't
@@ -74,7 +78,18 @@ All notable changes to Journey are documented here. The format follows
 - **Map controls are pills in a row** resting on top of the Nearby panel (or the stop preview): *My location*,
   *Roll a stop* and *Nearby* when the panel is hidden. If they don't all fit, the row scrolls sideways.
 - **Search lists stops and lines by transport type**: V/Line first, then trains, trams, buses and night buses. Good
-  matches still come before loose ones.
+  matches still come before loose ones. Stations and stops now come before lines, since they're what most searches
+  are for.
+- **Settings for the home screen widget** (Settings → Home screen widget): put your favourites in the widget's own
+  order by dragging, switch off any you'd rather leave off it, and choose what each row shows: the distance, the
+  suburb or nothing under the stop, the destination, and the live indicator. The widget redraws straight away.
+- **A tidier Settings page**, in clear sections (For You, Appearance, Departures, Service updates, Nearby stops, Map,
+  Home screen widget, Stop alerts, Crowding, Game, Essentials island, myki, Interaction, Updates, API access, Data and
+  About). Everything you've set carries over. Option pickers whose labels didn't fit (the crowding level) use short
+  labels with the full one spelt out underneath.
+- For developers: every setting is now one typed definition in `Prefs` (`SettingsRepository.kt`), and the Settings
+  page is declared in `SettingsCatalog` as Toggle, Choice, Slider, TextInput, Modes, Action, Info and Custom rows that
+  `SettingsRenderer` draws. Adding a setting takes two lines; see CONTRIBUTING.
 - **Fewer PTV requests for the same live data.** Two screens asking for the same thing at once now share one request,
   pull to refresh straight after a page loads reuses what just arrived, favourites split from one stop share one
   departures request, nearby stops and disruptions are kept for longer (stops don't move; disruptions for five
@@ -84,6 +99,16 @@ All notable changes to Journey are documented here. The format follows
   phone instead of being downloaded again.
 - For developers: an optional `WEATHER_API_KEY` in `.env` (a free OpenWeatherMap key) is built into release builds for
   the default weather provider. Without it people choose Open-Meteo or paste their own key.
+
+### Fixed
+- A line's stops are listed in the order the service runs. Some routes (many buses) came back from PTV with the other
+  direction's stops mixed in at the top, in alphabetical order.
+- The toolbar comes back when you reach the end of a page, so you're never stuck at the bottom of For You with no way
+  to switch tabs.
+- A journey's map preview fits the whole route clear of the rounded corners and the *Explore* chip, and the chip itself
+  now opens the map. Exploring a journey on the Map tab shows just its route, framed above the controls.
+- Option pickers with several choices (the temperature size, the stop roulette's *Roll a*, the service updates level)
+  no longer cut their labels off.
 
 ### Removed
 - The satellite map and 3D buildings, which used up far more of the Mapbox free tier. The map is always the flat

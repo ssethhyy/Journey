@@ -172,13 +172,15 @@ object JourneyMapper {
     }
 
     fun geocode(dto: GeocodeMatchDto): GeocodeResult {
-        val locality = dto.areas.firstOrNull { it.isDefault }?.name
-            ?: dto.areas.filter { it.adminLevel >= 7 }.maxByOrNull { it.adminLevel }?.name
+        val locality = dto.areas.filter { it.adminLevel >= 7 }.maxByOrNull { it.adminLevel }?.name
+            ?: dto.areas.firstOrNull { it.isDefault }?.name
+
         val name = if (dto.type.equals("ADDRESS", true) && dto.street != null) {
             listOfNotNull(dto.houseNumber, dto.street).joinToString(" ")
         } else {
             dto.name
         }
+
         return GeocodeResult(
             state = dto.areas.firstOrNull { it.adminLevel == 4.0 }?.name,
             country = dto.areas.firstOrNull { it.adminLevel == 2.0 }?.name,

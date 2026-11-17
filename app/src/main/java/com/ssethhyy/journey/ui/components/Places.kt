@@ -6,7 +6,6 @@
 
 package com.ssethhyy.journey.ui.components
 
-import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
@@ -46,6 +45,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -69,7 +69,6 @@ import com.ssethhyy.journey.data.planner.GeoPoint
 import com.ssethhyy.journey.data.planner.GeocodeResult
 import com.ssethhyy.journey.data.planner.PlanLocation
 import com.ssethhyy.journey.data.repository.PlaceIcon
-import com.ssethhyy.journey.data.repository.PlaceKind
 import com.ssethhyy.journey.data.repository.PlacesRepository
 import com.ssethhyy.journey.data.repository.SavedPlace
 import com.ssethhyy.journey.ui.LoadState
@@ -88,6 +87,8 @@ import kotlinx.coroutines.launch
 
 val PlaceIcon.vector: ImageVector
     @Composable get() = when (this) {
+        PlaceIcon.HOME -> Sym.Home
+        PlaceIcon.WORK -> Sym.Work
         PlaceIcon.STAR -> Sym.StarFilled
         PlaceIcon.HEART -> Sym.FavoriteFilled
         PlaceIcon.SCHOOL -> Sym.School
@@ -100,93 +101,71 @@ val PlaceIcon.vector: ImageVector
         PlaceIcon.FAMILY -> Sym.FamilyRestroom
     }
 
+/** The badge always uses the place's chosen icon. */
 val SavedPlace.vector: ImageVector
-    @Composable get() = when (kind) {
-        PlaceKind.HOME -> Sym.Home
-        PlaceKind.WORK -> Sym.Work
-        PlaceKind.CUSTOM -> icon.vector
-    }
+    @Composable get() = icon.vector
 
-/** Each kind of place gets its own expressive shape so they are recognisable at a glance. */
+/** Every saved place gets the same expressive shape and color. */
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
-fun PlaceKind.shape(): Shape = when (this) {
-    PlaceKind.HOME -> MaterialShapes.Cookie4Sided.toShape()
-    PlaceKind.WORK -> MaterialShapes.Cookie6Sided.toShape()
-    PlaceKind.CUSTOM -> MaterialShapes.Sunny.toShape()
-}
+fun PlaceIcon.shape(): Shape = MaterialShapes.Sunny.toShape()
 
 @Composable
-fun PlaceKind.containerColor(): Color = when (this) {
-    PlaceKind.HOME -> MaterialTheme.colorScheme.primaryContainer
-    PlaceKind.WORK -> MaterialTheme.colorScheme.tertiaryContainer
-    PlaceKind.CUSTOM -> MaterialTheme.colorScheme.secondaryContainer
-}
+fun PlaceIcon.containerColor(): Color = MaterialTheme.colorScheme.secondaryContainer
 
 @Composable
-fun PlaceKind.contentColor(): Color = when (this) {
-    PlaceKind.HOME -> MaterialTheme.colorScheme.onPrimaryContainer
-    PlaceKind.WORK -> MaterialTheme.colorScheme.onTertiaryContainer
-    PlaceKind.CUSTOM -> MaterialTheme.colorScheme.onSecondaryContainer
-}
+fun PlaceIcon.contentColor(): Color = MaterialTheme.colorScheme.onSecondaryContainer
 
 @Composable
-fun PlaceBadge(kind: PlaceKind, icon: ImageVector, modifier: Modifier = Modifier, size: Dp = 48.dp) {
+fun PlaceBadge(icon: PlaceIcon, modifier: Modifier = Modifier, size: Dp = 48.dp) {
     Box(
         modifier
             .size(size)
-            .clip(kind.shape())
-            .background(kind.containerColor()),
+            .clip(icon.shape())
+            .background(icon.containerColor()),
         contentAlignment = Alignment.Center,
     ) {
-        Icon(icon, contentDescription = null, tint = kind.contentColor(), modifier = Modifier.size(size * 0.48f))
+        Icon(icon.vector, contentDescription = null, tint = icon.contentColor(), modifier = Modifier.size(size * 0.48f))
     }
 }
 
 /**
- * Horizontal row of saved places. Unset Home/Work show as "Set home"/"Set work" prompts, followed
- * by an "Add place" tile.
+ * Horizontal row of saved places followed by an "Add place" tile. "Set home" and
+ * "Set work" prompts appear only while no saved place uses the Home or Work icon;
+ * tapping one opens the normal editor pre-filled with that name and icon.
  */
-@OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun PlacesRow(
     places: List<SavedPlace>,
     onOpen: (SavedPlace) -> Unit,
     onEdit: (SavedPlace) -> Unit,
-    onCreate: (PlaceKind) -> Unit,
+    /** (prefillIcon, prefillName) -> open the editor. */
+    onCreate: (PlaceIcon, String) -> Unit,
     modifier: Modifier = Modifier,
     contentPadding: PaddingValues = PaddingValues(horizontal = 16.dp),
-    /** "Set home" and "Set work" tiles while those aren't saved. */
-    showSuggestions: Boolean = true,
     showAddTile: Boolean = true,
 ) {
     val view = LocalView.current
-    val home = places.firstOrNull { it.kind == PlaceKind.HOME }
-    val work = places.firstOrNull { it.kind == PlaceKind.WORK }
-    val custom = places.filter { it.kind == PlaceKind.CUSTOM }
+    val noPlaces = places.isEmpty()
 
     LazyRow(modifier = modifier, contentPadding = contentPadding, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-        if (home != null || showSuggestions) item(key = "home") {
-            if (home != null) PlaceTile(home, onClick = { onOpen(home) }, onLongClick = { onEdit(home) })
-            else PlaceTilePrompt(PlaceKind.HOME, Sym.Home, "Set home", onClick = { onCreate(PlaceKind.HOME) })
+        if (noPlaces) {
+            // Suggest 'Home' or 'Work' if nothing is added
+            item(key = "home") { PlaceTilePrompt(PlaceIcon.HOME.vector, "Set home", onClick = { onCreate(PlaceIcon.HOME, "Home") }) }
+            item(key = "work") { PlaceTilePrompt(PlaceIcon.WORK.vector, "Set work", onClick = { onCreate(PlaceIcon.WORK, "Work") }) }
+        }else{
+            // Otherwise, show all the added items
+            items(places, key = { it.id }) { place -> PlaceTile(place, onClick = { onOpen(place) }, onLongClick = { onEdit(place) }) }
         }
-        if (work != null || showSuggestions) item(key = "work") {
-            if (work != null) PlaceTile(work, onClick = { onOpen(work) }, onLongClick = { onEdit(work) })
-            else PlaceTilePrompt(PlaceKind.WORK, Sym.Work, "Set work", onClick = { onCreate(PlaceKind.WORK) })
-        }
-        items(custom, key = { it.id }) { place ->
-            PlaceTile(place, onClick = { onOpen(place) }, onLongClick = { onEdit(place) })
-        }
-        if (showAddTile) item(key = "add") {
-            PlaceTilePrompt(PlaceKind.CUSTOM, Sym.Add, "Add place", onClick = {
-                HapticUtil.performUIHaptic(view)
-                onCreate(PlaceKind.CUSTOM)
-            })
+        if (showAddTile) {
+            item(key = "add") { PlaceTilePrompt(Sym.Add, "Add place", onClick = {
+                    HapticUtil.performUIHaptic(view)
+                    onCreate(PlaceIcon.STAR, "")
+            })}
         }
     }
 }
 
-@OptIn(ExperimentalFoundationApi::class)
 @Composable
 private fun PlaceTile(place: SavedPlace, onClick: () -> Unit, onLongClick: () -> Unit) {
     val view = LocalView.current
@@ -204,15 +183,15 @@ private fun PlaceTile(place: SavedPlace, onClick: () -> Unit, onLongClick: () ->
                     HapticUtil.performHeavyHaptic(view)
                     onLongClick()
                 },
-                onClickLabel = "Plan a trip to ${place.label}",
-                onLongClickLabel = "Edit ${place.label}",
+                onClickLabel = "Plan a trip to ${place.name}",
+                onLongClickLabel = "Edit Saved Place",
             )
             .padding(vertical = 14.dp, horizontal = 8.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
-        PlaceBadge(place.kind, place.vector)
+        PlaceBadge(place.icon)
         Spacer(Modifier.size(8.dp))
-        Text(place.label, style = MaterialTheme.typography.labelLarge, maxLines = 1, overflow = TextOverflow.Ellipsis)
+        Text(place.name, style = MaterialTheme.typography.labelLarge, maxLines = 1, overflow = TextOverflow.Ellipsis)
         Text(
             place.address ?: " ",
             style = MaterialTheme.typography.labelSmall,
@@ -224,7 +203,7 @@ private fun PlaceTile(place: SavedPlace, onClick: () -> Unit, onLongClick: () ->
 }
 
 @Composable
-private fun PlaceTilePrompt(kind: PlaceKind, icon: ImageVector, label: String, onClick: () -> Unit) {
+private fun PlaceTilePrompt(icon: ImageVector, label: String, onClick: () -> Unit) {
     val view = LocalView.current
     Column(
         Modifier
@@ -241,7 +220,7 @@ private fun PlaceTilePrompt(kind: PlaceKind, icon: ImageVector, label: String, o
         Box(
             Modifier
                 .size(48.dp)
-                .clip(kind.shape())
+                .clip(CircleShape)
                 .background(MaterialTheme.colorScheme.surfaceContainerHighest),
             contentAlignment = Alignment.Center,
         ) {
@@ -264,7 +243,8 @@ class LocationSearchViewModel(private val container: AppContainer) : ViewModel()
     private val _results = MutableStateFlow<LoadState<List<GeocodeResult>>?>(null)
     val results: StateFlow<LoadState<List<GeocodeResult>>?> = _results.asStateFlow()
 
-    val places = container.placesRepository.places.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
+    val places: StateFlow<List<SavedPlace>> = container.placesRepository.places
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
 
     private var near: GeoPoint? = null
 
@@ -326,7 +306,7 @@ fun LocationSearchSheet(
     val results by vm.results.collectAsStateWithLifecycle()
     val places by vm.places.collectAsStateWithLifecycle()
     val focus = remember { FocusRequester() }
-    val scope = androidx.compose.runtime.rememberCoroutineScope()
+    val scope = rememberCoroutineScope()
     LaunchedEffect(Unit) {
         vm.reset()
         runCatching { focus.requestFocus() }
@@ -375,10 +355,10 @@ fun LocationSearchSheet(
                                 .padding(horizontal = 12.dp, vertical = 10.dp),
                             verticalAlignment = Alignment.CenterVertically,
                         ) {
-                            PlaceBadge(place.kind, place.vector, size = 40.dp)
+                            PlaceBadge(place.icon, size = 40.dp)
                             Spacer(Modifier.width(14.dp))
                             Column(Modifier.weight(1f)) {
-                                Text(place.label, style = MaterialTheme.typography.titleSmall)
+                                Text(place.name, style = MaterialTheme.typography.titleSmall)
                                 place.address?.let {
                                     Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1, overflow = TextOverflow.Ellipsis)
                                 }
@@ -398,7 +378,7 @@ fun LocationSearchSheet(
                     } else {
                         items(r.data, key = { "${it.name}_${it.latitude}_${it.longitude}" }) { result ->
                             LocationRow(
-                                icon = if (result.type.equals("STOP", true)) Sym.Train else if (result.type.equals("ADDRESS", true)) Sym.LocationOn else Sym.LocationOn,
+                                icon = if (result.type.equals("STOP", true)) Sym.Train else Sym.LocationOn,
                                 title = result.name,
                                 subtitle = result.subtitle,
                             ) {
@@ -450,72 +430,52 @@ class PlaceEditorViewModel(private val container: AppContainer) : ViewModel() {
 }
 
 /**
- * Create or edit a saved place. [existing] null means a new place of [initialKind].
+ * Create or edit a saved place. [existing] null means a new place, pre-filled with
+ * [initialIcon] and [initialName] (e.g. "Home" / "Work" from the prompt tiles).
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun PlaceEditorSheet(
-    initialKind: PlaceKind,
     existing: SavedPlace?,
     onDismiss: () -> Unit,
+    initialIcon: PlaceIcon = PlaceIcon.STAR,
+    initialName: String = "",
 ) {
     val vm = appViewModel(key = "place_editor") { PlaceEditorViewModel(it) }
     val view = LocalView.current
-    var kind by rememberSaveable { mutableStateOf(existing?.kind ?: initialKind) }
-    var name by rememberSaveable { mutableStateOf(existing?.takeIf { it.kind == PlaceKind.CUSTOM }?.name.orEmpty()) }
-    var icon by rememberSaveable { mutableStateOf(existing?.icon ?: PlaceIcon.STAR) }
+    var name by rememberSaveable { mutableStateOf(existing?.name ?: initialName) }
+    var icon by rememberSaveable { mutableStateOf(existing?.icon ?: initialIcon) }
     var location by remember {
-        mutableStateOf(existing?.let { PlanLocation(it.address ?: it.label, it.latitude, it.longitude, it.address) })
+        mutableStateOf(existing?.let { PlanLocation(it.address ?: it.name, it.latitude, it.longitude, it.address) })
     }
     var pickingLocation by rememberSaveable { mutableStateOf(false) }
 
-    val canSave = location != null && (kind != PlaceKind.CUSTOM || name.isNotBlank())
+    val canSave = location != null && name.isNotBlank()
 
     StandardBottomSheet(
         onDismissRequest = onDismiss,
-        title = if (existing == null) "Add place" else "Edit ${existing.label}",
+        title = if (existing == null) "Add place" else "Edit ${existing.name}",
         sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
     ) {
-        SegmentedPicker(
-            items = PlaceKind.entries,
-            selectedItem = kind,
-            onItemSelected = { kind = it },
-            labelProvider = {
-                when (it) {
-                    PlaceKind.HOME -> "Home"
-                    PlaceKind.WORK -> "Work"
-                    PlaceKind.CUSTOM -> "Other"
-                }
-            },
-            iconProvider = {
-                when (it) {
-                    PlaceKind.HOME -> Sym.Home
-                    PlaceKind.WORK -> Sym.Work
-                    PlaceKind.CUSTOM -> Sym.StarFilled
-                }
-            },
+        OutlinedTextField(
+            value = name,
+            onValueChange = { name = it.take(30) },
+            label = { Text("Name") },
+            placeholder = { Text("e.g. Home, Uni, Gym, Mum's") },
+            singleLine = true,
+            shape = RoundedCornerShape(16.dp),
+            modifier = Modifier.fillMaxWidth(),
         )
-        if (kind == PlaceKind.CUSTOM) {
-            OutlinedTextField(
-                value = name,
-                onValueChange = { name = it.take(30) },
-                label = { Text("Name") },
-                placeholder = { Text("e.g. Uni, Gym, Mum's") },
-                singleLine = true,
-                shape = RoundedCornerShape(16.dp),
-                modifier = Modifier.fillMaxWidth(),
-            )
-            Text("Icon", style = MaterialTheme.typography.titleSmall, modifier = Modifier.padding(start = 4.dp))
-            LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                items(PlaceIcon.entries) { option ->
-                    FilledTonalIconToggleButton(
-                        checked = icon == option,
-                        onCheckedChange = {
-                            HapticUtil.performUIHaptic(view)
-                            icon = option
-                        },
-                    ) { Icon(option.vector, contentDescription = option.label) }
-                }
+        Text("Icon", style = MaterialTheme.typography.titleSmall, modifier = Modifier.padding(start = 4.dp))
+        LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            items(PlaceIcon.entries) { option ->
+                FilledTonalIconToggleButton(
+                    checked = icon == option,
+                    onCheckedChange = {
+                        HapticUtil.performUIHaptic(view)
+                        icon = option
+                    },
+                ) { Icon(option.vector, contentDescription = option.label) }
             }
         }
         Surface(
@@ -557,8 +517,7 @@ fun PlaceEditorSheet(
                     vm.save(
                         SavedPlace(
                             id = existing?.id ?: PlacesRepository.newId(),
-                            kind = kind,
-                            name = if (kind == PlaceKind.CUSTOM) name.trim() else kind.name.lowercase().replaceFirstChar { it.uppercase() },
+                            name = name.trim(),
                             address = if (loc.isCurrentLocation) "Pinned location" else listOfNotNull(loc.name, loc.subtitle).joinToString(", "),
                             latitude = loc.latitude,
                             longitude = loc.longitude,

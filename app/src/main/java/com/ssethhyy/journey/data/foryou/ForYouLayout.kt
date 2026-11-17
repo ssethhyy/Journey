@@ -84,6 +84,7 @@ data class GreetingConfig(
 @Serializable
 data class PlacesConfig(
     /** "Set home" and "Set work" tiles while those aren't saved. */
+    /** No longer used: Home and Work suggestions show until any place is saved. Kept so older layouts still read. */
     val showSuggestions: Boolean = true,
     val showAddTile: Boolean = true,
 )
@@ -98,10 +99,10 @@ data class FavouritesConfig(
 )
 
 @Serializable
-enum class DisruptionLevel(val label: String, val detail: String) {
-    MAJOR("Major only", "Closures, suspensions, buses replacing trains and changed timetables"),
-    DELAYS("Major and delays", "Also minor delays"),
-    ALL("Everything", "Every current notice, including planned works and information"),
+enum class DisruptionLevel(val label: String, val detail: String, /** For a narrow segmented picker. */ val shortLabel: String) {
+    MAJOR("Major only", "Closures, suspensions, buses replacing trains and changed timetables", "Major"),
+    DELAYS("Major and delays", "Also minor delays", "Delays"),
+    ALL("Everything", "Every current notice, including planned works and information", "All"),
 }
 
 @Serializable

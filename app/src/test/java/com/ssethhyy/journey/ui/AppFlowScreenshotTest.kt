@@ -1,5 +1,7 @@
 package com.ssethhyy.journey.ui
 
+import androidx.compose.ui.test.performTouchInput
+import androidx.compose.ui.test.swipeDown
 import android.graphics.Bitmap
 import androidx.compose.ui.graphics.asAndroidBitmap
 import androidx.compose.ui.test.ExperimentalTestApi
@@ -170,9 +172,36 @@ class AppFlowScreenshotTest {
     }
 
     private fun seedPlaces(container: AppContainer) = runBlocking {
-        container.placesRepository.save(savedPlace("home", "Home", "12 Smith Street, Fitzroy", -37.80, 144.98, kindName = "HOME", iconName = "HOME"))
-        container.placesRepository.save(savedPlace("work", "Work", "Caulfield", -37.877, 145.042, kindName = "WORK", iconName = "WORK"))
-        container.placesRepository.save(savedPlace("gym", "Gym", "St Kilda", -37.86, 144.98, kindName = "CUSTOM", iconName = PlaceIcon.FITNESS.name))
+        container.placesRepository.save(
+            SavedPlace(
+                id = "home",
+                name = "Home",
+                address = "12 Smith Street, Fitzroy",
+                latitude = -37.80,
+                longitude = 144.98,
+                icon = PlaceIcon.HOME,
+            ),
+        )
+        container.placesRepository.save(
+            SavedPlace(
+                id = "work",
+                name = "Work",
+                address = "Caulfield",
+                latitude = -37.877,
+                longitude = 145.042,
+                icon = PlaceIcon.WORK,
+            ),
+        )
+        container.placesRepository.save(
+            SavedPlace(
+                id = "gym",
+                name = "Gym",
+                address = "St Kilda",
+                latitude = -37.86,
+                longitude = 144.98,
+                icon = PlaceIcon.FITNESS,
+            ),
+        )
     }
 
     @Test
@@ -231,7 +260,11 @@ class AppFlowScreenshotTest {
             .onFirst().performScrollToIndex(0)
         rule.waitForIdle()
 
-        // Plan tab: saved places and recent journeys.
+        // Plan tab: saved places and recent journeys. Scrolling down the page tucked the toolbar away; a small pull
+        // brings it back, as it would for anyone.
+        rule.onAllNodes(androidx.compose.ui.test.SemanticsMatcher.keyIsDefined(androidx.compose.ui.semantics.SemanticsProperties.VerticalScrollAxisRange))
+            .onFirst().performTouchInput { swipeDown() }
+        rule.waitUntil(5_000) { rule.onAllNodes(hasContentDescription("Plan")).fetchSemanticsNodes().isNotEmpty() }
         rule.onNode(hasContentDescription("Plan")).performClick()
         waitForText("Plan a journey")
         snap("07_plan")

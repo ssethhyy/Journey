@@ -210,12 +210,7 @@ fun SearchScreen() {
                     MessageState(Sym.SearchOff, "No matches", "Check the spelling or try a suburb, line number or station name.")
                 } else {
                     LazyColumn(contentPadding = PaddingValues(start = 16.dp, end = 16.dp, bottom = bottomPadding)) {
-                        if (r.data.routes.isNotEmpty()) {
-                            item(key = "routes_header") { SectionLabel("Lines & routes") }
-                            itemsIndexed(r.data.routes.take(15), key = { _, it -> "route_${it.key}" }) { index, route ->
-                                SegmentRow(index, r.data.routes.take(15).size) { RouteResultRow(route, onClick = { openRoute(route) }) }
-                            }
-                        }
+                        // Stations and stops first, then lines.
                         if (r.data.stops.isNotEmpty()) {
                             item(key = "stops_header") { SectionLabel("Stations & stops") }
                             itemsIndexed(r.data.stops, key = { _, it -> "stop_${it.key}" }) { index, stop ->
@@ -232,6 +227,13 @@ fun SearchScreen() {
                                         },
                                     )
                                 }
+                            }
+                        }
+                        // Lines after stops: most searches are for a station or stop.
+                        if (r.data.routes.isNotEmpty()) {
+                            item(key = "routes_header") { SectionLabel("Lines & routes") }
+                            itemsIndexed(r.data.routes.take(15), key = { _, it -> "route_${it.key}" }) { index, route ->
+                                SegmentRow(index, r.data.routes.take(15).size) { RouteResultRow(route, onClick = { openRoute(route) }) }
                             }
                         }
                     }

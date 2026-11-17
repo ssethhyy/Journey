@@ -279,7 +279,7 @@ fun ForYouHeader(
                         val placeable = measurable.measure(constraints)
                         layout(placeable.width, (placeable.height * progress).roundToInt()) { placeable.place(0, 0) }
                     }
-                    .graphicsLayer { alpha = progress }
+                    .graphicsLayer { alpha = progress * progress }
                     .padding(top = 12.dp),
             ) {
                 if (showDetails && reading != null) {
@@ -328,7 +328,8 @@ private const val SmallTemperature = 32f
  * it out again (cheap enough to change every frame).
  */
 private fun Modifier.scaledFromTopStart(scale: Float): Modifier = layout { measurable, constraints ->
-    val placeable = measurable.measure(constraints.copy(minWidth = 0, minHeight = 0, maxWidth = Constraints.Infinity))
+    // Its full size, whatever room the slim bar gives it: the text must never be clipped before it's scaled.
+    val placeable = measurable.measure(Constraints())
     layout((placeable.width * scale).roundToInt(), (placeable.height * scale).roundToInt()) {
         placeable.placeWithLayer(0, 0) {
             scaleX = scale

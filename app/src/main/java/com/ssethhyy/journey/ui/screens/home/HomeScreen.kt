@@ -139,8 +139,9 @@ fun HomeScreen(requestedTab: HomeTab?, onTabRequestHandled: () -> Unit) {
             }
 
             override fun onPostScroll(consumed: Offset, available: Offset, source: NestedScrollSource): Offset {
-                // Reaching the top (nothing left to scroll up) always shows the bars.
-                if (available.y > 0f) barsVisible = true
+                // Reaching the top or the end (nothing left to scroll) always shows the bars, so you're never left
+                // at the bottom of a page with no way to switch tabs.
+                if (source == NestedScrollSource.UserInput && available.y != 0f) barsVisible = true
                 return Offset.Zero
             }
         }

@@ -1,7 +1,7 @@
 /*
  * Feature Module: Data
  * File: PlacesRepository.kt
- * Description: Saved places (home, work, custom) and recent journey destinations, stored as JSON.
+ * Description: Saved places and recent journey destinations, stored as JSON.
  */
 
 package com.ssethhyy.journey.data.repository
@@ -20,33 +20,33 @@ import kotlinx.serialization.builtins.ListSerializer
 import kotlinx.serialization.json.Json
 import java.util.UUID
 
-enum class PlaceKind { HOME, WORK, CUSTOM }
-
-/** Icons a custom place can use; HOME and WORK have fixed icons. */
+/** Icons a saved place can use. Any place can be a Home or Work. */
 enum class PlaceIcon(val label: String) {
-    STAR("Star"), HEART("Favourite"), SCHOOL("School"), FITNESS("Gym"), SHOPPING("Shopping"),
-    FOOD("Food"), COFFEE("Coffee"), PARK("Park"), HOSPITAL("Health"), FAMILY("Family"),
+    HOME("Home"),
+    WORK("Work"),
+    SCHOOL("School"),
+    STAR("Star"),
+    HEART("Favourite"),
+    FITNESS("Gym"),
+    SHOPPING("Shopping"),
+    FOOD("Food"),
+    COFFEE("Coffee"),
+    PARK("Park"),
+    HOSPITAL("Health"),
+    FAMILY("Family"),
 }
 
 @Serializable
 data class SavedPlace(
     val id: String,
-    val kind: PlaceKind,
     val name: String,
     val address: String? = null,
     val latitude: Double,
     val longitude: Double,
     val icon: PlaceIcon = PlaceIcon.STAR,
 ) {
-    val label: String
-        get() = when (kind) {
-            PlaceKind.HOME -> "Home"
-            PlaceKind.WORK -> "Work"
-            PlaceKind.CUSTOM -> name
-        }
-
     fun toPlanLocation() = PlanLocation(
-        name = label,
+        name = name,
         latitude = latitude,
         longitude = longitude,
         subtitle = address,
@@ -82,22 +82,14 @@ object PlacesCodec {
     fun decodeRecents(raw: String?): List<RecentTrip> =
         if (raw.isNullOrBlank()) emptyList() else runCatching { json.decodeFromString(recentSerializer, raw) }.getOrDefault(emptyList())
 
-    /** Home and Work are unique: saving one replaces the previous. Custom places upsert by id. */
+    /** Saved places are unique by id: saving an existing id replaces it. */
     fun upsert(list: List<SavedPlace>, place: SavedPlace): List<SavedPlace> {
-        fun replaces(other: SavedPlace) = other.id == place.id || (place.kind != PlaceKind.CUSTOM && other.kind == place.kind)
-        val index = list.indexOfFirst(::replaces)
+        val index = list.indexOfFirst { it.id == place.id }
         if (index < 0) return list + place
-        return list.mapIndexedNotNull { i, other ->
-            when {
-                i == index -> place
-                replaces(other) -> null
-                else -> other
-            }
-        }
+        return list.mapIndexed { i, other -> if (i == index) place else other }
     }
 
-    /** Home first, then Work, then custom places in the order they were added. */
-    fun sorted(list: List<SavedPlace>): List<SavedPlace> = list.sortedBy { it.kind.ordinal }
+    fun sorted(list: List<SavedPlace>): List<SavedPlace> = list
 
     fun addRecent(list: List<RecentTrip>, trip: RecentTrip, max: Int = 6): List<RecentTrip> =
         (listOf(trip) + list.filterNot { it.key == trip.key }).take(max)

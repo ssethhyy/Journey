@@ -126,8 +126,6 @@ fun WidgetSettingsSheet(
             when (widget) {
                 ForYouWidget.GREETING -> GreetingSettings(state, weatherReady, onLayout, onSettings, onRetryWeather)
                 ForYouWidget.PLACES -> Group("Places") {
-                    IconToggleItem(Sym.Home, "Suggest Home and Work", layout.places.showSuggestions, { v -> onLayout { it.copy(places = it.places.copy(showSuggestions = v)) } },
-                        description = "Show “Set home” and “Set work” until they're saved")
                     IconToggleItem(Sym.Add, "Add place tile", layout.places.showAddTile, { v -> onLayout { it.copy(places = it.places.copy(showAddTile = v)) } })
                 }
                 ForYouWidget.FAVOURITES -> FavouritesSettings(state, onLayout, onSettings, onReorderFavourites)
@@ -252,7 +250,7 @@ private fun GreetingSettings(
     }
     Group("Collapsed bar") {
         IconToggleItem(Sym.ExpandLess, "Collapse after a few seconds", g.collapses, { v -> set { it.copy(collapses = v) } },
-            description = "Shrinks to a small bar so you see more of the page. Scrolling down collapses it too; scroll up or tap it to expand it")
+            description = "Shrinks to a slim bar on its own after a while. Scrolling down shrinks it too; pull down at the top or tap it to open it again")
         if (g.collapses) {
             SliderItem(Sym.Schedule, "Collapse after", g.collapseAfterSeconds, 3..20, 1, { "$it s" }, { v -> set { it.copy(collapseAfterSeconds = v) } })
         }

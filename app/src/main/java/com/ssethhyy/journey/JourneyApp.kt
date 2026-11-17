@@ -248,6 +248,15 @@ open class JourneyApp : Application() {
                 .debounce(1_500)
                 .collect { runCatching { WidgetRefreshWorker.refreshNow(this@JourneyApp) } }
         }
+        // And when its order or contents change in Settings → Home screen widget.
+        container.appScope.launch {
+            container.settingsRepository.settings
+                .map { it.widget }
+                .distinctUntilChanged()
+                .drop(1)
+                .debounce(800)
+                .collect { runCatching { WidgetRefreshWorker.refreshNow(this@JourneyApp) } }
+        }
     }
 
     /** Overridden in tests to point the app at a fake PTV server. */

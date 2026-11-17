@@ -404,6 +404,10 @@ fun MapScreen(isActive: Boolean, modifier: Modifier = Modifier) {
                     }
                 }
 
+                if(state.settings.mapRender3DVehicles){
+                    VehicleModelLayer()
+                }
+
                 val selectedKey = state.selected?.key
                 val annotations = remember(state.stops, selectedKey, journey) {
                     // Exploring a planned journey: only its route, not every stop around it (a tapped stop still shows).

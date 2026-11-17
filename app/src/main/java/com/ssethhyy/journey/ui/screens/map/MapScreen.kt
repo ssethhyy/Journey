@@ -404,6 +404,10 @@ fun MapScreen(isActive: Boolean, modifier: Modifier = Modifier) {
                     }
                 }
 
+                if(state.settings.mapRender3DVehicles){
+                    VehicleModelLayer()
+                }
+
                 val selectedKey = state.selected?.key
                 val annotations = remember(state.stops, selectedKey) {
                     state.stops.map { stop ->

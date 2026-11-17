@@ -18,6 +18,7 @@ import com.ssethhyy.journey.data.planner.PlannerApi
 import com.ssethhyy.journey.data.repository.PlacesRepository
 import com.ssethhyy.journey.tracking.TrackingManager
 import com.ssethhyy.journey.data.location.LocationProvider
+import com.ssethhyy.journey.data.model.TransportMode
 import com.ssethhyy.journey.data.repository.FavouritesRepository
 import com.ssethhyy.journey.data.repository.PtvRepository
 import com.ssethhyy.journey.data.repository.SettingsRepository
@@ -125,6 +126,17 @@ class AppContainer(
     fun closeJourneyMap() {
         _journeyMap.value = null
     }
+
+    data class TripMapRequest(
+        val runRef: String,
+        val mode: TransportMode,
+        val title: String,
+        val fromStopId: String?,
+    )
+    private val _tripMap = MutableStateFlow<TripMapRequest?>(null)
+    val tripMap: StateFlow<TripMapRequest?> = _tripMap.asStateFlow()
+    fun openTripMap(request: TripMapRequest) { _tripMap.value = request }
+    fun closeTripMap() { _tripMap.value = null }
 
     private val _forYouEditRequest = MutableStateFlow(false)
 

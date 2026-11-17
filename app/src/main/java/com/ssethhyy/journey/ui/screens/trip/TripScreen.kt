@@ -69,11 +69,13 @@ import java.time.Duration
 import java.time.Instant
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.nestedscroll.nestedScroll
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewModelScope
 import com.ssethhyy.journey.AppContainer
+import com.ssethhyy.journey.appContainer
 import com.ssethhyy.journey.data.model.StoppingPattern
 import com.ssethhyy.journey.data.model.TransportMode
 import com.ssethhyy.journey.ui.LoadState
@@ -117,6 +119,7 @@ class TripViewModel(private val container: AppContainer, private val runRef: Str
         if (userInitiated) _refreshing.value = true
         val previous = _state.value.dataOrNull
         // The route line never changes mid-trip, so only the first load fetches it.
+
         val result = loadCatching {
             val fresh = container.ptvRepository.stoppingPattern(runRef, mode, withPath = previous == null || previous.path.isEmpty())
             if (previous != null && fresh.path.isEmpty()) fresh.copy(path = previous.path) else fresh
@@ -193,6 +196,7 @@ fun TripScreen(key: TripKey) {
                     val progress = remember(stopPoints, liveVehicle) {
                         liveVehicle?.let { TripProgress.locate(stopPoints, it.latitude, it.longitude) }?.takeIf(TripProgress::isOnRoute)
                     }
+                    val context = LocalContext.current
 
                     // Pinned above the list; the stop list below is shortened to make room for it.
                     TripMap(
@@ -202,6 +206,25 @@ fun TripScreen(key: TripKey) {
                         fromStopId = key.fromStopId,
                         modifier = Modifier.padding(start = 16.dp, end = 16.dp, top = 2.dp, bottom = 8.dp),
                     )
+
+                    TextButton(
+                        onClick = {
+                            val target = pattern ?: return@TextButton
+                            context.appContainer.openTripMap(
+                                AppContainer.TripMapRequest(
+                                    runRef = key.runRef,
+                                    mode = key.mode,
+                                    title = target.destination ?: key.title,
+                                    fromStopId = key.fromStopId.toString(),
+                                )
+                            )
+                            navigator.goToTab(com.ssethhyy.journey.ui.navigation.HomeTab.MAP)
+                        },
+                        modifier = Modifier.padding(horizontal = 16.dp),
+                    ) {
+                        Text("Show on map")
+                    }
+
                     val pullState = androidx.compose.material3.pulltorefresh.rememberPullToRefreshState()
                     com.ssethhyy.journey.ui.components.PullRefreshHaptics(pullState, refreshing)
                     PullToRefreshBox(
@@ -287,6 +310,11 @@ fun TripScreen(key: TripKey) {
             }
         }
     }
+}
+
+@Composable
+fun TripMapRequest(runRef: String, mode: TransportMode, title: String, fromStopId: Int) {
+    TODO("Not yet implemented")
 }
 
 /** Highest stop index the vehicle (or, without live location, the user's stop) has already passed. */

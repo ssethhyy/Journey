@@ -30,7 +30,8 @@ class RouteLineTest {
     /** PTV sends a line's shape in pieces, out of order; the service's line still follows all of it. */
     @Test
     fun piecesSentOutOfOrderAreStitchedTogether() {
-        val pieces = listOf(shape.subList(11, shape.size), shape.subList(0, 11))
+        // Like PTV's, the pieces meet end to end (here sharing the corner point).
+        val pieces = listOf(shape.subList(10, shape.size), shape.subList(0, 11))
         val line = RouteLine.alongStops(stops, pieces)!!
         assertEquals(stops.first(), line.first())
         assertEquals(stops.last(), line.last())

@@ -167,7 +167,9 @@ fun RouteDetailScreen(key: RouteDetailKey) {
                 contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = padding.calculateTopPadding(), bottom = pageBottomInset(32.dp)),
                 verticalArrangement = Arrangement.spacedBy(8.dp),
             ) {
-                val paths = d.data.geopaths[state.directionId] ?: d.data.geopaths.values.firstOrNull().orEmpty()
+                // The route's real shape, smoothed like every other line in the app.
+                val paths = (d.data.geopaths[state.directionId] ?: d.data.geopaths.values.firstOrNull().orEmpty())
+                    .map(com.ssethhyy.journey.data.model.RouteLine::smooth)
                 if (paths.isNotEmpty()) {
                     item(key = "map") { RouteMapPreview(paths, color, state.settings) }
                 }

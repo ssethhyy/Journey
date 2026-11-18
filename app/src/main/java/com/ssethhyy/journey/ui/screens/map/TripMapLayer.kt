@@ -63,9 +63,10 @@ fun TripMapLayer(
     val current = pattern ?: return
 
     // ---- Route line ---------------------------------------------------------------
-    // pattern.path is a List<Pair<Double, Double>> — (longitude, latitude) per point.
+    // pattern.path is a List<Pair<Double, Double>> — (latitude, longitude) per point, already the route's real,
+    // smoothed shape (see RouteLine).
     val linePoints = remember(current) {
-        current.path.map { (lon, lat) -> Point.fromLngLat(lon, lat) }
+        current.path.map { (lat, lon) -> Point.fromLngLat(lon, lat) }
     }
 
     if (linePoints.size >= 2) {

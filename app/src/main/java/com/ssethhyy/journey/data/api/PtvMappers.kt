@@ -6,6 +6,7 @@
 
 package com.ssethhyy.journey.data.api
 
+import com.ssethhyy.journey.data.model.RouteLine
 import com.ssethhyy.journey.data.model.Departure
 import com.ssethhyy.journey.data.model.DepartureBoard
 import com.ssethhyy.journey.data.model.Disruption
@@ -155,7 +156,9 @@ object PtvMappers {
             vehicle = vehicle(firstRun),
             disruptions = response.disruptions.values.map { disruption(it) },
             vehiclePosition = position,
-            path = if (withPath) TripProgress.bestPath(patternStops.map { it.stop.latitude to it.stop.longitude }, geopaths) else emptyList(),
+            // The route's real shape between the first and last stop, when the pattern's shapes include it; the
+            // repository fills in the rest (see PtvRepository.stoppingPattern).
+            path = if (withPath) RouteLine.alongStops(patternStops.map { it.stop.latitude to it.stop.longitude }, geopaths)?.let(RouteLine::smooth).orEmpty() else emptyList(),
         )
     }
 

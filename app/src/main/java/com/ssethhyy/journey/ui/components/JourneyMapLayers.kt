@@ -37,9 +37,14 @@ object JourneyGeometry {
     /** Legs that have a drawable path. */
     fun drawable(journey: Journey): List<JourneyLeg> = journey.legs.filter { it.path.size > 1 }
 
-    /** Each leg's points, starting where the previous leg ended so the route reads as one line. */
+    /**
+     * Each leg's points, starting where the previous leg ended so the route reads as one line. Transit legs follow
+     * the planner's shape for the route, smoothed like every other line in the app.
+     */
     fun segments(legs: List<JourneyLeg>): List<Pair<JourneyLeg, List<Point>>> = legs.mapIndexed { index, leg ->
-        val points = leg.path.map { Point.fromLngLat(it.longitude, it.latitude) }
+        val raw = leg.path.map { it.latitude to it.longitude }
+        val shaped = if (leg.kind == LegKind.WALK) raw else com.ssethhyy.journey.data.model.RouteLine.smooth(raw)
+        val points = shaped.map { (lat, lon) -> Point.fromLngLat(lon, lat) }
         val joined = legs.getOrNull(index - 1)?.path?.lastOrNull()?.let { listOf(Point.fromLngLat(it.longitude, it.latitude)) + points } ?: points
         leg to joined
     }

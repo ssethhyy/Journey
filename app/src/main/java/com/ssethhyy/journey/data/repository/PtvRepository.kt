@@ -6,6 +6,7 @@
 
 package com.ssethhyy.journey.data.repository
 
+import com.ssethhyy.journey.data.model.RouteLine
 import com.ssethhyy.journey.data.api.PtvApi
 import com.ssethhyy.journey.data.api.PtvMappers
 import com.ssethhyy.journey.data.model.DepartureBoard
@@ -209,8 +210,22 @@ class PtvRepository(private val api: PtvApi) {
         return stopFare(mode, stop.id)
     }
 
-    suspend fun stoppingPattern(runRef: String, mode: TransportMode, withPath: Boolean = true): StoppingPattern =
-        PtvMappers.stoppingPattern(api.pattern(runRef, mode.routeType, stopId = null, includeGeopath = withPath), withPath)
+    /**
+     * A service's stops and, with [withPath], its line: the route's real shape from PTV between the first and last
+     * stop. The pattern's own shapes come first; when none fits, the route's shapes (cached for hours) are tried;
+     * only if PTV has no shape at all is a smooth curve drawn through the stops.
+     */
+    suspend fun stoppingPattern(runRef: String, mode: TransportMode, withPath: Boolean = true): StoppingPattern {
+        val pattern = PtvMappers.stoppingPattern(api.pattern(runRef, mode.routeType, stopId = null, includeGeopath = withPath), withPath)
+        if (!withPath || pattern.path.isNotEmpty()) return pattern
+        val stops = pattern.stops.map { it.stop.latitude to it.stop.longitude }
+        val routeShapes = pattern.route?.id?.let { id ->
+            runCatching { routeDetails(id).geopaths.values.flatten() }.getOrNull()
+        }.orEmpty()
+        // Stitching thousands of shape points is real work: keep it off the main thread.
+        val line = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Default) { RouteLine.forStops(stops, routeShapes) }
+        return pattern.copy(path = line)
+    }
 
     fun clearCaches() {
         departuresCache.clear()

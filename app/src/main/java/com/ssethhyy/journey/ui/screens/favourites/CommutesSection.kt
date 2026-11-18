@@ -89,40 +89,40 @@ fun LazyListScope.commutesSection(
     collapsed: Boolean = false,
     onToggle: () -> Unit = {},
 ) {
-    if (showTitle) {
-        item(key = "commutes_header") {
-            WidgetTitle(
-                "Commutes",
-                collapsed = collapsed,
-                onToggle = onToggle,
-                modifier = Modifier.animateItem(),
-                trailing = if (config.showAddButton) {
-                    { TitleAddButton("Add", actions.onAdd) }
-                } else null,
-            )
-        }
-        if (collapsed) return
-    }
     val cards = state.cards.filter { config.showLearned || it.commute.manual }.take(config.maxShown)
-    if (cards.isEmpty()) {
-        item(key = "commutes_empty") {
-            Surface(onClick = actions.onAdd, shape = RoundedCornerShape(28.dp), color = MaterialTheme.colorScheme.surfaceContainer, modifier = Modifier.fillMaxWidth().animateItem()) {
-                Row(Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(14.dp)) {
-                    CommuteBadge(CommuteKind.OTHER)
-                    Column {
-                        Text("No commutes yet", style = MaterialTheme.typography.titleMedium)
-                        Text(
-                            "Add one, or plan the same trip a couple of times and Journey will suggest it here.",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
+    // One block, collapsing with the same animation as every other widget.
+    item(key = "w_commutes") {
+        CollapsibleWidget(
+            "Commutes",
+            showTitle,
+            collapsed,
+            onToggle,
+            Modifier.animateItem(placementSpec = null),
+            trailing = if (config.showAddButton) {
+                { TitleAddButton("Add", actions.onAdd) }
+            } else null,
+        ) {
+            if (cards.isEmpty()) {
+                Surface(onClick = actions.onAdd, shape = RoundedCornerShape(28.dp), color = MaterialTheme.colorScheme.surfaceContainer, modifier = Modifier.fillMaxWidth()) {
+                    Row(Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(14.dp)) {
+                        CommuteBadge(CommuteKind.OTHER)
+                        Column {
+                            Text("No commutes yet", style = MaterialTheme.typography.titleMedium)
+                            Text(
+                                "Add one, or plan the same trip a couple of times and Journey will suggest it here.",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                        }
+                    }
+                }
+            } else {
+                Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                    cards.forEach { card ->
+                        androidx.compose.runtime.key(card.commute.id) { CommuteCard(card, now, actions, config.showBackup) }
                     }
                 }
             }
-        }
-    } else {
-        items(cards.size, key = { "commute_${cards[it].commute.id}" }) { index ->
-            CommuteCard(cards[index], now, actions, config.showBackup, Modifier.animateItem())
         }
     }
 }

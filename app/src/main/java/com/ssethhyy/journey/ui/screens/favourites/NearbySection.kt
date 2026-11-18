@@ -51,60 +51,58 @@ fun LazyListScope.nearbySection(
     onToggle: () -> Unit = {},
     showMapButton: Boolean = true,
 ) {
-    if (showTitle) {
-        item(key = "nearby_header") {
-            WidgetTitle(
-                "Near you",
-                collapsed = collapsed,
-                onToggle = onToggle,
-                modifier = Modifier.animateItem(),
-                trailing = if (showMapButton) {
-                    {
-                        TextButton(onClick = hapticClick(onOpenMap)) {
-                            Icon(Sym.Map, null, Modifier.size(18.dp))
-                            Spacer(Modifier.width(6.dp))
-                            Text("Map")
-                        }
-                    }
-                } else null,
-            )
-        }
-        if (collapsed) return
-    }
-    item(key = "nearby_body") {
-        val stops = state.stops.dataOrNull.orEmpty().take(count)
-        Surface(shape = RoundedCornerShape(28.dp), color = MaterialTheme.colorScheme.surfaceContainer, modifier = Modifier.fillMaxWidth()) {
-            Column(Modifier.padding(8.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                val blocked = state.locationStatus == LocationStatus.NO_PERMISSION || state.locationStatus == LocationStatus.SERVICES_OFF
-                if (blocked) {
-                    Row(
-                        Modifier
-                            .fillMaxWidth()
-                            .clip(RoundedCornerShape(18.dp))
-                            .background(MaterialTheme.colorScheme.tertiaryContainer)
-                            .padding(start = 14.dp, end = 4.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                    ) {
-                        Icon(Sym.LocationOff, null, tint = MaterialTheme.colorScheme.onTertiaryContainer, modifier = Modifier.size(18.dp))
-                        Spacer(Modifier.width(10.dp))
-                        Text(
-                            if (state.locationStatus == LocationStatus.SERVICES_OFF) "Location is off, showing the city" else "Allow location to see stops near you",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onTertiaryContainer,
-                            modifier = Modifier.weight(1f),
-                        )
-                        TextButton(
-                            onClick = onEnableLocation,
-                            colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.onTertiaryContainer),
-                        ) { Text(if (state.locationStatus == LocationStatus.SERVICES_OFF) "Turn on" else "Allow") }
+    // One block, collapsing with the same animation as every other widget.
+    item(key = "w_nearby") {
+        CollapsibleWidget(
+            "Near you",
+            showTitle,
+            collapsed,
+            onToggle,
+            Modifier.animateItem(placementSpec = null),
+            trailing = if (showMapButton) {
+                {
+                    TextButton(onClick = hapticClick(onOpenMap)) {
+                        Icon(Sym.Map, null, Modifier.size(18.dp))
+                        Spacer(Modifier.width(6.dp))
+                        Text("Map")
                     }
                 }
-                when {
-                    state.stops is LoadState.Loading && stops.isEmpty() -> NearbyNote("Finding stops near you…")
-                    state.stops is LoadState.Error && stops.isEmpty() -> NearbyNote("Couldn't load nearby stops. Pull down to try again.")
-                    stops.isEmpty() -> NearbyNote("No stops within ${DistanceFormatter.distance(state.settings.nearbyRadiusMeters.toDouble())}")
-                    else -> stops.forEach { stop ->
-                        NearbyStopRow(stop, state.boards[stop.key], now, state.settings.timeDisplay, onClick = hapticClick { onOpenStop(stop) })
+            } else null,
+        ) {
+            val stops = state.stops.dataOrNull.orEmpty().take(count)
+            Surface(shape = RoundedCornerShape(28.dp), color = MaterialTheme.colorScheme.surfaceContainer, modifier = Modifier.fillMaxWidth()) {
+                Column(Modifier.padding(8.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                    val blocked = state.locationStatus == LocationStatus.NO_PERMISSION || state.locationStatus == LocationStatus.SERVICES_OFF
+                    if (blocked) {
+                        Row(
+                            Modifier
+                                .fillMaxWidth()
+                                .clip(RoundedCornerShape(18.dp))
+                                .background(MaterialTheme.colorScheme.tertiaryContainer)
+                                .padding(start = 14.dp, end = 4.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            Icon(Sym.LocationOff, null, tint = MaterialTheme.colorScheme.onTertiaryContainer, modifier = Modifier.size(18.dp))
+                            Spacer(Modifier.width(10.dp))
+                            Text(
+                                if (state.locationStatus == LocationStatus.SERVICES_OFF) "Location is off, showing the city" else "Allow location to see stops near you",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onTertiaryContainer,
+                                modifier = Modifier.weight(1f),
+                            )
+                            TextButton(
+                                onClick = onEnableLocation,
+                                colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.onTertiaryContainer),
+                            ) { Text(if (state.locationStatus == LocationStatus.SERVICES_OFF) "Turn on" else "Allow") }
+                        }
+                    }
+                    when {
+                        state.stops is LoadState.Loading && stops.isEmpty() -> NearbyNote("Finding stops near you…")
+                        state.stops is LoadState.Error && stops.isEmpty() -> NearbyNote("Couldn't load nearby stops. Pull down to try again.")
+                        stops.isEmpty() -> NearbyNote("No stops within ${DistanceFormatter.distance(state.settings.nearbyRadiusMeters.toDouble())}")
+                        else -> stops.forEach { stop ->
+                            NearbyStopRow(stop, state.boards[stop.key], now, state.settings.timeDisplay, onClick = hapticClick { onOpenStop(stop) })
+                        }
                     }
                 }
             }

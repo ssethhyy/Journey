@@ -366,7 +366,7 @@ fun FavouritesScreen(onAddFromNearby: () -> Unit, onAddFromSearch: () -> Unit) {
                     ) {
                         // The edit button lives in the greeting; without that at the top, a slim row carries it.
                         if (layout.widgets.firstOrNull() != ForYouWidget.GREETING) {
-                            item(key = "top_row") { ForYouTopRow(onEdit = { editing = true }, modifier = Modifier.animateItem()) }
+                            item(key = "top_row") { ForYouTopRow(onEdit = { editing = true }, modifier = Modifier.animateItem(placementSpec = null)) }
                         }
                         if (layout.widgets.isEmpty()) {
                             item(key = "nothing") {
@@ -411,12 +411,12 @@ fun FavouritesScreen(onAddFromNearby: () -> Unit, onAddFromSearch: () -> Unit) {
                                             onAddName = if (state.settings.userName.isBlank()) {
                                                 { askingName = true }
                                             } else null,
-                                            modifier = Modifier.animateItem(),
+                                            modifier = Modifier.animateItem(placementSpec = null),
                                         )
                                     }
                                 }
                                 ForYouWidget.PLACES -> item(key = "w_places") {
-                                    CollapsibleWidget("Places", layout.showTitles, layout.isCollapsed(widget), { toggle(widget) }, Modifier.animateItem()) {
+                                    CollapsibleWidget("Places", layout.showTitles, layout.isCollapsed(widget), { toggle(widget) }, Modifier.animateItem(placementSpec = null)) {
                                         PlacesRow(
                                             places = state.places,
                                             onOpen = { navigator.planTo(it.toPlanLocation()) },
@@ -472,7 +472,7 @@ fun FavouritesScreen(onAddFromNearby: () -> Unit, onAddFromSearch: () -> Unit) {
                                                 collapsed = layout.isCollapsed(widget),
                                                 onToggle = { toggle(widget) },
                                                 onOpenAll = navigator::openDisruptions,
-                                                modifier = Modifier.animateItem(),
+                                                modifier = Modifier.animateItem(placementSpec = null),
                                             )
                                         }
                                     }
@@ -499,12 +499,12 @@ fun FavouritesScreen(onAddFromNearby: () -> Unit, onAddFromSearch: () -> Unit) {
                                     showMapButton = layout.nearYou.showMapButton,
                                 )
                                 ForYouWidget.NETWORK_STATUS -> item(key = "w_network") {
-                                    CollapsibleWidget("Network status", layout.showTitles, layout.isCollapsed(widget), { toggle(widget) }, Modifier.animateItem()) {
+                                    CollapsibleWidget("Network status", layout.showTitles, layout.isCollapsed(widget), { toggle(widget) }, Modifier.animateItem(placementSpec = null)) {
                                         NetworkStatusWidget(state.disruptions, layout.networkStatus.modes, navigator::openDisruptions)
                                     }
                                 }
                                 ForYouWidget.SHORTCUTS -> item(key = "w_shortcuts") {
-                                    CollapsibleWidget("Shortcuts", layout.showTitles, layout.isCollapsed(widget), { toggle(widget) }, Modifier.animateItem()) {
+                                    CollapsibleWidget("Shortcuts", layout.showTitles, layout.isCollapsed(widget), { toggle(widget) }, Modifier.animateItem(placementSpec = null)) {
                                         ShortcutsWidget(layout.shortcuts.shortcuts, onShortcut)
                                     }
                                 }
@@ -612,7 +612,10 @@ private fun widgetSummary(widget: ForYouWidget, state: FavouritesUiState, commut
     }
 }
 
-/** The Favourites widget: its title, the mode filters and each favourite stop. */
+/**
+ * The Favourites widget: its title, the mode filters and each favourite stop, as one block. Collapsing it uses the same
+ * animation as every other widget, and the widgets below follow its edge exactly.
+ */
 private fun LazyListScope.favouritesWidget(
     state: FavouritesUiState,
     now: Instant,
@@ -625,70 +628,63 @@ private fun LazyListScope.favouritesWidget(
 ) {
     val config = state.layout.favourites
     val showTitle = state.layout.showTitles
-    if (showTitle) {
-        item(key = "favourites_header") {
-            WidgetTitle(
-                "Favourites",
-                collapsed = collapsed,
-                onToggle = onToggle,
-                modifier = Modifier.animateItem(),
-                trailing = if (config.showAddButton && state.favourites.isNotEmpty()) {
-                    { TitleAddButton("Add", onAdd) }
-                } else null,
-            )
-        }
-        if (collapsed) return
-    }
-    if (state.favourites.isEmpty()) {
-        item(key = "empty") { EmptyFavourites(onAdd, onAddFromSearch) }
-        return
-    }
-    if (config.showModeFilters && state.availableModes.size > 1) {
-        item(key = "filters") {
-            ModeFilterRow(
-                selected = state.filter,
-                onToggle = onToggleFilter,
-                modes = state.availableModes,
-                contentPadding = PaddingValues(0.dp),
-                modifier = Modifier.animateItem(),
-            )
-        }
-    }
-    // A favourite with nothing coming can be hidden, once its departures have loaded.
-    val shown: (FavouriteStop) -> Boolean = { fav ->
-        config.showEmptyStops || run {
-            val board = (state.boards[fav.key] as? LoadState.Success)?.data
-            board == null || fav.filter(board.departures).any { d -> d.bestTime?.isAfter(now.minusSeconds(60)) ?: false }
-        }
-    }
-    // Without a title, the Add button sits on the first heading instead.
-    val addOnHeading = !showTitle && config.showAddButton
-    if (config.groupByMode) {
-        val firstMode = state.visibleGroups.firstOrNull()?.first
-        state.visibleGroups.forEach { (mode, all) ->
-            val favourites = all.filter(shown)
-            if (favourites.isEmpty()) return@forEach
-            item(key = "header_${mode.name}") {
-                ModeHeading(
-                    mode.pluralLabel,
-                    Modifier.animateItem(),
-                    trailing = if (addOnHeading && mode == firstMode) {
-                        { AddFavouriteButton(onClick = onAdd) }
-                    } else null,
-                )
+    item(key = "w_favourites") {
+        CollapsibleWidget(
+            "Favourites",
+            showTitle,
+            collapsed,
+            onToggle,
+            Modifier.animateItem(placementSpec = null),
+            trailing = if (config.showAddButton && state.favourites.isNotEmpty()) {
+                { TitleAddButton("Add", onAdd) }
+            } else null,
+        ) {
+            if (state.favourites.isEmpty()) {
+                EmptyFavourites(onAdd, onAddFromSearch)
+                return@CollapsibleWidget
             }
-            items(favourites, key = { it.key }) { fav ->
-                card(fav, all.first() != fav, all.last() != fav, Modifier.animateItem())
+            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                if (config.showModeFilters && state.availableModes.size > 1) {
+                    ModeFilterRow(
+                        selected = state.filter,
+                        onToggle = onToggleFilter,
+                        modes = state.availableModes,
+                        contentPadding = PaddingValues(0.dp),
+                    )
+                }
+                // A favourite with nothing coming can be hidden, once its departures have loaded.
+                val shown: (FavouriteStop) -> Boolean = { fav ->
+                    config.showEmptyStops || run {
+                        val board = (state.boards[fav.key] as? LoadState.Success)?.data
+                        board == null || fav.filter(board.departures).any { d -> d.bestTime?.isAfter(now.minusSeconds(60)) ?: false }
+                    }
+                }
+                // Without a title, the Add button sits on the first heading instead.
+                val addOnHeading = !showTitle && config.showAddButton
+                if (config.groupByMode) {
+                    val firstMode = state.visibleGroups.firstOrNull()?.first
+                    state.visibleGroups.forEach { (mode, all) ->
+                        val favourites = all.filter(shown)
+                        if (favourites.isEmpty()) return@forEach
+                        ModeHeading(
+                            mode.pluralLabel,
+                            trailing = if (addOnHeading && mode == firstMode) {
+                                { AddFavouriteButton(onClick = onAdd) }
+                            } else null,
+                        )
+                        favourites.forEach { fav ->
+                            androidx.compose.runtime.key(fav.key) { card(fav, all.first() != fav, all.last() != fav, Modifier) }
+                        }
+                    }
+                } else {
+                    if (addOnHeading) {
+                        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) { AddFavouriteButton(onClick = onAdd) }
+                    }
+                    state.visibleFlat.filter(shown).forEach { fav ->
+                        androidx.compose.runtime.key(fav.key) { card(fav, false, false, Modifier) }
+                    }
+                }
             }
-        }
-    } else {
-        if (addOnHeading) {
-            item(key = "favourites_add") {
-                Row(Modifier.fillMaxWidth().animateItem(), horizontalArrangement = Arrangement.End) { AddFavouriteButton(onClick = onAdd) }
-            }
-        }
-        items(state.visibleFlat.filter(shown), key = { it.key }) { fav ->
-            card(fav, false, false, Modifier.animateItem())
         }
     }
 }

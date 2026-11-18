@@ -101,6 +101,12 @@ All notable changes to Journey are documented here. The format follows
   the default weather provider. Without it people choose Open-Meteo or paste their own key.
 
 ### Fixed
+- **For You no longer crashes after scrolling for a while.** Letting go of the greeting header part-way could make it
+  spring a fraction past fully open or closed, which crashed the page. Saving the For You layout is safer too: a widget
+  or favourite can't end up listed twice (which also crashed the page), moving the only widget no longer fails, a drag
+  saved while the layout changed underneath can't drop or double a widget, and a change that can't be saved keeps the
+  layout as it was instead of closing the app.
+- A greeting moved further down For You no longer shows a second *Edit* pill.
 - A line's stops are listed in the order the service runs. Some routes (many buses) came back from PTV with the other
   direction's stops mixed in at the top, in alphabetical order.
 - The toolbar comes back when you reach the end of a page, so you're never stuck at the bottom of For You with no way

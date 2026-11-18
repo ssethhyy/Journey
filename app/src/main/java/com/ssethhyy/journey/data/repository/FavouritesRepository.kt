@@ -106,7 +106,8 @@ object FavouritesCodec {
         (if (pretty) prettyJson else json).encodeToString(serializer, list)
 
     fun decode(raw: String?): List<FavouriteStop> =
-        if (raw.isNullOrBlank()) emptyList() else runCatching { json.decodeFromString(serializer, raw) }.getOrDefault(emptyList())
+        // One entry per key: lists key their rows by favourite, so a repeat would crash them.
+        if (raw.isNullOrBlank()) emptyList() else runCatching { json.decodeFromString(serializer, raw).distinctBy { it.key } }.getOrDefault(emptyList())
 
     fun add(list: List<FavouriteStop>, item: FavouriteStop): List<FavouriteStop> =
         if (list.any { it.key == item.key }) list else list + item
@@ -156,7 +157,7 @@ object FavouritesCodec {
     /** Puts the favourites in the order of [keys]; any not named keep their place after them. */
     fun reorder(list: List<FavouriteStop>, keys: List<String>): List<FavouriteStop> {
         val byKey = list.associateBy { it.key }
-        val ordered = keys.mapNotNull { byKey[it] }
+        val ordered = keys.distinct().mapNotNull { byKey[it] }
         return ordered + list.filter { it !in ordered }
     }
 

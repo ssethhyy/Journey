@@ -140,6 +140,26 @@ class ForYouTest {
         FavouriteStop(stopId = id, routeType = 0, name = name, lines = lines)
 
     @Test
+    fun savingNeverCrashesOnOddLayouts() {
+        // Moving the only widget used to throw (an empty range for the new index).
+        val one = ForYouLayout(widgets = listOf(ForYouWidget.GREETING))
+        assertEquals(one.widgets, one.move(0, 3).widgets)
+        // Repeated widgets would crash the For You list (rows are keyed by widget).
+        val doubled = ForYouLayout(widgets = listOf(ForYouWidget.PLACES, ForYouWidget.PLACES, ForYouWidget.GREETING))
+        assertEquals(listOf(ForYouWidget.PLACES, ForYouWidget.GREETING), doubled.sanitized().widgets)
+        assertEquals(listOf(ForYouWidget.PLACES, ForYouWidget.GREETING), ForYouLayout.decode(ForYouLayout.encode(doubled))?.widgets)
+    }
+
+    @Test
+    fun favouritesAreNeverRepeated() {
+        val a = fav(1, "Flinders Street")
+        val b = fav(2, "Richmond")
+        val raw = FavouritesCodec.encode(listOf(a, b, a))
+        assertEquals(listOf(a.key, b.key), FavouritesCodec.decode(raw).map { it.key })
+        assertEquals(listOf(b.key, a.key), FavouritesCodec.reorder(listOf(a, b), listOf(b.key, b.key, a.key)).map { it.key })
+    }
+
+    @Test
     fun majorMeansClosuresAndReplacementBuses() {
         assertTrue(ForYouDisruptions.isMajor(disruption(1, "Buses replace trains between Clifton Hill and Eltham", "Planned Works", listOf(hurstbridge))))
         assertTrue(ForYouDisruptions.isMajor(disruption(2, "Station closed", "Planned Closure", listOf(hurstbridge))))

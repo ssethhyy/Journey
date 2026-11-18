@@ -143,6 +143,8 @@ fun ForYouEditor(
             changed = false
             val list = order
             val index = list.indexOf(widget)
+            // The layout changed under the drag (a widget removed or put back): nothing to swap.
+            if (index < 0) return
             val info = listState.layoutInfo.visibleItemsInfo
             val before = list.getOrNull(index - 1)?.let { prev -> info.firstOrNull { it.key == prev.name } }
             val after = list.getOrNull(index + 1)?.let { next -> info.firstOrNull { it.key == next.name } }
@@ -258,7 +260,7 @@ fun ForYouEditor(
                         onMove = { delta ->
                             val index = order.indexOf(widget)
                             val target = (index + delta).coerceIn(0, order.lastIndex)
-                            if (target != index) {
+                            if (index >= 0 && target != index) {
                                 val next = order.toMutableList().apply { add(target, removeAt(index)) }
                                 order = next
                                 onReorder(next)

@@ -132,7 +132,8 @@ fun FavouritesScreen(onAddFromNearby: () -> Unit, onAddFromSearch: () -> Unit) {
     // bar as you scroll down and grows back as you pull down at the top, following your finger, then settles to
     // whichever is closer (or the way you flicked) when you let go. One value drives all of it.
     val pinnedHeader = layout.widgets.firstOrNull() == ForYouWidget.GREETING
-    val header = remember { androidx.compose.animation.core.Animatable(1f) }
+    // Bounded to 0..1: a settling spring stops at the ends instead of overshooting past them.
+    val header = remember { androidx.compose.animation.core.Animatable(1f).apply { updateBounds(0f, 1f) } }
     // How far the list scrolls to fully collapse it: the big header's height less the slim bar's.
     var headerRangePx by remember { mutableFloatStateOf(with(density) { 180.dp.toPx() }) }
     var settleJob by remember { mutableStateOf<kotlinx.coroutines.Job?>(null) }
@@ -288,7 +289,13 @@ fun FavouritesScreen(onAddFromNearby: () -> Unit, onAddFromSearch: () -> Unit) {
                 summary = { widgetSummary(it, state, commutes) },
                 topPadding = innerPadding.calculateTopPadding(),
                 bottomPadding = ToolbarClearance + innerPadding.calculateBottomPadding(),
-                onReorder = { order -> vm.updateLayout { it.copy(widgets = order) } },
+                onReorder = { order ->
+                    // Applied to the layout as it is now: widgets added or removed meanwhile are kept or left out,
+                    // never lost or doubled by an out-of-date order.
+                    vm.updateLayout { current ->
+                        current.copy(widgets = order.filter { it in current.widgets }.distinct() + current.widgets.filter { it !in order })
+                    }
+                },
                 onRemove = removeWidget,
                 onSettings = { settingsFor = it },
                 onAdd = { addingWidget = true },
@@ -388,6 +395,8 @@ fun FavouritesScreen(onAddFromNearby: () -> Unit, onAddFromSearch: () -> Unit) {
                                             showDetails = g.showWeatherDetails,
                                             progress = inlineHeader,
                                             onToggle = { inlineHeaderExpanded = !inlineHeaderExpanded },
+                                            // The top row above already carries the Edit pill.
+                                            showEdit = false,
                                             onEdit = { editing = true },
                                             onSetUpWeather = {
                                                 editing = true

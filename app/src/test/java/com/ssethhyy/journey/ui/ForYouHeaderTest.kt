@@ -59,6 +59,32 @@ class ForYouHeaderTest {
     @Test
     fun drawsCollapsed() = draw(expanded = false)
 
+    /** A settling spring can push progress just past 0 or 1; that used to crash with negative padding. */
+    @Test
+    fun overshotProgressDoesNotCrash() {
+        var progress by androidx.compose.runtime.mutableFloatStateOf(-0.06f)
+        rule.setContent {
+            JourneyTheme(themeMode = ThemeMode.DARK, dynamicColor = false) {
+                ForYouHeader(
+                    greeting = "Good morning, Seth",
+                    date = "Today",
+                    weather = LoadState.Success(rain),
+                    unit = TemperatureUnit.CELSIUS,
+                    showDetails = true,
+                    progress = progress,
+                    onToggle = {},
+                    onEdit = {},
+                    onSetUpWeather = {},
+                    onRetryWeather = {},
+                )
+            }
+        }
+        rule.waitForIdle()
+        progress = 1.06f
+        rule.waitForIdle()
+        rule.onNodeWithText("Good morning, Seth").assertExists()
+    }
+
     private fun draw(expanded: Boolean) {
         rule.setContent {
             JourneyTheme(themeMode = ThemeMode.DARK, dynamicColor = false) {

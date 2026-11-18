@@ -162,7 +162,12 @@ fun ForYouHeader(
     temperatureSp: Float = 116f,
     /** Set while no name is saved: tapping the greeting asks for one. */
     onAddName: (() -> Unit)? = null,
+    /** The Edit pill; off when the greeting sits further down the page and the top row already has one. */
+    showEdit: Boolean = true,
 ) {
+    // A spring settling the header can overshoot 0 or 1 for a frame; sizes and padding must never go negative.
+    @Suppress("NAME_SHADOWING")
+    val progress = progress.coerceIn(0f, 1f)
     val view = LocalView.current
     val expanded = progress > 0.5f
     val reading = (weather as? LoadState.Success)?.data
@@ -266,7 +271,7 @@ fun ForYouHeader(
                         BarText(barDate, Modifier.alpha(1f - progress).weight(1f, fill = false))
                         Spacer(Modifier.width(10.dp))
                     }
-                    EditButton(onEdit)
+                    if (showEdit) EditButton(onEdit)
                 }
             }
         }

@@ -168,7 +168,9 @@ data class ForYouLayout(
     fun move(from: Int, to: Int): ForYouLayout {
         if (from !in widgets.indices || from == to) return this
         val list = widgets.toMutableList()
-        list.add(to.coerceIn(0, list.lastIndex), list.removeAt(from))
+        val moved = list.removeAt(from)
+        // coerceIn(0, size) never gets an empty range, even with a single widget.
+        list.add(to.coerceIn(0, list.size), moved)
         return copy(widgets = list)
     }
 
@@ -176,6 +178,12 @@ data class ForYouLayout(
 
     fun add(widget: ForYouWidget, at: Int = widgets.size): ForYouLayout =
         if (widget in widgets) this else copy(widgets = widgets.toMutableList().apply { add(at.coerceIn(0, size), widget) })
+
+    /**
+     * The same layout with each widget at most once. The For You list keys its rows by widget, so a repeat (from an
+     * old document or an interrupted drag) would crash it.
+     */
+    fun sanitized(): ForYouLayout = if (widgets.size == widgets.distinct().size) this else copy(widgets = widgets.distinct())
 
     fun toggleCollapsed(widget: ForYouWidget) =
         copy(collapsed = if (widget in collapsed) collapsed - widget else collapsed + widget)
@@ -190,7 +198,7 @@ data class ForYouLayout(
         fun encode(layout: ForYouLayout): String = json.encodeToString(serializer(), layout)
 
         /** Null for anything unreadable, so a bad document falls back to the default layout. */
-        fun decode(raw: String?): ForYouLayout? = raw?.let { runCatching { json.decodeFromString(serializer(), it) }.getOrNull() }
+        fun decode(raw: String?): ForYouLayout? = raw?.let { runCatching { json.decodeFromString(serializer(), it).sanitized() }.getOrNull() }
     }
 }
 
@@ -215,9 +223,17 @@ class ForYouRepository(
         store.edit { if (it[key] == null) it[key] = ForYouLayout.encode(initial) }
     }
 
-    suspend fun update(transform: (ForYouLayout) -> ForYouLayout) = store.edit { p ->
-        val current = ForYouLayout.decode(p[key]) ?: ForYouLayout()
-        p[key] = ForYouLayout.encode(transform(current))
+    /** Changes the layout. A change that fails keeps the layout as it was rather than crashing the app. */
+    suspend fun update(transform: (ForYouLayout) -> ForYouLayout) {
+        runCatching {
+            store.edit { p ->
+                val current = ForYouLayout.decode(p[key]) ?: ForYouLayout()
+                p[key] = ForYouLayout.encode(transform(current).sanitized())
+            }
+        }.onFailure {
+            if (it is kotlinx.coroutines.CancellationException) throw it
+            android.util.Log.w("ForYouRepository", "Couldn't save the For You layout", it)
+        }
     }
 
     suspend fun reset() = store.edit { it[key] = ForYouLayout.encode(ForYouLayout()) }

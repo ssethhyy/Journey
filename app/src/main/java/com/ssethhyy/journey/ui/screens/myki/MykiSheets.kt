@@ -137,7 +137,7 @@ fun openNfcSettings(context: Context) {
 }
 
 /** Groups digits as printed on the card while the field keeps plain digits. */
-private object MykiNumberTransformation : VisualTransformation {
+internal object MykiNumberTransformation : VisualTransformation {
     override fun filter(text: AnnotatedString): TransformedText {
         val formatted = MykiNumber.format(text.text)
         val mapping = object : OffsetMapping {
@@ -200,80 +200,7 @@ fun ScanPrompt(nfc: NfcState, message: String?, modifier: Modifier = Modifier) {
     }
 }
 
-@OptIn(ExperimentalLayoutApi::class, androidx.compose.material3.ExperimentalMaterial3Api::class)
-@Composable
-fun AddMykiSheet(
-    scannedNumber: String?,
-    scanMessage: String?,
-    nfc: NfcState,
-    onDismiss: () -> Unit,
-    onSave: (number: String, nickname: String, fareType: MykiFareType, balanceCents: Long?) -> Unit,
-) {
-    var number by rememberSaveable { mutableStateOf("") }
-    var nickname by rememberSaveable { mutableStateOf("") }
-    var fareType by rememberSaveable { mutableStateOf(MykiFareType.FULL) }
-    var balance by rememberSaveable { mutableStateOf("") }
-    var touched by rememberSaveable { mutableStateOf(false) }
-    LaunchedEffect(scannedNumber) { scannedNumber?.let { number = it; touched = true } }
-
-    val problem = MykiNumber.problem(number)
-    val balanceCents = parseDollars(balance)
-    val balanceError = balance.isNotBlank() && balanceCents == null
-
-    StandardBottomSheet(onDismissRequest = onDismiss, scrollable = true, title = "Add a myki") {
-        ScanPrompt(nfc, scanMessage)
-        OutlinedTextField(
-            value = number,
-            onValueChange = { input ->
-                number = MykiNumber.digits(input).take(MykiNumber.LENGTH)
-                if (number.length == MykiNumber.LENGTH) touched = true
-            },
-            label = { Text("Card number") },
-            placeholder = { Text("3 08425 0000 0000 0") },
-            visualTransformation = MykiNumberTransformation,
-            isError = touched && problem != null,
-            supportingText = { Text(if (touched || number.isNotEmpty()) problem ?: "Looks good" else "On the back of your myki") },
-            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number, imeAction = ImeAction.Next),
-            singleLine = true,
-            modifier = Modifier.fillMaxWidth(),
-        )
-        OutlinedTextField(
-            value = nickname,
-            onValueChange = { nickname = it.take(24) },
-            label = { Text("Name (optional)") },
-            placeholder = { Text("My myki") },
-            singleLine = true,
-            keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next),
-            modifier = Modifier.fillMaxWidth(),
-        )
-        Text("Fare type", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
-        FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            MykiFareType.entries.forEach { type ->
-                FilterChip(selected = fareType == type, onClick = hapticSelect { fareType = type }, label = { Text(type.label) })
-            }
-        }
-        OutlinedTextField(
-            value = balance,
-            onValueChange = { balance = it.take(9) },
-            label = { Text("Current balance (optional)") },
-            prefix = { Text("$") },
-            isError = balanceError,
-            supportingText = { Text(if (balanceError) "Enter an amount like 26.16" else "Check it at a myki machine or in the PTV app") },
-            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal, imeAction = ImeAction.Done),
-            singleLine = true,
-            modifier = Modifier.fillMaxWidth(),
-        )
-        Button(
-            onClick = { onSave(number, nickname, fareType, balanceCents) },
-            enabled = problem == null && !balanceError,
-            modifier = Modifier.fillMaxWidth().height(52.dp),
-        ) {
-            Icon(Sym.AddCard, null, Modifier.size(20.dp))
-            Spacer(Modifier.width(8.dp))
-            Text("Add myki")
-        }
-    }
-}
+// AddMykiSheet lives in AddMykiSheet.kt.
 
 @OptIn(androidx.compose.material3.ExperimentalMaterial3Api::class)
 @Composable

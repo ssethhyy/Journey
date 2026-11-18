@@ -344,6 +344,10 @@ object SettingsCatalog {
             Custom("about") { AboutCard() },
             Info("version", "Version", Sym.Info) { BuildConfig.VERSION_NAME },
             Action(
+                "open_transit", "Open Transit", Sym.CreditCard,
+                { "The myki card art and NFC animation come from Open Transit by Aston Bolwell" },
+            ) { openLink(context, "https://github.com/AstonBolwell/Open-Transit-App") },
+            Action(
                 "data_sources", "Data sources", Sym.Info,
                 {
                     "Timetable data licensed from Public Transport Victoria under CC BY 4.0. Journey planning by Transitous (MOTIS) " +

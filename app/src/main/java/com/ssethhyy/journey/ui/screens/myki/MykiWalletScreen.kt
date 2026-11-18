@@ -219,11 +219,12 @@ private fun StackedCard(card: MykiCard, onOpen: () -> Unit, modifier: Modifier =
             },
     ) {
         MykiCardArt(card)
-        // Name and balance sit in the strip that stays visible when another card is in front.
+        // Name and balance sit in the strip that stays visible when another card is in front, in the card's colours.
+        val colours = MykiCardColours.current()
         Surface(
             shape = CircleShape,
-            color = Color.Black.copy(alpha = 0.5f),
-            contentColor = Color.White,
+            color = colours.text.copy(alpha = 0.14f),
+            contentColor = colours.text,
             modifier = Modifier.padding(14.dp),
         ) {
             Row(Modifier.padding(horizontal = 12.dp, vertical = 6.dp), verticalAlignment = Alignment.CenterVertically) {

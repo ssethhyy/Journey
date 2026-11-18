@@ -99,11 +99,20 @@ fun JourneyTheme(
         }
     }
 
-    MaterialExpressiveTheme(
-        colorScheme = colorScheme,
-        motionScheme = MotionScheme.expressive(),
-        shapes = JourneyShapes,
-        typography = typography,
-        content = content,
-    )
+    val wallpaperColours = dynamicColor && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S
+    androidx.compose.runtime.CompositionLocalProvider(LocalWallpaperColours provides wallpaperColours) {
+        MaterialExpressiveTheme(
+            colorScheme = colorScheme,
+            motionScheme = MotionScheme.expressive(),
+            shapes = JourneyShapes,
+            typography = typography,
+            content = content,
+        )
+    }
 }
+
+/**
+ * True when the colours come from the wallpaper (dynamic colour on, Android 12+). Things with a brand look of their
+ * own, like the myki card, use their usual colours otherwise.
+ */
+val LocalWallpaperColours = androidx.compose.runtime.staticCompositionLocalOf { false }

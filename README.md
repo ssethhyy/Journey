@@ -310,5 +310,7 @@ Built with and thanks to:
 - Public Transport Victoria and Transport Victoria for open data, and [Mapbox](https://www.mapbox.com) with
   [OpenStreetMap](https://www.openstreetmap.org/copyright) contributors for maps.
 - [Metrodroid](https://github.com/metrodroid/metrodroid) for documenting how the myki card number is stored.
+- [Open Transit](https://github.com/AstonBolwell/Open-Transit-App) by [Aston Bolwell](https://github.com/AstonBolwell), for the myki card artwork (line pattern, wordmark and PTV logo) and the NFC scanning animation.
+- [Lottie](https://github.com/airbnb/lottie-android) by Airbnb, which plays that animation.
 
 The full list of third-party code, data and brand notices is in **[THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md)**.

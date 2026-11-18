@@ -1,158 +1,160 @@
 /*
  * Feature Module: myki
  * File: MykiCardArt.kt
- * Description: The myki card face. Uses your artwork from res/drawable-nodpi when present
- * (myki_card_art, or myki_card_art_<fare type> for a specific fare type), otherwise draws a
- * stand-in with the same layout: polygon pattern, wordmark top right, mode badges bottom left.
+ * Description: The myki card face, drawn from Open Transit's myki artwork (the line pattern, the myki wordmark and
+ * the PTV logo, by Aston Bolwell: https://github.com/AstonBolwell/Open-Transit-App).
+ *
+ * With colours from the wallpaper, the card sits just a step lighter than the page, with the pattern, logos and text in
+ * the matching colours and the wordmark in the accent. Without, it's the familiar myki look: charcoal with the green
+ * wordmark.
  */
 
 package com.ssethhyy.journey.ui.screens.myki
 
-import android.annotation.SuppressLint
-import android.content.Context
-import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.remember
+import androidx.compose.runtime.Immutable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.ssethhyy.journey.R
 import com.ssethhyy.journey.data.myki.MykiCard
 import com.ssethhyy.journey.data.myki.MykiFareType
-import com.ssethhyy.journey.ui.components.Sym
-import kotlin.random.Random
+import com.ssethhyy.journey.data.myki.MykiNumber
+import com.ssethhyy.journey.ui.theme.LocalWallpaperColours
 
 /** ISO/IEC 7810 ID-1: 85.60 × 53.98 mm. */
 const val MYKI_CARD_RATIO = 85.60f / 53.98f
 
-private val CardGrey = Color(0xFF3B3C3E)
-private val LineColour = Color(0x2EFFFFFF)
-private val MykiGreen = Color(0xFFC6D82E)
+/** The colours of a myki card face, and of anything drawn to match it (like the NFC animation's card). */
+@Immutable
+data class MykiCardColours(
+    val card: Color,
+    val pattern: Color,
+    val wordmark: Color,
+    val logo: Color,
+    val text: Color,
+) {
+    companion object {
+        /** The real card: charcoal, a faint white pattern and the green wordmark. */
+        val Myki = MykiCardColours(
+            card = Color(0xFF333434),
+            pattern = Color.White.copy(alpha = 0.2f),
+            wordmark = Color(0xFFC2D840),
+            logo = Color.White.copy(alpha = 0.9f),
+            text = Color.White,
+        )
 
-/** The art for [fareType] (0 = none) and whether it is fare-specific (so it already names the fare type). */
-@SuppressLint("DiscouragedApi")
-private fun artRes(context: Context, fareType: MykiFareType): Pair<Int, Boolean> {
-    val res = context.resources
-    fun find(name: String) = res.getIdentifier(name, "drawable", context.packageName)
-    val specific = if (fareType == MykiFareType.FULL) 0 else find("myki_card_art_${fareType.name.lowercase()}")
-    return if (specific != 0) specific to true else find("myki_card_art") to false
+        /** Wallpaper colours when they're in use, otherwise [Myki]. */
+        @Composable
+        fun current(): MykiCardColours {
+            if (!LocalWallpaperColours.current) return Myki
+            val scheme = MaterialTheme.colorScheme
+            // Just a step up from the page behind it, so it reads as a card without looking tinted.
+            return MykiCardColours(
+                card = scheme.surfaceContainer,
+                pattern = scheme.onSurface.copy(alpha = 0.10f),
+                wordmark = scheme.primary,
+                logo = scheme.onSurfaceVariant,
+                text = scheme.onSurface,
+            )
+        }
+    }
 }
 
 @Composable
-fun MykiCardArt(card: MykiCard, modifier: Modifier = Modifier, cornerRadius: androidx.compose.ui.unit.Dp = 20.dp) {
-    val context = LocalContext.current
-    val (art, artNamesFare) = remember(card.fareType) { artRes(context, card.fareType) }
-    Box(
+fun MykiCardArt(card: MykiCard, modifier: Modifier = Modifier, cornerRadius: Dp = 20.dp) {
+    MykiCardFace(
+        number = card.number,
+        fareLabel = card.fareType.takeIf { it != MykiFareType.FULL }?.label,
+        modifier = modifier.semantics { contentDescription = "${card.nickname} myki, ${card.fareType.label}" },
+        cornerRadius = cornerRadius,
+    )
+}
+
+/**
+ * The card face on its own: Open Transit's layout, with the pattern across the card, the PTV logo top right, the myki
+ * wordmark bottom left and the card number in the middle.
+ */
+@Composable
+fun MykiCardFace(
+    number: String?,
+    modifier: Modifier = Modifier,
+    fareLabel: String? = null,
+    cornerRadius: Dp = 20.dp,
+    colours: MykiCardColours = MykiCardColours.current(),
+) {
+    BoxWithConstraints(
         modifier
             .fillMaxWidth()
             .aspectRatio(MYKI_CARD_RATIO)
             .clip(RoundedCornerShape(cornerRadius))
-            .background(CardGrey)
-            .semantics { contentDescription = "${card.nickname} myki, ${card.fareType.label}" },
+            .background(colours.card),
     ) {
-        if (art != 0) {
-            Image(painterResource(art), contentDescription = null, contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize())
-        } else {
-            StandInArt(card.number)
+        val w = maxWidth
+        val h = maxHeight
+        Image(
+            painterResource(R.drawable.myki_card_pattern),
+            contentDescription = null,
+            contentScale = ContentScale.Crop,
+            colorFilter = ColorFilter.tint(colours.pattern),
+            modifier = Modifier.fillMaxSize(),
+        )
+        Image(
+            painterResource(R.drawable.myki_ptv_logo),
+            contentDescription = null,
+            colorFilter = ColorFilter.tint(colours.logo),
+            modifier = Modifier.align(Alignment.TopEnd).padding(top = h * 0.08f, end = w * 0.06f).width(w * 0.17f),
+        )
+        Image(
+            painterResource(R.drawable.myki_wordmark),
+            contentDescription = null,
+            colorFilter = ColorFilter.tint(colours.wordmark),
+            modifier = Modifier.align(Alignment.BottomStart).padding(start = w * 0.06f, bottom = h * 0.08f).width(w * 0.27f),
+        )
+        if (!number.isNullOrBlank()) {
+            Text(
+                MykiNumber.format(number),
+                color = colours.text,
+                fontSize = (h.value * 0.075f).sp,
+                fontWeight = FontWeight.SemiBold,
+                letterSpacing = (h.value * 0.006f).sp,
+                maxLines = 1,
+                modifier = Modifier.align(Alignment.Center),
+            )
         }
-        if (card.fareType != MykiFareType.FULL && !artNamesFare) {
+        if (fareLabel != null) {
             Surface(
                 shape = CircleShape,
-                color = Color.Black.copy(alpha = 0.55f),
-                contentColor = Color.White,
-                modifier = Modifier.align(Alignment.BottomEnd).padding(14.dp),
+                color = colours.text.copy(alpha = 0.14f),
+                contentColor = colours.text,
+                modifier = Modifier.align(Alignment.BottomEnd).padding(end = w * 0.05f, bottom = h * 0.08f),
             ) {
-                Text(card.fareType.label, fontSize = 12.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp))
+                Text(fareLabel, fontSize = 12.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp))
             }
         }
-    }
-}
-
-@Composable
-private fun StandInArt(seedText: String) {
-    // A stable low-poly network, seeded by the card number so each card looks a little different.
-    val points = remember(seedText) {
-        val random = Random(seedText.hashCode())
-        val cols = 7
-        val rows = 5
-        List(rows) { r ->
-            List(cols) { c ->
-                Offset(
-                    ((c + random.nextFloat() * 0.7f - 0.35f) / (cols - 1)).coerceIn(-0.05f, 1.05f),
-                    ((r + random.nextFloat() * 0.7f - 0.35f) / (rows - 1)).coerceIn(-0.05f, 1.05f),
-                )
-            }
-        }
-    }
-    Canvas(Modifier.fillMaxSize()) {
-        fun p(o: Offset) = Offset(o.x * size.width, o.y * size.height)
-        val stroke = 1.dp.toPx()
-        points.forEachIndexed { r, row ->
-            row.forEachIndexed { c, point ->
-                row.getOrNull(c + 1)?.let { drawLine(LineColour, p(point), p(it), stroke) }
-                points.getOrNull(r + 1)?.let { next ->
-                    drawLine(LineColour, p(point), p(next[c]), stroke)
-                    next.getOrNull(c + 1)?.let { drawLine(LineColour, p(point), p(it), stroke) }
-                }
-            }
-        }
-        listOf(points[1][0], points[4][3]).forEach { drawCircle(LineColour.copy(alpha = 0.5f), 3.dp.toPx(), p(it)) }
-    }
-    BoxWithConstraints(Modifier.fillMaxSize()) {
-        val scale = maxWidth.value / 340f
-        Text(
-            "myki",
-            color = MykiGreen,
-            fontSize = (58 * scale).sp,
-            fontWeight = FontWeight.ExtraBold,
-            letterSpacing = (-2 * scale).sp,
-            modifier = Modifier.align(Alignment.TopEnd).padding(top = (12 * scale).dp, end = (22 * scale).dp),
-        )
-        Row(
-            horizontalArrangement = Arrangement.spacedBy((8 * scale).dp),
-            modifier = Modifier.align(Alignment.BottomStart).padding(start = (22 * scale).dp, bottom = (26 * scale).dp),
-        ) {
-            ModeBadge(Sym.Train, (38 * scale).dp)
-            ModeBadge(Sym.Tram, (38 * scale).dp)
-            ModeBadge(Sym.DirectionsBus, (38 * scale).dp)
-        }
-    }
-}
-
-@Composable
-private fun ModeBadge(icon: ImageVector, size: androidx.compose.ui.unit.Dp) {
-    Box(
-        Modifier
-            .size(size)
-            .background(Color.White, CircleShape),
-        contentAlignment = Alignment.Center,
-    ) {
-        Icon(icon, contentDescription = null, tint = CardGrey, modifier = Modifier.size(size * 0.62f))
     }
 }

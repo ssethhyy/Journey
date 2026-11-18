@@ -100,6 +100,26 @@ All notable changes to Journey are documented here. The format follows
 - For developers: an optional `WEATHER_API_KEY` in `.env` (a free OpenWeatherMap key) is built into release builds for
   the default weather provider. Without it people choose Open-Meteo or paste their own key.
 
+### Changed
+- **A new myki card**, drawn from [Open Transit](https://github.com/AstonBolwell/Open-Transit-App)'s myki artwork by
+  Aston Bolwell: its line pattern across the card, the PTV logo, the myki wordmark and your card number. With colours
+  from your wallpaper the whole card takes them on (card, pattern, logos and text); otherwise it's the familiar
+  charcoal myki with the green wordmark.
+- **Adding a myki starts with a scan**, laid out like the system's NFC sheet but in Material 3 Expressive: "Ready to
+  scan" over a large card playing Open Transit's myki NFC animation (recoloured to match), with *Add manually* and
+  *Cancel* underneath. A card that's read, or *Add manually*, moves on to its details, with the card face filling in
+  as you type.
+- **Route lines follow the real track or road on every map.** PTV sends a route's shape as separate pieces in no
+  particular order, and stopping patterns often come without one, so trips used to draw straight lines from stop to
+  stop. Now a service's line is stitched from the route's shape stop by stop (the piece running past each pair of
+  stops, joined where pieces meet), so it bends where the line really bends. Every line (services, line pages and
+  planned journeys) is smoothed the same way, and only where PTV has no shape at all is a gentle curve drawn through
+  the stops.
+- The myki card sits just a step lighter than the page when colours come from your wallpaper, rather than strongly
+  tinted.
+- **Collapsing For You widgets is smooth and consistent**: Favourites, Commutes and Near you now collapse with the
+  same animation as the others, and the widgets below follow the edge instead of catching up afterwards.
+
 ### Fixed
 - **For You no longer crashes after scrolling for a while.** Letting go of the greeting header part-way could make it
   spring a fraction past fully open or closed, which crashed the page. Saving the For You layout is safer too: a widget

@@ -9,6 +9,7 @@ other people's services. This file lists what that includes and under which term
 |---|---|---|
 | **Essentials Island SDK** (`island-sdk`, `island-sdk-compose`), copied unmodified from [sameerasw/essentials](https://github.com/sameerasw/essentials) at commit `1b26918` | `third_party/essentials-island/` | MIT, © 2025 Sameera Sandakelum. See `third_party/essentials-island/LICENSE` |
 | **Material Symbols Rounded** icons, downloaded from [google/material-design-icons](https://github.com/google/material-design-icons) | `app/src/main/res/drawable/rounded_*.xml` | Apache License 2.0, © Google |
+| **Open Transit myki assets** (card line pattern, myki wordmark, PTV logo and the `mykiNFC` Lottie animation) from the `opentransit-myki` module of [AstonBolwell/Open-Transit-App](https://github.com/AstonBolwell/Open-Transit-App), by Aston Bolwell. The SVGs were converted to vector drawables; the animation is used as is and recoloured at runtime | `app/src/main/res/drawable/myki_card_pattern.xml`, `myki_wordmark.xml`, `myki_ptv_logo.xml`, `app/src/main/res/raw/myki_nfc.json` | Used with the author's permission and credited in the app (Settings → About). The repository has no licence file; ask the author before reusing them elsewhere |
 
 A few source files carry a `sameerasw.com` MIT header because they follow patterns from the
 [android-common](https://github.com/sameerasw/android-common) design-language documents (MIT, © 2026 sameerasw.com),
@@ -22,6 +23,7 @@ which Journey uses as its UI reference but does not include.
 | Kotlin, kotlinx.coroutines, kotlinx.serialization | Apache 2.0, © JetBrains |
 | OkHttp, MockWebServer | Apache 2.0, © Square |
 | Gson | Apache 2.0, © Google |
+| Lottie for Android (lottie-compose) | Apache 2.0, © Airbnb |
 | Google Play services Location | Android SDK / Play services terms |
 | Mapbox Maps SDK for Android | [Mapbox Terms of Service](https://www.mapbox.com/legal/tos) (a Mapbox account and public token are required) |
 | Robolectric, AndroidX Test, JUnit | MIT / Apache 2.0 / EPL 1.0 |

@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- The line pattern across a myki card's face.
+     From Open Transit by Aston Bolwell (https://github.com/AstonBolwell/Open-Transit-App), opentransit-myki assets.
+     Drawn in white so the app can tint it. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="340dp"
+    android:height="204.0dp"
+    android:viewportWidth="500.0"
+    android:viewportHeight="300.0">
+    <path android:pathData="M 495.541 288.459 L 408.638 291.45 L 458.76 215.446 L 419.746 221.484 L 347.867 146.275 L 351.522 250.709 L 288.029 144.628 L 211.914 112.945 L 112.517 118.43 L -9.772 104.953 L 98.661 68.559 L 169.746 34.94 L 253.614 64.277 L 288.42 143.976 L 347.456 145.783 L 458.434 215.843 L 495.783 288.735 L 477.577 337.952"
+        android:strokeColor="#FFFFFFFF"
+        android:strokeWidth="2"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round" />
+    <path android:pathData="M 97.057 69.1 L 111.935 119.216 L 170.273 34.384 C 170.273 34.384 210.601 114.648 210.601 114.257 C 210.601 113.866 205.903 217.622 205.903 217.622 L 180.845 306.108 L 209.035 357.007 L 241.924 289.664 L 259.935 351.526 L 290.866 337.692 L 242.315 289.925 L 314.568 289.044 L 310.442 352.179 L 408.637 291.432 L 367.606 370.189 L 456.876 357.66 C 456.876 357.66 409.028 290.647 408.637 291.43 C 408.246 292.213 419.68 221.406 419.68 221.406 L 351.447 250.736 L 293.607 214.359 L 288.125 144.361 L 170.273 33.949"
+        android:strokeColor="#FFFFFFFF"
+        android:strokeWidth="2"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round" />
+    <path android:pathData="M -9.614 105.078 C -9.614 105.078 25.624 144.231 25.232 144.231 C 24.84 144.231 111.369 117.215 111.369 117.215 L 205.729 218.231 L 146.607 199.829 L 110.978 117.607 L 42.071 195.89 L 25.232 144.623 L -33.498 114.866 L 42.094 195.931 L -56.207 183.384 L -15.096 250.337 L 42.068 195.913 L 60.47 287.924 L -15.488 249.553 C -15.488 249.553 26.015 351.744 26.015 351.352 C 26.015 350.96 60.862 288.315 60.862 288.315 L 98.449 289.49 L 50.29 337.648 L 93.359 335.691 L 98.449 289.098 L 151.306 345.479 L 178.713 305.934 L 98.449 289.098 L 146.216 200.22 L 42.094 195.899"
+        android:strokeColor="#FFFFFFFF"
+        android:strokeWidth="2"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round" />
+    <path android:pathData="M 41.807 195.913 L 98.927 289.098 L 206.207 215.882 L 286.472 144.622"
+        android:strokeColor="#FFFFFFFF"
+        android:strokeWidth="2"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round" />
+    <path android:pathData="M 180.366 305.934 L 243.795 287.141 L 205.033 217.448 L 294.302 213.532 L 243.403 288.315 L 351.466 250.728 L 314.662 289.098 L 408.63 291.447 L 351.516 250.778"
+        android:strokeColor="#FFFFFFFF"
+        android:strokeWidth="2"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round" />
+    <path android:pathData="M104.144,118.212a6.976,6.976 0 1,0 13.952,0a6.976,6.976 0 1,0 -13.952,0Z"
+        android:fillColor="#FFFFFFFF" />
+    <path android:pathData="M284.30100000000004,144.717a3.876,3.876 0 1,0 7.752,0a3.876,3.876 0 1,0 -7.752,0Z"
+        android:fillColor="#FFFFFFFF" />
+    <path android:pathData="M167.0,35.734a3.876,3.876 0 1,0 7.752,0a3.876,3.876 0 1,0 -7.752,0Z"
+        android:fillColor="#FFFFFFFF" />
+    <path android:pathData="M235.793,289.314a6.976,6.976 0 1,0 13.952,0a6.976,6.976 0 1,0 -13.952,0Z"
+        android:fillColor="#FFFFFFFF" />
+    <path android:pathData="M453.766,215.955a3.876,3.876 0 1,0 7.752,0a3.876,3.876 0 1,0 -7.752,0Z"
+        android:fillColor="#FFFFFFFF" />
+    <path android:pathData="M38.195,196.019a3.876,3.876 0 1,0 7.752,0a3.876,3.876 0 1,0 -7.752,0Z"
+        android:fillColor="#FFFFFFFF" />
+</vector>

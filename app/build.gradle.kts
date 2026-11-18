@@ -118,6 +118,8 @@ dependencies {
     implementation(libs.androidx.datastore.preferences)
     implementation(libs.androidx.glance.appwidget)
     implementation(libs.androidx.glance.material3)
+    // The myki NFC animation (from Open Transit) when adding a card.
+    implementation(libs.lottie.compose)
     implementation(libs.androidx.work.runtime.ktx)
     implementation(project(":island-sdk-compose"))
     implementation(libs.okhttp)

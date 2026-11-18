@@ -181,6 +181,12 @@ nearby stops 10 minutes, disruptions 5 minutes. Each store has a repository expo
 - **`MykiNfc`** reads the card number over NFC (DESFire application `0x11F2`, file `0x0F`). A myki's balance and trips
   are locked on the card and can't be read, so balances are entered by the user and adjusted by logged trips.
 - **`ProfileStatsCalculator`** derives the profile page's numbers from logged trips.
+- **`MykiCardFace`** draws the card from Open Transit's myki assets (vector drawables `myki_card_pattern`,
+  `myki_wordmark`, `myki_ptv_logo`, all white and tinted) in `MykiCardColours`: wallpaper colours when
+  `LocalWallpaperColours` is true (set by `JourneyTheme`), otherwise the real card's charcoal and green.
+- **`AddMykiSheet`** opens on a scan step with `MykiNfcAnimation` (Open Transit's `mykiNFC` Lottie, `res/raw/myki_nfc.json`,
+  recoloured with Lottie dynamic properties). The wallet's `MykiScanEffect` does the reading; a number read, or
+  "Add manually", switches the sheet to the details step.
 
 ## Live vehicle tracking
 
@@ -218,6 +224,18 @@ lighting doesn't darken the colours.
   usual hour when trips agree) and stores the user's own. `CommutesViewModel` plans each for "leave now" and picks a
   backup after the main trip.
 - *Near you* on For You shares the Map tab's `NearbyViewModel`, so the location is looked up once.
+
+## Route lines
+
+`RouteLine` (in `data.model`) turns PTV geopaths into what every map draws. A route's geopath arrives as separate
+pieces in no particular order (halves of a line, loop and depot variants), so `alongStops` builds a service's line stop
+pair by stop pair: the shortest piece that passes within 200 m of both stops, cut between them, or two pieces whose
+ends meet within 600 m; a pair with neither is drawn straight, and if under half the pairs follow a shape the curve is
+used instead;
+`smooth` rounds corners with Chaikin's method (one pass for dense shapes, two for sparse ones); `curveThrough` is a
+Catmull-Rom curve through the stops for services PTV sent no shape for. `PtvRepository.stoppingPattern` tries the
+pattern's own geopaths, then the route's (`routeDetails`, cached for hours), then the curve. The route page and
+journey legs pass their shapes through `smooth` too.
 
 ## Map stops
 

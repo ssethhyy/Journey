@@ -128,16 +128,16 @@ class PtvApi(
         "/v3/stops/route/$routeId/route_type/$routeType",
         buildList {
             if (directionId != null) add("direction_id" to directionId.toString())
-            add("include_geopath" to "false")
+            add("include_geopath" to "true")
         },
         StopsOnRouteResponse.serializer(),
     )
 
-    suspend fun route(routeId: Int): RouteResponse = get(
-        "/v3/routes/$routeId",
-        listOf("include_geopath" to "true"),
-        RouteResponse.serializer(),
-    )
+        suspend fun route(routeId: Int): RouteResponse = get(
+            "/v3/routes/$routeId",
+            listOf("include_geopath" to "true"),
+            RouteResponse.serializer(),
+        )
 
     suspend fun directions(routeId: Int): DirectionsResponse = get(
         "/v3/directions/route/$routeId",

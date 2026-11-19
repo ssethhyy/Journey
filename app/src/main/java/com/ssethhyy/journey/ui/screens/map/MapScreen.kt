@@ -430,7 +430,11 @@ fun MapScreen(isActive: Boolean, modifier: Modifier = Modifier) {
                 // ---- Trip mode: stops (+ optional vehicle), nothing else -------------
                 val currentTrip = tripRequest
                 if (overlay == MapOverlay.TRIP && currentTrip != null) {
-                    TripMapLayer(runRef = currentTrip.runRef, mode = currentTrip.mode)
+                    TripMapLayer(
+                        runRef = currentTrip.runRef,
+                        mode = currentTrip.mode,
+                        directionId = currentTrip.directionId,
+                    )
                     if (state.settings.mapRender3dVehicles) {
                         VehicleModelLayer()
                     }

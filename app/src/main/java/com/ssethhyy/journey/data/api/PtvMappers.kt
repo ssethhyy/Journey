@@ -152,12 +152,11 @@ object PtvMappers {
         return StoppingPattern(
             route = routeDto?.let(::route),
             destination = firstRun?.destinationName,
+            directionId = firstRun?.directionId ?: 0,
             stops = patternStops,
             vehicle = vehicle(firstRun),
             disruptions = response.disruptions.values.map { disruption(it) },
             vehiclePosition = position,
-            // The route's real shape between the first and last stop, when the pattern's shapes include it; the
-            // repository fills in the rest (see PtvRepository.stoppingPattern).
             path = if (withPath) RouteLine.alongStops(patternStops.map { it.stop.latitude to it.stop.longitude }, geopaths)?.let(RouteLine::smooth).orEmpty() else emptyList(),
         )
     }

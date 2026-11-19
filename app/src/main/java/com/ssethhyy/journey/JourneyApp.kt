@@ -130,6 +130,7 @@ class AppContainer(
     data class TripMapRequest(
         val runRef: String,
         val mode: TransportMode,
+        val directionId: Int,
         val title: String,
         val fromStopId: String?,
     )

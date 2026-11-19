@@ -207,22 +207,26 @@ fun TripScreen(key: TripKey) {
                         modifier = Modifier.padding(start = 16.dp, end = 16.dp, top = 2.dp, bottom = 8.dp),
                     )
 
-                    TextButton(
-                        onClick = {
-                            val target = pattern ?: return@TextButton
-                            context.appContainer.openTripMap(
-                                AppContainer.TripMapRequest(
-                                    runRef = key.runRef,
-                                    mode = key.mode,
-                                    title = target.destination ?: key.title,
-                                    fromStopId = key.fromStopId.toString(),
+                    // Live tracking in the Map View currently only available for Trains.
+                    if(key.mode == TransportMode.TRAIN) {
+                        TextButton(
+                            onClick = {
+                                val target = pattern ?: return@TextButton
+                                context.appContainer.openTripMap(
+                                    AppContainer.TripMapRequest(
+                                        runRef = key.runRef,
+                                        mode = key.mode,
+                                        directionId = target.directionId,
+                                        title = target.destination ?: key.title,
+                                        fromStopId = key.fromStopId.toString(),
+                                    )
                                 )
-                            )
-                            navigator.goToTab(com.ssethhyy.journey.ui.navigation.HomeTab.MAP)
-                        },
-                        modifier = Modifier.padding(horizontal = 16.dp),
-                    ) {
-                        Text("Show on map")
+                                navigator.goToTab(com.ssethhyy.journey.ui.navigation.HomeTab.MAP)
+                            },
+                            modifier = Modifier.padding(horizontal = 16.dp),
+                        ) {
+                            Text("Show on map")
+                        }
                     }
 
                     val pullState = androidx.compose.material3.pulltorefresh.rememberPullToRefreshState()

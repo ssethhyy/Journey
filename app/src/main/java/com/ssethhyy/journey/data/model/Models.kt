@@ -215,6 +215,7 @@ data class VehiclePosition(
 data class StoppingPattern(
     val route: Route?,
     val destination: String?,
+    val directionId: Int = 0,
     val stops: List<PatternStop>,
     val vehicle: VehicleInfo?,
     val disruptions: List<Disruption>,

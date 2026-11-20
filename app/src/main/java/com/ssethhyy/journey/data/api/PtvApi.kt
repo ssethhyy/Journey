@@ -6,6 +6,7 @@
 
 package com.ssethhyy.journey.data.api
 
+import android.util.Log
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.coroutines.withContext
@@ -133,11 +134,14 @@ class PtvApi(
         StopsOnRouteResponse.serializer(),
     )
 
-        suspend fun route(routeId: Int): RouteResponse = get(
-            "/v3/routes/$routeId",
-            listOf("include_geopath" to "true"),
-            RouteResponse.serializer(),
-        )
+    suspend fun route(routeId: Int, geopathUtc: String? = null): RouteResponse = get(
+        "/v3/routes/$routeId",
+        buildList {
+            add("include_geopath" to "true")
+            if (geopathUtc != null) add("geopath_utc" to geopathUtc)
+        },
+        RouteResponse.serializer(),
+    )
 
     suspend fun directions(routeId: Int): DirectionsResponse = get(
         "/v3/directions/route/$routeId",
@@ -184,6 +188,8 @@ class PtvApi(
         val credentials = credentialsProvider()?.takeIf { it.isValid } ?: throw PtvException.MissingCredentials()
         val signed = PtvSigner.signedPath(buildPathAndQuery(path, query), credentials)
         val request = Request.Builder().url(baseUrl.trimEnd('/') + signed).get().build()
+
+        Log.d("PtvApi", "GET ${request.url}")
 
         val response = try {
             client.newCall(request).await()

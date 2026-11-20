@@ -434,10 +434,8 @@ fun MapScreen(isActive: Boolean, modifier: Modifier = Modifier) {
                         runRef = currentTrip.runRef,
                         mode = currentTrip.mode,
                         directionId = currentTrip.directionId,
+                        render3dVehicles = state.settings.mapRender3dVehicles
                     )
-                    if (state.settings.mapRender3dVehicles) {
-                        VehicleModelLayer()
-                    }
                 }
 
                 // ---- Search region bounds --------------------------------------------

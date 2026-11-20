@@ -208,7 +208,7 @@ fun TripScreen(key: TripKey) {
                     )
 
                     // Live tracking in the Map View currently only available for Trains.
-                    if(key.mode == TransportMode.TRAIN) {
+                    //if(key.mode == TransportMode.TRAIN) {
                         TextButton(
                             onClick = {
                                 val target = pattern ?: return@TextButton
@@ -227,7 +227,7 @@ fun TripScreen(key: TripKey) {
                         ) {
                             Text("Show on map")
                         }
-                    }
+                    //}
 
                     val pullState = androidx.compose.material3.pulltorefresh.rememberPullToRefreshState()
                     com.ssethhyy.journey.ui.components.PullRefreshHaptics(pullState, refreshing)

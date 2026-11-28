@@ -1,5 +1,6 @@
 package com.ssethhyy.journey.ui
 
+import androidx.compose.ui.test.swipe
 import androidx.compose.ui.test.performTouchInput
 import androidx.compose.ui.test.swipeDown
 import android.graphics.Bitmap
@@ -278,9 +279,16 @@ class AppFlowScreenshotTest {
         waitForText("Departs in", substring = true)
         snap("08_plan_results")
 
-        // Journey detail.
+        // A journey opens on the map: when to leave and its steps in the panel.
         rule.onAllNodesWithText("Departs in", substring = true).onFirst().performClick()
-        waitForText("Get off", substring = true)
+        waitForText("Steps")
+        snap("09_journey_map")
+        // Pulled up, the panel becomes the journey's page.
+        rule.onNodeWithText("From ", substring = true).performTouchInput {
+            swipe(center, androidx.compose.ui.geometry.Offset(center.x, center.y - 3_000f), durationMillis = 400)
+        }
+        rule.waitUntil(15_000) { rule.onAllNodesWithContentDescription("Log trip").fetchSemanticsNodes().isNotEmpty() }
+        rule.waitForIdle()
         snap("09_journey_detail")
 
         // Log the journey on the default myki (no myki yet, then one).
@@ -308,8 +316,12 @@ class AppFlowScreenshotTest {
         org.junit.Assert.assertTrue("fare was deducted", logged.balanceCents!! < 2_616L)
         org.junit.Assert.assertEquals("other myki untouched", 840L, runBlocking { container.mykiRepository.cards.first() }.first { it.id == "m2" }.balanceCents)
         runBlocking { container.mykiRepository.clear() }
+        // Back to the journey's panel on the map, then Back again closes it and returns to Plan.
         rule.activity.onBackPressedDispatcher.onBackPressed()
         rule.waitForIdle()
+        rule.activity.onBackPressedDispatcher.onBackPressed()
+        rule.waitForIdle()
+        waitForText("Departs in", substring = true)
 
         // Profile from the For You FAB, then Settings from the Profile FAB.
         runBlocking { container.settingsRepository.setUserName("Alex") }

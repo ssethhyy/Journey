@@ -239,10 +239,10 @@ class PtvRepository(
     }
 
     /**
-     * Prefers Transport Victoria's GTFS Realtime position for the service's vehicle: it's sent more reliably than PTV's
-     * and says when it was recorded, so the vehicle can be placed between updates. The vehicle is found by its numbers,
-     * near PTV's position when there is one, or near where the timetable says it should be. PTV's position stays when
-     * it's newer, or when the feed has nothing.
+     * Uses Transport Victoria's GTFS Realtime position for the service's vehicle whenever the feed has a live one: it's
+     * more accurate and sent more reliably than PTV's, and says when it was recorded, so the vehicle can be placed
+     * between updates. The vehicle is found by its numbers, near PTV's position when there is one, or near where the
+     * timetable says it should be. PTV's position is only the backup, for when the feed has nothing live.
      */
     private suspend fun withLivePosition(pattern: StoppingPattern, mode: TransportMode): StoppingPattern {
         val lookup = liveVehicle ?: return pattern
@@ -268,10 +268,8 @@ class PtvRepository(
         val lon = rt.longitude ?: return pattern
         val recorded = rt.timestampSec?.let { java.time.Instant.ofEpochSecond(it) }
         val ptv = pattern.vehiclePosition
-        // Keep PTV's when it's the newer of the two.
-        if (ptv?.recordedAt != null && recorded != null && ptv.recordedAt.isAfter(recorded)) return pattern
-        // A position more than a few minutes old isn't live any more.
-        if (recorded != null && recorded.isBefore(java.time.Instant.now().minusSeconds(300))) return pattern
+        // A feed position more than a few minutes old isn't live any more: fall back to PTV's.
+        if (!LivePositionRule.feedIsLive(recorded, java.time.Instant.now())) return pattern
         return pattern.copy(
             vehiclePosition = VehiclePosition(
                 latitude = lat,
@@ -344,4 +342,14 @@ object SearchRanking {
             ),
         ),
     )
+}
+
+/** When Transport Victoria's GTFS Realtime position is used in place of PTV's. */
+object LivePositionRule {
+    /** How old a feed position can be and still count as live. */
+    const val MAX_AGE_SECONDS = 300L
+
+    /** The feed's position is used whenever it's live; PTV's is only the backup. An undated one is taken as live. */
+    fun feedIsLive(recorded: java.time.Instant?, now: java.time.Instant): Boolean =
+        recorded == null || !recorded.isBefore(now.minusSeconds(MAX_AGE_SECONDS))
 }

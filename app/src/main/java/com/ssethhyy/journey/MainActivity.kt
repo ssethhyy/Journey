@@ -312,7 +312,7 @@ fun JourneyRoot(
                     // Pages pulled up out of a map panel morph in and drop back down, instead of sliding sideways.
                     entry<StopDetailKey>(metadata = { key -> if (key.fromMap) MapPageTransitions.metadata else emptyMap() }) { key -> StopDetailScreen(key) }
                     entry<RouteDetailKey>(metadata = { key -> if (key.fromMap) MapPageTransitions.metadata else emptyMap() }) { key -> RouteDetailScreen(key) }
-                    entry<TripKey> { key -> TripScreen(key) }
+                    entry<TripKey>(metadata = { key -> if (key.fromMap) MapPageTransitions.metadata else emptyMap() }) { key -> TripScreen(key) }
                     entry<SearchKey> { SearchScreen() }
                     entry<SettingsKey> { SettingsScreen() }
                     entry<DisruptionsKey> { DisruptionsScreen() }
@@ -321,7 +321,7 @@ fun JourneyRoot(
                     entry<MykiCardKey> { key -> MykiCardScreen(key) }
                     entry<FaresKey> { FaresScreen() }
                     entry<ProfileKey> { ProfileScreen() }
-                    entry<JourneyDetailKey>(metadata = { key -> if (key.fromMap) MapPageTransitions.crossfade else emptyMap() }) { key -> JourneyDetailScreen(key) }
+                    entry<JourneyDetailKey>(metadata = { key -> if (key.fromMap) MapPageTransitions.metadata else emptyMap() }) { key -> JourneyDetailScreen(key) }
                     entry<com.ssethhyy.journey.ui.navigation.NearbyKey>(metadata = MapPageTransitions.metadata) { key -> com.ssethhyy.journey.ui.screens.map.NearbyPage(key) }
                 },
             )
@@ -340,20 +340,11 @@ fun JourneyRoot(
 /**
  * How a page a map panel turned into comes and goes. The panel has already become the page by the time it opens (and
  * the panel starts as the page when you come back), so the swap itself isn't animated: only the toolbar changes.
- * The journey page isn't laid out like its panel, so it crossfades quickly instead.
  */
 private object MapPageTransitions {
     private val none = androidx.compose.animation.EnterTransition.None togetherWith androidx.compose.animation.ExitTransition.None
-    private val fade = androidx.compose.animation.fadeIn(androidx.compose.animation.core.tween(160)) togetherWith
-        androidx.compose.animation.fadeOut(androidx.compose.animation.core.tween(160))
-
     val metadata: Map<String, Any> =
         androidx.navigation3.ui.NavDisplay.transitionSpec { none } +
             androidx.navigation3.ui.NavDisplay.popTransitionSpec { none } +
             androidx.navigation3.ui.NavDisplay.predictivePopTransitionSpec { none }
-
-    val crossfade: Map<String, Any> =
-        androidx.navigation3.ui.NavDisplay.transitionSpec { fade } +
-            androidx.navigation3.ui.NavDisplay.popTransitionSpec { fade } +
-            androidx.navigation3.ui.NavDisplay.predictivePopTransitionSpec { fade }
 }

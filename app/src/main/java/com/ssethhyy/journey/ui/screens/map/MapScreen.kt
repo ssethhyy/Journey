@@ -167,6 +167,11 @@ fun MapScreen(isActive: Boolean, modifier: Modifier = Modifier) {
         journeyRequest?.let { container.journeyRepository.journey(it.journeyId) }
     }
     val tripRequest by container.tripMap.collectAsStateWithLifecycle()
+    // The journey step picked in its panel: highlighted on the map and zoomed to.
+    var journeyLeg by remember(journeyRequest) { mutableStateOf<Int?>(null) }
+    var tripPanelHeightPx by remember { mutableIntStateOf(0) }
+    // The trip's points, so it can be fitted again as its panel moves.
+    var tripFitPoints by remember(tripRequest) { mutableStateOf<List<Point>>(emptyList()) }
     val rouletteRequest by container.rouletteRequest.collectAsStateWithLifecycle()
     // A line opened from search or a stop: drawn on the map with its stops in a panel.
     val mapLine by MapLineRequests.route.collectAsStateWithLifecycle()
@@ -214,6 +219,7 @@ fun MapScreen(isActive: Boolean, modifier: Modifier = Modifier) {
     val journeyPanelVisible = journeyMode
     val previewClearance: androidx.compose.ui.unit.Dp = when {
         state.selected != null || mapLine != null -> with(density) { previewHeightPx.toDp() } + 4.dp
+        tripMode -> with(density) { tripPanelHeightPx.toDp() } + 4.dp
         journeyPanelVisible -> with(density) { journeyPanelHeightPx.toDp() } + 4.dp
         nearbyVisible -> with(density) { nearbyHeightPx.toDp() } + 4.dp
         else -> 0.dp
@@ -223,7 +229,7 @@ fun MapScreen(isActive: Boolean, modifier: Modifier = Modifier) {
     val rouletteVm = appViewModel(key = "stop_roulette") { StopRouletteViewModel(it) }
     val roulette by rouletteVm.state.collectAsStateWithLifecycle()
     val controlsVisible = (roulette is RouletteState.Idle || state.selected == null) &&
-        !(nearbyVisible && nearbyFullProgress > 0.6f) && (placeFullProgress <= 0.6f || (state.selected == null && mapLine == null && !journeyMode))
+        !(nearbyVisible && nearbyFullProgress > 0.6f) && (placeFullProgress <= 0.6f || (state.selected == null && mapLine == null && !journeyMode && !tripMode))
     val controlsClearance: androidx.compose.ui.unit.Dp = if (controlsVisible) ControlRowHeight + 8.dp else 0.dp
 
     val statusTopPx = WindowInsets.statusBars.getTop(density)
@@ -276,9 +282,14 @@ fun MapScreen(isActive: Boolean, modifier: Modifier = Modifier) {
     }
 
     androidx.activity.compose.BackHandler(enabled = isActive && journeyRequest != null) {
-        val request = journeyRequest ?: return@BackHandler
+        if (journeyLeg != null) {
+            journeyLeg = null
+            return@BackHandler
+        }
+        val tab = MapOrigins.journeyTab
+        MapOrigins.journeyTab = null
         container.closeJourneyMap()
-        navigator.openJourney(request.journeyId, request.fromName, request.toName)
+        tab?.let(navigator::goToTab)
     }
     androidx.activity.compose.BackHandler(enabled = isActive && tripRequest != null) {
         container.closeTripMap()
@@ -342,7 +353,7 @@ fun MapScreen(isActive: Boolean, modifier: Modifier = Modifier) {
     // the line, you, or just where you were looking) in the middle of the part the panel leaves uncovered.
     LaunchedEffect(bottomCoveredPx, topCoveredPx) {
         if (nearbyVisible && nearbyFullProgress > 0f) return@LaunchedEffect
-        if (placeFullProgress > 0f && (state.selected != null || mapLine != null || journeyMode)) return@LaunchedEffect
+        if (placeFullProgress > 0f && (state.selected != null || mapLine != null || journeyMode || tripMode)) return@LaunchedEffect
         visiblePadding = EdgeInsets(topCoveredPx.toDouble(), 0.0, bottomCoveredPx.toDouble(), 0.0)
         // Wait for the panel to come to rest, and for any fly-to to land.
         kotlinx.coroutines.delay(maxOf(140L, flyingUntil - System.currentTimeMillis()))
@@ -350,7 +361,13 @@ fun MapScreen(isActive: Boolean, modifier: Modifier = Modifier) {
         val here = state.userLocation
         val selected = state.selected
         when {
-            journeyMode || tripMode -> Unit // Their own panels fit them.
+            journeyMode -> Unit // Its panel fits it.
+            tripMode && tripFitPoints.size > 1 -> {
+                val padding = EdgeInsets(topCoveredPx + 24.0, 48.0, bottomCoveredPx + 24.0, 48.0)
+                val camera = viewportState.cameraForCoordinates(tripFitPoints, CameraOptions.Builder().build(), padding, 16.0, null)
+                viewportState.easeTo(camera, ease)
+            }
+            tripMode -> Unit
             selected != null -> viewportState.easeTo(
                 CameraOptions.Builder().center(Point.fromLngLat(selected.longitude, selected.latitude)).padding(visiblePadding).build(),
                 ease,
@@ -451,7 +468,7 @@ fun MapScreen(isActive: Boolean, modifier: Modifier = Modifier) {
                         JourneyRouteLayers(
                             j,
                             darkMap = state.settings.mapFollowsTheme && darkTheme,
-                            highlight = null,
+                            highlight = journeyLeg?.let { j.legs.getOrNull(it) },
                         )
                     }
                 }
@@ -637,12 +654,13 @@ fun MapScreen(isActive: Boolean, modifier: Modifier = Modifier) {
         // ---- Fit the journey into the uncovered part of the map ----------------------
         val statusTop = WindowInsets.statusBars.getTop(density)
         val navBottom = WindowInsets.navigationBars.getBottom(density)
-        LaunchedEffect(journey, journeyPanelHeightPx, isActive) {
+        LaunchedEffect(journey, journeyPanelHeightPx, isActive, journeyLeg) {
             val j = journey ?: return@LaunchedEffect
-            if (!isActive) return@LaunchedEffect
+            if (!isActive || placeFullProgress > 0f) return@LaunchedEffect
             // Wait for the panel to stop moving (it changes height every frame while dragged) before flying.
             kotlinx.coroutines.delay(250)
-            val drawable = JourneyGeometry.drawable(j)
+            val chosen = journeyLeg?.let { j.legs.getOrNull(it) }?.takeIf { it.path.size > 1 }
+            val drawable = chosen?.let(::listOf) ?: JourneyGeometry.drawable(j)
             val points = JourneyGeometry.allPoints(drawable)
             if (points.size < 2) return@LaunchedEffect
             val px = { dp: androidx.compose.ui.unit.Dp -> with(density) { dp.toPx() }.toDouble() }
@@ -670,18 +688,22 @@ fun MapScreen(isActive: Boolean, modifier: Modifier = Modifier) {
             journey?.let { j ->
                 JourneyMapPanel(
                     journey = j,
+                    origin = request?.fromName.orEmpty(),
                     destination = request?.toName.orEmpty(),
-                    selected = null,
-                    onSelect = {},
+                    selected = journeyLeg,
+                    onSelect = { journeyLeg = it },
                     onOpenStop = com.ssethhyy.journey.ui.components.rememberLegStopOpener(),
-                    onClose = container::closeJourneyMap,
+                    onClose = {
+                        MapOrigins.journeyTab = null
+                        container.closeJourneyMap()
+                    },
                     onFullProgress = { placeFullProgress = it },
-                    onFullPage = request?.let { r -> { navigator.openJourney(r.journeyId, r.fromName, r.toName, fromMap = true) } },
+                    onFullPage = request?.let { r -> { scroll: SheetScroll -> navigator.openJourneyPage(r.journeyId, r.fromName, r.toName, scroll, journeyLeg) } },
                 )
             }
         }
 
-        // ---- Trip panel (placeholder; expand with stop list next) --------------------
+        // ---- Trip panel: the service's live status and stopping pattern (MapPlaceSheets.kt) --
         AnimatedVisibility(
             visible = tripMode,
             enter = slideInVertically { it / 2 } + fadeIn(),
@@ -689,40 +711,22 @@ fun MapScreen(isActive: Boolean, modifier: Modifier = Modifier) {
             modifier = Modifier
                 .align(Alignment.BottomCenter)
                 .windowInsetsPadding(WindowInsets.navigationBars)
-                .padding(start = 12.dp, end = 12.dp, bottom = ToolbarClearance - 8.dp),
+                .padding(start = 12.dp, end = 12.dp, bottom = ToolbarClearance - 8.dp)
+                .onSizeChanged { tripPanelHeightPx = it.height },
         ) {
             val request = tripRequest
             if (request != null) {
-                Surface(
-                    shape = RoundedCornerShape(28.dp),
-                    color = MaterialTheme.colorScheme.surfaceContainerHigh,
-                    shadowElevation = 6.dp,
-                    modifier = Modifier.fillMaxWidth(),
-                ) {
-                    Row(
-                        Modifier.padding(16.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                    ) {
-                        Column(Modifier.weight(1f)) {
-                            Text(
-                                "To ${request.title}",
-                                style = MaterialTheme.typography.titleMedium,
-                                maxLines = 1,
-                                overflow = TextOverflow.Ellipsis,
-                            )
-                            Text(
-                                "Showing this run's stops",
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            )
-                        }
-                        HapticIconButton(
-                            icon = Sym.Close,
-                            contentDescription = "Close trip",
-                            onClick = { container.closeTripMap() },
-                        )
-                    }
-                }
+                MapTripSheet(
+                    request = request,
+                    onClose = container::closeTripMap,
+                    onFullProgress = { placeFullProgress = it },
+                    onFit = { points ->
+                        tripFitPoints = points
+                        val padding = EdgeInsets(topCoveredPx + 24.0, 48.0, bottomCoveredPx + 24.0, 48.0)
+                        val camera = viewportState.cameraForCoordinates(points, CameraOptions.Builder().build(), padding, 16.0, null)
+                        viewportState.flyTo(camera, MapAnimationOptions.mapAnimationOptions { duration(900) })
+                    },
+                )
             }
         }
 

@@ -62,6 +62,10 @@ data class TripKey(
     val routeType: Int,
     val fromStopId: Int,
     val title: String,
+    /** Opened by pulling the map's trip panel up; dragging it down goes back to the map. */
+    val fromMap: Boolean = false,
+    val scrollIndex: Int = 0,
+    val scrollOffset: Int = 0,
 ) : NavKey {
     val mode: TransportMode get() = TransportMode.fromRouteType(routeType)
 }
@@ -95,7 +99,16 @@ data object FaresKey : NavKey
 data object ProfileKey : NavKey
 
 @Serializable
-data class JourneyDetailKey(val journeyId: String, val fromName: String, val toName: String, val fromMap: Boolean = false) : NavKey
+data class JourneyDetailKey(
+    val journeyId: String,
+    val fromName: String,
+    val toName: String,
+    val fromMap: Boolean = false,
+    val scrollIndex: Int = 0,
+    val scrollOffset: Int = 0,
+    /** The step picked in the panel, kept open on the page (-1 for none). */
+    val selectedLeg: Int = -1,
+) : NavKey
 
 enum class HomeTab { FOR_YOU, PLAN, MAP }
 
@@ -137,8 +150,30 @@ class Navigator(
     /** The Nearby panel's page. */
     fun openNearbyPage(scroll: com.ssethhyy.journey.ui.screens.map.SheetScroll) = open(NearbyKey(scroll.index, scroll.offset))
 
-    fun openTrip(runRef: String, mode: TransportMode, fromStopId: Int, title: String) =
-        open(TripKey(runRef, mode.routeType, fromStopId, title))
+    /**
+     * Opens a service on the map: its stops and live position drawn, its stopping pattern in the floating panel.
+     * [from] is the stop it was opened from, which the panel goes back to when closed; [returnTo] is the tab Back
+     * returns to when it was opened from somewhere other than the map.
+     */
+    fun openTrip(
+        runRef: String,
+        mode: TransportMode,
+        fromStopId: Int,
+        title: String,
+        directionId: Int = -1,
+        from: Stop? = null,
+        returnTo: HomeTab? = null,
+    ) {
+        while (backStack.size > 1) backStack.removeAt(backStack.lastIndex)
+        selectTab(HomeTab.MAP)
+        com.ssethhyy.journey.ui.screens.map.MapLineRequests.clear()
+        com.ssethhyy.journey.ui.screens.map.MapOrigins.trip(from?.takeIf { it.latitude != 0.0 || it.longitude != 0.0 }, returnTo)
+        container.openTripMap(AppContainer.TripMapRequest(runRef, mode, directionId, title, fromStopId.toString()))
+    }
+
+    /** The service's own page, pulled up out of the map's trip panel. */
+    fun openTripPage(runRef: String, mode: TransportMode, fromStopId: Int, title: String, scroll: com.ssethhyy.journey.ui.screens.map.SheetScroll? = null) =
+        open(TripKey(runRef, mode.routeType, fromStopId, title, fromMap = true, scroll?.index ?: 0, scroll?.offset ?: 0))
 
     fun openSettings() = open(SettingsKey)
     fun openSearch() = open(SearchKey)
@@ -149,8 +184,22 @@ class Navigator(
     fun openFares() = open(FaresKey)
     fun openProfile() = open(ProfileKey)
 
-    fun openJourney(journeyId: String, fromName: String, toName: String, fromMap: Boolean = false) =
-        open(JourneyDetailKey(journeyId, fromName, toName, fromMap))
+    /**
+     * Opens a planned journey on the map, with its summary and steps in the floating panel (pull it up for the
+     * whole page). A journey the planner no longer has gets the page, which says so.
+     */
+    fun openJourney(journeyId: String, fromName: String, toName: String, returnTo: HomeTab? = null) {
+        if (container.journeyRepository.journey(journeyId) == null) {
+            open(JourneyDetailKey(journeyId, fromName, toName))
+        } else {
+            com.ssethhyy.journey.ui.screens.map.MapOrigins.journeyTab = returnTo
+            showJourneyOnMap(journeyId, fromName, toName)
+        }
+    }
+
+    /** The journey's own page, pulled up out of the map's journey panel. */
+    fun openJourneyPage(journeyId: String, fromName: String, toName: String, scroll: com.ssethhyy.journey.ui.screens.map.SheetScroll? = null, selectedLeg: Int? = null) =
+        open(JourneyDetailKey(journeyId, fromName, toName, fromMap = true, scroll?.index ?: 0, scroll?.offset ?: 0, selectedLeg ?: -1))
 
     fun openTracked(target: TrackingTarget) = when (target) {
         is TrackingTarget.Service -> openTrip(target.runRef, target.mode, target.stopId, target.headsign)
@@ -164,11 +213,10 @@ class Navigator(
         container.requestPlan(PlanRequest(to, from))
     }
 
-    /**
-     * Opens a planned journey full size on the Map tab, with its legs to explore. The Map tab lives on the home
-     * screen, so the journey page is closed here; Back on the map reopens it.
-     */
+    /** Opens a planned journey on the Map tab, with its legs to explore in the floating panel. */
     fun showJourneyOnMap(journeyId: String, fromName: String, toName: String) {
+        com.ssethhyy.journey.ui.screens.map.MapLineRequests.clear()
+        container.closeTripMap()
         container.showJourneyOnMap(com.ssethhyy.journey.JourneyMapRequest(journeyId, fromName, toName))
         while (backStack.size > 1) backStack.removeAt(backStack.lastIndex)
         selectTab(HomeTab.MAP)

@@ -205,7 +205,7 @@ fun PlanScreen() {
                             JourneyCard(
                                 journey = journey,
                                 now = now,
-                                onClick = { navigator.openJourney(journey.id, state.from.name, state.to?.name.orEmpty()) },
+                                onClick = { navigator.openJourney(journey.id, state.from.name, state.to?.name.orEmpty(), returnTo = com.ssethhyy.journey.ui.navigation.HomeTab.PLAN) },
                                 modifier = Modifier.animateItem(),
                             )
                         }

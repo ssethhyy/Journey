@@ -249,7 +249,7 @@ fun androidx.compose.foundation.lazy.LazyListScope.stopDetailItems(
             } else {
                 RoundedCardContainer {
                     visibleDepartures.forEach { dep -> DepartureListRow(dep, now, state, onOpenTrip = {
-                        dep.runRef?.let { navigator.openTrip(it, stop.mode, stop.id, dep.headsign) }
+                        dep.runRef?.let { navigator.openTrip(it, stop.mode, stop.id, dep.headsign, dep.directionId, from = stop) }
                     }) }
                 }
             }

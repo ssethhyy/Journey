@@ -104,41 +104,29 @@ import com.ssethhyy.journey.utils.TimeFormatter
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
 fun JourneyDetailScreen(key: JourneyDetailKey) {
-    val container = LocalContext.current.appContainer
     val navigator = currentNavigator
-    var journey by remember(key.journeyId) { mutableStateOf(container.journeyRepository.journey(key.journeyId)) }
-    var updatedAt by remember { mutableStateOf<java.time.Instant?>(java.time.Instant.now()) }
-    var refreshing by remember { mutableStateOf(false) }
-    val scope = rememberCoroutineScope()
+    // The same one the map's journey panel uses, so the page opens showing exactly what the panel did.
+    val live = journeyLiveViewModel(key.journeyId)
+    val journey by live.journey.collectAsStateWithLifecycle()
+    val updatedAt by live.updatedAt.collectAsStateWithLifecycle()
+    val refreshing by live.refreshing.collectAsStateWithLifecycle()
+    val now by com.ssethhyy.journey.ui.components.rememberNow()
     val openLegStop = com.ssethhyy.journey.ui.components.rememberLegStopOpener()
-    val refresh: () -> Unit = {
-        if (!refreshing) {
-            scope.launch {
-                refreshing = true
-                runCatching { container.journeyRepository.refreshJourney(key.journeyId) }
-                    .onSuccess { updated ->
-                        if (updated != null) {
-                            journey = updated
-                            updatedAt = java.time.Instant.now()
-                        }
-                    }
-                refreshing = false
-            }
-        }
-    }
+    var selected by androidx.compose.runtime.saveable.rememberSaveable(key.journeyId) { mutableStateOf(key.selectedLeg.takeIf { it >= 0 }) }
     // Live updates while the journey hasn't finished.
-    AutoRefreshEffect(enabled = journey?.end?.isAfter(java.time.Instant.now()) == true, intervalMs = 30_000) { refresh() }
+    AutoRefreshEffect(enabled = journey?.end?.isAfter(now) == true, intervalMs = 30_000) { live.refresh() }
     var logging by remember { mutableStateOf(false) }
     if (logging) journey?.let { com.ssethhyy.journey.ui.screens.myki.LogJourneySheet(it, onDismiss = { logging = false }) }
     // Pulled up out of the map's journey panel: drag it back down to return to the map.
     val pullDown = com.ssethhyy.journey.ui.components.rememberPullDownToClose(key.fromMap, navigator::back)
+    val listState = androidx.compose.foundation.lazy.rememberLazyListState(key.scrollIndex, key.scrollOffset)
 
     Scaffold(
         modifier = pullDown.pageModifier,
         topBar = {
             ReusableTopAppBar(
                 title = "To ${key.toName.ifBlank { "destination" }}",
-                subtitle = journey?.let { "${TimeFormatter.clock(it.start)} – ${TimeFormatter.clock(it.end)} · ${formatDuration(it.durationMinutes)}" },
+                subtitle = "From ${key.fromName.ifBlank { "your start" }}",
                 onBackClick = navigator::back,
                 pageFab = if (journey?.isWalkOnly == false) rememberTrackFab(TrackingTarget.Trip(key.journeyId, key.fromName, key.toName), "Track journey") else null,
                 pageActions = if (journey?.isWalkOnly == false) listOf(ToolbarFab(Sym.Contactless, "Log trip") { logging = true }) else emptyList(),
@@ -169,58 +157,29 @@ fun JourneyDetailScreen(key: JourneyDetailKey) {
             return@Scaffold
         }
         LazyColumn(
+            state = listState,
             modifier = Modifier
                 .fillMaxSize()
                 .floatingBarBlur(padding.calculateTopPadding())
                 .nestedScroll(pullDown.connection),
             contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = padding.calculateTopPadding(), bottom = pageBottomInset(104.dp)),
-            verticalArrangement = Arrangement.spacedBy(12.dp),
+            verticalArrangement = Arrangement.spacedBy(6.dp),
         ) {
-            item(key = "map") { JourneyMap(journey, onOpen = { navigator.showJourneyOnMap(key.journeyId, key.fromName, key.toName) }) }
-            item(key = "live") { LiveStatusRow(updatedAt = updatedAt, refreshing = refreshing, onRefresh = refresh) }
-            item(key = "chips") {
-                val chipColors = AssistChipDefaults.assistChipColors(containerColor = MaterialTheme.colorScheme.surfaceContainerHigh)
-                FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    AssistChip(onClick = {}, label = { Text(formatDuration(journey.durationMinutes)) }, leadingIcon = { Icon(Sym.Schedule, null, Modifier.size(18.dp)) }, shape = CircleShape, colors = chipColors, border = null)
-                    AssistChip(
-                        onClick = {},
-                        label = { Text(if (journey.transfers == 0) "No changes" else "${journey.transfers} change${if (journey.transfers > 1) "s" else ""}") },
-                        leadingIcon = { Icon(Sym.SyncAlt, null, Modifier.size(18.dp)) },
-                        shape = CircleShape,
-                        colors = chipColors,
-                        border = null,
-                    )
-                    if (journey.walkMeters >= 50) {
-                        AssistChip(
-                            onClick = {},
-                            label = { Text("${DistanceFormatter.distance(journey.walkMeters)} walking") },
-                            leadingIcon = { Icon(Sym.DirectionsWalk, null, Modifier.size(18.dp)) },
-                            shape = CircleShape,
-                            colors = chipColors,
-                            border = null,
-                        )
-                    }
-                }
+            // Pulled up from the map, the map is right behind it; otherwise a preview opens it there.
+            if (!key.fromMap) {
+                item(key = "map") { JourneyMap(journey, onOpen = { navigator.showJourneyOnMap(key.journeyId, key.fromName, key.toName) }) }
             }
-            item(key = "timeline") {
-                RoundedCardContainer(spacing = 0.dp) {
-                    Box(Modifier.padding(vertical = 12.dp)) {
-                        JourneyTimeline(
-                            journey,
-                            destinationName = key.toName,
-                            onStopClick = { leg, boarding -> openLegStop(leg, boarding) },
-                        )
-                    }
-                }
-            }
-            item(key = "attribution") {
-                Text(
-                    "Times include live updates where available. Planning by Transitous using Transport Victoria open data.",
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.padding(horizontal = 8.dp),
-                )
-            }
+            journeyItems(
+                journey = journey,
+                destination = key.toName,
+                now = now,
+                updatedAt = updatedAt,
+                refreshing = refreshing,
+                onRefresh = live::refresh,
+                selected = selected,
+                onSelect = { selected = it },
+                onOpenStop = openLegStop,
+            )
         }
     }
 }

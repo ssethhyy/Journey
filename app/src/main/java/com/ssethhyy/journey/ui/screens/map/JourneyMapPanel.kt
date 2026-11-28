@@ -11,6 +11,8 @@ package com.ssethhyy.journey.ui.screens.map
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.setValue
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.ssethhyy.journey.ui.screens.plan.journeyItems
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.expandVertically
@@ -83,6 +85,8 @@ object JourneyLegText {
 @Composable
 fun JourneyMapPanel(
     journey: Journey,
+    /** Where it starts and ends, as the planner named them. */
+    origin: String,
     destination: String,
     selected: Int?,
     onSelect: (Int?) -> Unit,
@@ -91,133 +95,69 @@ fun JourneyMapPanel(
     modifier: Modifier = Modifier,
     /** 0 at open to 1 at full page, as it moves. */
     onFullProgress: (Float) -> Unit = {},
-    /** The journey's own page, opened when the panel is pulled all the way up. */
-    onFullPage: (() -> Unit)? = null,
+    /** The journey's own page, opened when the panel is pulled all the way up, where the panel was scrolled to. */
+    onFullPage: ((SheetScroll) -> Unit)? = null,
 ) {
-    val legs = journey.legs
-    var step by androidx.compose.runtime.saveable.rememberSaveable(journey.start.epochSecond) { androidx.compose.runtime.mutableStateOf(SheetStep.OPEN) }
+    val live = com.ssethhyy.journey.ui.screens.plan.journeyLiveViewModel(journey.id)
+    val liveJourney by live.journey.collectAsStateWithLifecycle()
+    val updatedAt by live.updatedAt.collectAsStateWithLifecycle()
+    val refreshing by live.refreshing.collectAsStateWithLifecycle()
+    val shown = liveJourney ?: journey
+    val now by com.ssethhyy.journey.ui.components.rememberNow()
+    // Live times while the journey is still to come or under way.
+    com.ssethhyy.journey.ui.components.AutoRefreshEffect(enabled = shown.end.isAfter(now), intervalMs = 30_000) { live.refresh() }
+    var step by androidx.compose.runtime.saveable.rememberSaveable(journey.id) { androidx.compose.runtime.mutableStateOf(SheetStep.OPEN) }
     val listState = rememberLazyListState()
-    // Bring the chosen leg, with its details and stop buttons, fully into view.
-    LaunchedEffect(selected) { selected?.let { listState.animateScrollToItem(it) } }
-    // Pull it up into a full page of the journey's legs, or down to just its summary.
+    // Bring the chosen step, with its details and stop buttons, into view.
+    LaunchedEffect(selected) { selected?.let { listState.animateScrollToItem(com.ssethhyy.journey.ui.screens.plan.JOURNEY_FIRST_STEP_ITEM + it) } }
+    val trackFab = if (!shown.isWalkOnly) {
+        com.ssethhyy.journey.ui.components.rememberTrackFab(com.ssethhyy.journey.tracking.TrackingTarget.Trip(journey.id, origin, destination), "Track journey")
+    } else {
+        null
+    }
+    // Pull it up into the journey's page, or down to just its name.
     MapSheet(
         step = step,
         onStepChange = { step = it },
         name = "journey",
         modifier = modifier,
-        openHeight = if (selected == null) 280.dp else 380.dp,
+        openHeight = if (selected == null) 330.dp else 420.dp,
         onFullProgress = onFullProgress,
-        onFullPage = onFullPage?.let { open -> { _: SheetScroll -> open() } },
+        onFullPage = onFullPage,
         listState = listState,
         panelPadding = 8.dp,
         pagePadding = 16.dp,
-        spacing = 4.dp,
+        spacing = 6.dp,
         header = {
             Row(Modifier.padding(start = 16.dp, end = 4.dp, top = 8.dp, bottom = 8.dp), verticalAlignment = Alignment.CenterVertically) {
                 Column(Modifier.weight(1f)) {
                     Text("To ${destination.ifBlank { "your destination" }}", style = MaterialTheme.typography.titleMediumEmphasized, maxLines = 1, overflow = TextOverflow.Ellipsis)
                     Text(
-                        listOf(
-                            "${TimeFormatter.clock(journey.start)} – ${TimeFormatter.clock(journey.end)}",
-                            formatDuration(journey.durationMinutes),
-                            when (journey.transfers) {
-                                0 -> "No changes"
-                                1 -> "1 change"
-                                else -> "${journey.transfers} changes"
-                            },
-                        ).joinToString(" · "),
+                        "From ${origin.ifBlank { "your start" }}",
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
                     )
                 }
                 if (selected != null) {
                     TextButton(onClick = hapticClick { onSelect(null) }) { Text("Whole route") }
                 }
+                trackFab?.let { HapticIconButton(it.icon, it.contentDescription, onClick = it.onClick, tint = MaterialTheme.colorScheme.primary) }
                 HapticIconButton(Sym.Close, "Close journey", onClick = onClose, tint = MaterialTheme.colorScheme.onSurfaceVariant)
             }
         },
     ) {
-        itemsIndexed(legs, key = { index, leg -> "$index-${leg.start.epochSecond}" }) { index, leg ->
-            LegRow(
-                leg = leg,
-                title = JourneyLegText.title(leg, isLast = index == legs.lastIndex, destination = destination),
-                expanded = index == selected,
-                onClick = { onSelect(if (index == selected) null else index) },
-                onOpenStop = { boarding -> onOpenStop(leg, boarding) },
-            )
-        }
-    }
-}
-
-@Composable
-private fun LegRow(leg: JourneyLeg, title: String, expanded: Boolean, onClick: () -> Unit, onOpenStop: (Boolean) -> Unit) {
-    val transit = leg.kind != LegKind.WALK
-    Surface(
-        onClick = hapticClick(onClick),
-        shape = RoundedCornerShape(20.dp),
-        color = if (expanded) MaterialTheme.colorScheme.secondaryContainer else MaterialTheme.colorScheme.surfaceBright,
-        modifier = Modifier.fillMaxWidth(),
-    ) {
-        Column(Modifier.padding(horizontal = 12.dp, vertical = 10.dp)) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                val mode = leg.mode
-                if (transit && mode != null) {
-                    ModePictogram(mode, size = 32.dp)
-                } else {
-                    Box(Modifier.size(32.dp).background(MaterialTheme.colorScheme.surfaceContainerHighest, CircleShape), contentAlignment = Alignment.Center) {
-                        Icon(Sym.DirectionsWalk, null, Modifier.size(18.dp), tint = MaterialTheme.colorScheme.onSurfaceVariant)
-                    }
-                }
-                Spacer(Modifier.width(12.dp))
-                Column(Modifier.weight(1f)) {
-                    Text(title, style = MaterialTheme.typography.titleSmall, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                    Text(
-                        "${TimeFormatter.clock(leg.start)} – ${TimeFormatter.clock(leg.end)} · ${formatDuration(leg.durationMinutes)}",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                }
-                // The leg's colour on the map, so the row and the line are easy to match up.
-                Box(Modifier.size(width = 6.dp, height = 28.dp).background(leg.mapColor(), RoundedCornerShape(3.dp)))
-            }
-            AnimatedVisibility(visible = expanded, enter = expandVertically() + fadeIn(), exit = shrinkVertically() + fadeOut()) {
-                Column(Modifier.padding(top = 10.dp, start = 44.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                    if (transit) {
-                        Row(verticalAlignment = Alignment.CenterVertically) { LegChip(leg) }
-                        Detail("Get on", listOfNotNull(leg.fromName.ifBlank { null }, leg.platform?.let { "Platform $it" }, TimeFormatter.clock(leg.start)).joinToString(" · "))
-                        val stops = JourneyLegText.stopCount(leg)
-                        Detail("Ride", "$stops ${if (stops == 1) "stop" else "stops"} · ${formatDuration(leg.durationMinutes)}")
-                        Detail("Get off", listOfNotNull(leg.toName.ifBlank { null }, leg.arrivalPlatform?.let { "Platform $it" }, TimeFormatter.clock(leg.end)).joinToString(" · "))
-                        if (leg.intermediateStops.isNotEmpty()) {
-                            Text(
-                                "Via " + leg.intermediateStops.take(6).joinToString(", ") + if (leg.intermediateStops.size > 6) "…" else "",
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                maxLines = 3,
-                                overflow = TextOverflow.Ellipsis,
-                            )
-                        }
-                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.padding(top = 2.dp)) {
-                            FilledTonalButton(onClick = hapticClick { onOpenStop(true) }, contentPadding = PaddingValues(horizontal = 12.dp), modifier = Modifier.weight(1f)) {
-                                Text(leg.fromName.ifBlank { "Get-on stop" }, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                            }
-                            FilledTonalButton(onClick = hapticClick { onOpenStop(false) }, contentPadding = PaddingValues(horizontal = 12.dp), modifier = Modifier.weight(1f)) {
-                                Text(leg.toName.ifBlank { "Get-off stop" }, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                            }
-                        }
-                    } else {
-                        Detail("Walk", listOfNotNull(leg.distanceMeters?.takeIf { it > 0 }?.let(DistanceFormatter::distance), formatDuration(leg.durationMinutes)).joinToString(" · "))
-                    }
-                }
-            }
-        }
-    }
-}
-
-@Composable
-private fun Detail(label: String, value: String) {
-    Row {
-        Text(label, style = MaterialTheme.typography.labelLargeEmphasized, color = MaterialTheme.colorScheme.primary, modifier = Modifier.width(64.dp))
-        Text(value, style = MaterialTheme.typography.bodyMedium)
+        journeyItems(
+            journey = shown,
+            destination = destination,
+            now = now,
+            updatedAt = updatedAt,
+            refreshing = refreshing,
+            onRefresh = live::refresh,
+            selected = selected,
+            onSelect = onSelect,
+            onOpenStop = onOpenStop,
+        )
     }
 }

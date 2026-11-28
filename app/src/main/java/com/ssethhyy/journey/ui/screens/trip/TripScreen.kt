@@ -79,7 +79,8 @@ import com.ssethhyy.journey.appContainer
 import com.ssethhyy.journey.data.model.StoppingPattern
 import com.ssethhyy.journey.data.model.TransportMode
 import com.ssethhyy.journey.ui.LoadState
-import com.ssethhyy.journey.ui.appViewModel
+import com.ssethhyy.journey.ui.sharedAppViewModel
+import com.ssethhyy.journey.ui.components.floatingBarBlur
 import com.ssethhyy.journey.ui.components.AutoRefreshEffect
 import com.ssethhyy.journey.ui.components.DisruptionCard
 import com.ssethhyy.journey.ui.components.ErrorState
@@ -144,10 +145,31 @@ class TripViewModel(private val container: AppContainer, private val runRef: Str
 /** How often the live position and predicted times refresh while the screen is open. */
 private const val LIVE_REFRESH_MS = 10_000L
 
+/** What "Track this service" follows for this run, once its stopping pattern has loaded. */
+internal fun tripTrackTarget(runRef: String, mode: TransportMode, fromStopId: Int, title: String, pattern: StoppingPattern?): TrackingTarget.Service? =
+    pattern?.let {
+        TrackingTarget.Service(
+            runRef = runRef,
+            mode = mode,
+            stopId = fromStopId,
+            stopName = it.stops.firstOrNull { s -> s.stop.id == fromStopId }?.stop?.name ?: "Your stop",
+            routeLabel = it.route?.badgeLabel?.let { badge -> if (mode == TransportMode.TRAIN || mode == TransportMode.VLINE) "$badge line" else "${mode.label} $badge" } ?: mode.label,
+            headsign = it.destination ?: title,
+        )
+    }
+
+/** The trip's view model, shared by the map's trip panel and the trip page so they show the same thing. */
+@Composable
+internal fun tripViewModel(runRef: String, mode: TransportMode): TripViewModel =
+    sharedAppViewModel(key = "trip_$runRef") { TripViewModel(it, runRef, mode) }
+
+/** How often the trip panel and page refresh the live position and times. */
+internal const val TRIP_REFRESH_MS = LIVE_REFRESH_MS
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun TripScreen(key: TripKey) {
-    val vm = appViewModel(key = "trip_${key.runRef}") { TripViewModel(it, key.runRef, key.mode) }
+    val vm = tripViewModel(key.runRef, key.mode)
     val state by vm.state.collectAsStateWithLifecycle()
     val refreshing by vm.refreshing.collectAsStateWithLifecycle()
     val crowding by vm.crowding.collectAsStateWithLifecycle()
@@ -156,20 +178,14 @@ fun TripScreen(key: TripKey) {
     val now by rememberNow()
     var showAllStops by rememberSaveable { mutableStateOf(false) }
     AutoRefreshEffect(enabled = true, intervalMs = LIVE_REFRESH_MS) { vm.load() }
+    // Pulled up out of the map's trip panel: it starts where the panel was scrolled, and dragging down goes back.
+    val listState = androidx.compose.foundation.lazy.rememberLazyListState(key.scrollIndex, key.scrollOffset)
+    val pullDown = com.ssethhyy.journey.ui.components.rememberPullDownToClose(key.fromMap, navigator::back)
 
     val pattern = state.dataOrNull
-    val stopName = pattern?.stops?.firstOrNull { it.stop.id == key.fromStopId }?.stop?.name
-    val trackTarget = pattern?.let {
-        TrackingTarget.Service(
-            runRef = key.runRef,
-            mode = key.mode,
-            stopId = key.fromStopId,
-            stopName = stopName ?: "Your stop",
-            routeLabel = it.route?.badgeLabel?.let { badge -> if (key.mode == TransportMode.TRAIN || key.mode == TransportMode.VLINE) "$badge line" else "${key.mode.label} $badge" } ?: key.mode.label,
-            headsign = it.destination ?: key.title,
-        )
-    }
+    val trackTarget = tripTrackTarget(key.runRef, key.mode, key.fromStopId, key.title, pattern)
     Scaffold(
+        modifier = pullDown.pageModifier,
         topBar = {
             ReusableTopAppBar(
                 title = "To ${pattern?.destination ?: key.title}",
@@ -183,19 +199,41 @@ fun TripScreen(key: TripKey) {
             if (!usesBottomBar() && trackTarget != null) TrackButton(target = trackTarget, label = "Track this service")
         },
     ) { padding ->
+        if (key.fromMap) {
+            // Laid out like the panel at full height, so the panel turns into it without a jump.
+            when (val s = state) {
+                LoadState.Loading -> Box(Modifier.padding(padding)) { LoadingState(label = "Loading stopping pattern") }
+                is LoadState.Error -> Box(Modifier.padding(padding)) { ErrorState(s.error, onRetry = { vm.load() }, onOpenSettings = navigator::openSettings) }
+                is LoadState.Success -> LazyColumn(
+                    state = listState,
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .floatingBarBlur(padding.calculateTopPadding())
+                        .nestedScroll(pullDown.connection),
+                    contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = padding.calculateTopPadding(), bottom = pageBottomInset(104.dp)),
+                    verticalArrangement = Arrangement.spacedBy(6.dp),
+                ) {
+                    tripItems(
+                        data = s.data,
+                        mode = key.mode,
+                        fromStopId = key.fromStopId,
+                        now = now,
+                        crowding = crowding,
+                        showAllStops = showAllStops,
+                        onShowAllStops = { showAllStops = it },
+                        onOpenStop = navigator::openStop,
+                    )
+                }
+            }
+            return@Scaffold
+        }
         Column(Modifier.fillMaxSize().padding(top = padding.calculateTopPadding())) {
             when (val s = state) {
                 LoadState.Loading -> LoadingState(label = "Loading stopping pattern")
                 is LoadState.Error -> ErrorState(s.error, onRetry = { vm.load() }, onOpenSettings = navigator::openSettings)
                 is LoadState.Success -> {
                     val data = s.data
-                    val stops = data.stops
-                    val fromIndex = stops.indexOfFirst { it.stop.id == key.fromStopId }.coerceAtLeast(0)
                     val liveVehicle = data.vehiclePosition?.takeIf { it.isFresh(now) }
-                    val stopPoints = remember(stops) { stops.map { it.stop.latitude to it.stop.longitude } }
-                    val progress = remember(stopPoints, liveVehicle) {
-                        liveVehicle?.let { TripProgress.locate(stopPoints, it.latitude, it.longitude) }?.takeIf(TripProgress::isOnRoute)
-                    }
                     val context = LocalContext.current
 
                     // Pinned above the list; the stop list below is shortened to make room for it.
@@ -241,76 +279,109 @@ fun TripScreen(key: TripKey) {
                         modifier = Modifier.weight(1f).fillMaxWidth(),
                     ) {
                         LazyColumn(
+                            state = listState,
                             contentPadding = PaddingValues(start = 16.dp, end = 16.dp, bottom = pageBottomInset(104.dp)),
                             verticalArrangement = Arrangement.spacedBy(6.dp),
                         ) {
-                            item(key = "live") {
-                                LiveStatusCard(
-                                    mode = key.mode,
-                                    stops = stops,
-                                    fromIndex = fromIndex,
-                                    vehicle = liveVehicle,
-                                    progress = progress,
-                                    now = now,
+                            tripItems(
+                                data = data,
+                                mode = key.mode,
+                                fromStopId = key.fromStopId,
+                                now = now,
+                                crowding = crowding,
+                                showAllStops = showAllStops,
+                                onShowAllStops = { showAllStops = it },
+                                onOpenStop = navigator::openStop,
+                            )
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+/**
+ * The trip's live status, crowding, stopping pattern and service updates, as list items: shared by the map's trip
+ * panel and the page it pulls up into, so the two look the same.
+ */
+internal fun androidx.compose.foundation.lazy.LazyListScope.tripItems(
+    data: StoppingPattern,
+    mode: TransportMode,
+    fromStopId: Int,
+    now: Instant,
+    crowding: CrowdingUi,
+    showAllStops: Boolean,
+    onShowAllStops: (Boolean) -> Unit,
+    onOpenStop: (com.ssethhyy.journey.data.model.Stop) -> Unit,
+) {
+    val stops = data.stops
+    val fromIndex = stops.indexOfFirst { it.stop.id == fromStopId }.coerceAtLeast(0)
+    val liveVehicle = data.vehiclePosition?.takeIf { it.isFresh(now) }
+    val progress = liveVehicle
+        ?.let { TripProgress.locate(stops.map { s -> s.stop.latitude to s.stop.longitude }, it.latitude, it.longitude) }
+        ?.takeIf(TripProgress::isOnRoute)
+    item(key = "live") {
+        LiveStatusCard(
+            mode = mode,
+            stops = stops,
+            fromIndex = fromIndex,
+            vehicle = liveVehicle,
+            progress = progress,
+            now = now,
+        )
+    }
+    item(key = "crowding") {
+        CrowdingCard(crowding, AirConditioningCheck.check(data.vehicle, data.disruptions))
+    }
+    if (stops.isEmpty()) {
+        item(key = "chips") { TripChips(data) }
+        item { MessageState(Sym.Route, "No stops available", "PTV hasn't published a stopping pattern for this service.") }
+    } else {
+        item(key = "label") { SectionLabel("Stopping pattern") }
+        item(key = "timeline") {
+            val window = remember(stops.size, fromIndex, progress?.anchorIndex, showAllStops) {
+                TripProgress.window(stops.size, fromIndex, progress?.anchorIndex, expanded = showAllStops)
+            }
+            RoundedCardContainer(spacing = 0.dp) {
+                window.forEach { entry ->
+                    when (entry) {
+                        is TripWindowItem.Collapsed -> TimelineCollapsedRow(entry.count, mode.color, onClick = { onShowAllStops(true) })
+                        is TripWindowItem.Stop -> {
+                            val index = entry.index
+                            val ps = stops[index]
+                            StopRow(
+                                ps = ps,
+                                index = index,
+                                lastIndex = stops.lastIndex,
+                                mode = mode,
+                                highlighted = index == fromIndex,
+                                passed = index <= passedUpTo(progress, fromIndex),
+                                hasVehicle = progress?.atIndex == index,
+                                now = now,
+                                onClick = { onOpenStop(ps.stop) },
+                            )
+                            if (progress != null && progress.atIndex == null && progress.afterIndex == index && index < stops.lastIndex) {
+                                TimelineVehicleRow(
+                                    mode = mode,
+                                    lineColor = mode.color,
+                                    text = "Between ${ps.stop.name} and ${stops[index + 1].stop.name}",
+                                    detail = liveVehicle?.let { updatedText(it, now) },
                                 )
-                            }
-                            item(key = "crowding") {
-                                CrowdingCard(crowding, AirConditioningCheck.check(data.vehicle, data.disruptions))
-                            }
-                            if (stops.isEmpty()) {
-                                item(key = "chips") { TripChips(data) }
-                                item { MessageState(Sym.Route, "No stops available", "PTV hasn't published a stopping pattern for this service.") }
-                            } else {
-                                item(key = "label") { SectionLabel("Stopping pattern") }
-                                item(key = "timeline") {
-                                    val window = remember(stops.size, fromIndex, progress?.anchorIndex, showAllStops) {
-                                        TripProgress.window(stops.size, fromIndex, progress?.anchorIndex, expanded = showAllStops)
-                                    }
-                                    RoundedCardContainer(spacing = 0.dp) {
-                                        window.forEach { entry ->
-                                            when (entry) {
-                                                is TripWindowItem.Collapsed -> TimelineCollapsedRow(entry.count, key.mode.color, onClick = { showAllStops = true })
-                                                is TripWindowItem.Stop -> {
-                                                    val index = entry.index
-                                                    val ps = stops[index]
-                                                    StopRow(
-                                                        ps = ps,
-                                                        index = index,
-                                                        lastIndex = stops.lastIndex,
-                                                        mode = key.mode,
-                                                        highlighted = index == fromIndex,
-                                                        passed = index <= passedUpTo(progress, fromIndex),
-                                                        hasVehicle = progress?.atIndex == index,
-                                                        now = now,
-                                                        onClick = { navigator.openStop(ps.stop) },
-                                                    )
-                                                    if (progress != null && progress.atIndex == null && progress.afterIndex == index && index < stops.lastIndex) {
-                                                        TimelineVehicleRow(
-                                                            mode = key.mode,
-                                                            lineColor = key.mode.color,
-                                                            text = "Between ${ps.stop.name} and ${stops[index + 1].stop.name}",
-                                                            detail = liveVehicle?.let { updatedText(it, now) },
-                                                        )
-                                                    }
-                                                }
-                                            }
-                                        }
-                                    }
-                                }
-                                item(key = "chips") { TripChips(data) }
-                                if (data.disruptions.isNotEmpty()) {
-                                    item(key = "disruptions_label") { SectionLabel("Service updates") }
-                                    items(data.disruptions, key = { "d${it.id}" }) { DisruptionCard(it) }
-                                }
-                                if (showAllStops && stops.size > 8) {
-                                    item(key = "fewer") {
-                                        TextButton(onClick = hapticConfirm { showAllStops = false }, modifier = Modifier.fillMaxWidth()) { Text("Show fewer stops") }
-                                    }
-                                }
                             }
                         }
                     }
                 }
+            }
+        }
+        item(key = "chips") { TripChips(data) }
+        if (data.disruptions.isNotEmpty()) {
+            item(key = "disruptions_label") { SectionLabel("Service updates") }
+            items(data.disruptions, key = { "d${it.id}" }) { DisruptionCard(it) }
+        }
+        if (showAllStops && stops.size > 8) {
+            item(key = "fewer") {
+                TextButton(onClick = hapticConfirm { onShowAllStops(false) }, modifier = Modifier.fillMaxWidth()) { Text("Show fewer stops") }
             }
         }
     }

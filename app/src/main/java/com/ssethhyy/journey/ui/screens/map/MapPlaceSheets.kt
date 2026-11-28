@@ -49,6 +49,7 @@ import com.ssethhyy.journey.ui.screens.route.RouteDetailViewModel
 import com.ssethhyy.journey.ui.screens.route.routeDetailItems
 import com.ssethhyy.journey.ui.screens.stop.StopDetailViewModel
 import com.ssethhyy.journey.ui.screens.stop.stopDetailItems
+import com.ssethhyy.journey.ui.screens.trip.tripItems
 import com.ssethhyy.journey.ui.theme.color
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -65,6 +66,23 @@ object MapLineRequests {
 
     fun clear() {
         _route.value = null
+    }
+}
+
+/**
+ * Where the map's trip and journey panels came from, so Back can return there: the stop whose departure was tapped
+ * (its panel reopens), or the tab the trip or journey was opened from.
+ */
+object MapOrigins {
+    var tripStop: Stop? = null
+        private set
+    var tripTab: com.ssethhyy.journey.ui.navigation.HomeTab? = null
+        private set
+    var journeyTab: com.ssethhyy.journey.ui.navigation.HomeTab? = null
+
+    fun trip(stop: Stop?, tab: com.ssethhyy.journey.ui.navigation.HomeTab?) {
+        tripStop = stop
+        tripTab = tab
     }
 }
 
@@ -220,4 +238,91 @@ fun MapLineLayer(route: Route) {
         },
         polylineAnnotationGroupState = lineState,
     )
+}
+
+/**
+ * A service on the map: where it is, how it's running and its stopping pattern, the same as its page. Its stops and
+ * live position are drawn by the map's trip layer. Back returns to where it was opened from.
+ */
+@Composable
+fun MapTripSheet(
+    request: com.ssethhyy.journey.AppContainer.TripMapRequest,
+    /** Takes the trip off the map. */
+    onClose: () -> Unit,
+    /** Fits the map to the trip's points, in the part of the map the panel leaves uncovered. */
+    onFit: suspend (List<Point>) -> Unit,
+    modifier: Modifier = Modifier,
+    onFullProgress: (Float) -> Unit = {},
+) {
+    val vm = com.ssethhyy.journey.ui.screens.trip.tripViewModel(request.runRef, request.mode)
+    val state by vm.state.collectAsStateWithLifecycle()
+    val crowding by vm.crowding.collectAsStateWithLifecycle()
+    val navigator = currentNavigator
+    val now by rememberNow()
+    val fromStopId = request.fromStopId?.toIntOrNull() ?: -1
+    var step by rememberSaveable(request.runRef) { mutableStateOf(SheetStep.OPEN) }
+    var showAllStops by rememberSaveable(request.runRef) { mutableStateOf(false) }
+    AutoRefreshEffect(enabled = true, intervalMs = com.ssethhyy.journey.ui.screens.trip.TRIP_REFRESH_MS) { vm.load() }
+    val pattern = state.dataOrNull
+
+    // Closing goes back to the stop the departure was tapped on; Back also goes back to the tab it came from.
+    val close: () -> Unit = {
+        val stop = MapOrigins.tripStop
+        MapOrigins.trip(null, null)
+        onClose()
+        stop?.let(navigator::showOnMap)
+    }
+    BackHandler {
+        val tab = MapOrigins.tripTab.takeIf { MapOrigins.tripStop == null }
+        close()
+        tab?.let(navigator::goToTab)
+    }
+
+    // Once it has loaded: from your stop to the end of the line, and the vehicle wherever it is.
+    LaunchedEffect(request.runRef, pattern != null) {
+        val p = pattern ?: return@LaunchedEffect
+        val from = p.stops.indexOfFirst { it.stop.id == fromStopId }.coerceAtLeast(0)
+        val points = p.stops.drop(from).map { Point.fromLngLat(it.stop.longitude, it.stop.latitude) } +
+            listOfNotNull(p.vehiclePosition?.takeIf { it.isFresh(now) }?.let { Point.fromLngLat(it.longitude, it.latitude) })
+        if (points.size > 1) onFit(points)
+    }
+
+    val trackTarget = com.ssethhyy.journey.ui.screens.trip.tripTrackTarget(request.runRef, request.mode, fromStopId, request.title, pattern)
+    val trackFab = trackTarget?.let { com.ssethhyy.journey.ui.components.rememberTrackFab(it, "Track this service") }
+    MapSheet(
+        step = step,
+        onStepChange = { step = it },
+        name = "trip",
+        onFullProgress = onFullProgress,
+        onFullPage = { scroll -> navigator.openTripPage(request.runRef, request.mode, fromStopId, request.title, scroll) },
+        modifier = modifier,
+        panelPadding = 8.dp,
+        pagePadding = 16.dp,
+        spacing = 6.dp,
+        header = {
+            PlaceHeader(
+                picture = { ModePictogram(request.mode, size = 40.dp) },
+                title = "To ${pattern?.destination ?: request.title}",
+                subtitle = listOfNotNull(pattern?.route?.displayName, request.mode.label).joinToString(" · "),
+            ) {
+                trackFab?.let { HapticIconButton(it.icon, it.contentDescription, onClick = it.onClick, tint = MaterialTheme.colorScheme.primary) }
+                HapticIconButton(Sym.Close, "Close this service", onClick = close, tint = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+        },
+    ) {
+        when (val s = state) {
+            LoadState.Loading -> item(key = "loading") { LoadingState(label = "Loading stopping pattern") }
+            is LoadState.Error -> item(key = "error") { ErrorState(s.error, onRetry = { vm.load() }, onOpenSettings = navigator::openSettings) }
+            is LoadState.Success -> tripItems(
+                data = s.data,
+                mode = request.mode,
+                fromStopId = fromStopId,
+                now = now,
+                crowding = crowding,
+                showAllStops = showAllStops,
+                onShowAllStops = { showAllStops = it },
+                onOpenStop = navigator::openStop,
+            )
+        }
+    }
 }

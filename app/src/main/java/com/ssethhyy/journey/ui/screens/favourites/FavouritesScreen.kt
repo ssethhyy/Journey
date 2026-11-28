@@ -224,7 +224,7 @@ fun FavouritesScreen(onAddFromNearby: () -> Unit, onAddFromSearch: () -> Unit) {
     val commuteActions = remember(commutesVm) {
         CommuteActions(
             onPlan = { c -> navigator.planTo(c.to.toPlan(), c.from.toPlan().takeIf { !c.from.isCurrent }) },
-            onOpen = { c, journey -> navigator.openJourney(journey.id, if (c.from.isCurrent) "Your location" else c.from.name, c.to.name) },
+            onOpen = { c, journey -> navigator.openJourney(journey.id, if (c.from.isCurrent) "Your location" else c.from.name, c.to.name, returnTo = com.ssethhyy.journey.ui.navigation.HomeTab.FOR_YOU) },
             onAdd = { commuteEditor = null to true },
             onEdit = { c -> commuteEditor = c to true },
             onRemove = { c -> commutesVm.remove(c) },
@@ -452,7 +452,7 @@ fun FavouritesScreen(onAddFromNearby: () -> Unit, onAddFromSearch: () -> Unit) {
                                         canMoveDown = canMoveDown,
                                         onOpen = { navigator.openStop(fav.toStop()) },
                                         onOpenTrip = { dep ->
-                                            dep.runRef?.let { navigator.openTrip(it, fav.mode, fav.stopId, dep.headsign) }
+                                            dep.runRef?.let { navigator.openTrip(it, fav.mode, fav.stopId, dep.headsign, dep.directionId, returnTo = com.ssethhyy.journey.ui.navigation.HomeTab.FOR_YOU) }
                                         },
                                         onRetry = { vm.refresh(force = true) },
                                         onRename = { renaming = fav },

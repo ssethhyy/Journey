@@ -304,6 +304,21 @@ status.
   (`ProgressStyle` on Android 16) and `TrackingUi` shows the in-app banner.
 - `widget` is a Jetpack Glance widget with responsive layouts, refreshed by WorkManager and the manual refresh button.
 
+## Home stays alive under pages
+
+`MainActivity` draws `HomeScreen` beneath `NavDisplay` through `KeepAliveHome`; the `HomeKey` entry is see-through and
+every other entry gets an opaque background from a `NavEntryDecorator`. While a page is on top, `KeepAliveHome` holds
+the home screen's lifecycle at CREATED (so the Mapbox map stops rendering and lifecycle-aware refreshes pause), parks
+its Back handlers on a dispatcher nothing presses, and hides it from touch and accessibility. `MapSheet` treats the
+lifecycle starting again as coming back from its page.
+
+## PTV disk cache
+
+Outside tests, `PtvApi` uses `PtvHttpCache.client`: an OkHttp disk cache (20 MB in the cache folder) with a network
+interceptor that rewrites PTV's cache headers on the paths `PtvCachePolicy` allows (lines, directions and their stops
+for 7 days; nearby stops and stop details for a day). Live data is never cached. The in-memory `TtlCache`s in
+`PtvRepository` still sit in front.
+
 ## Pace and "time to leave"
 
 While you're still on your way to board (a tracked service, or a journey's next transit leg), `TrackingService` reads

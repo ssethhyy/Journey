@@ -25,6 +25,13 @@ All notable changes to Journey are documented here. The format follows
   Nearby now has its own page listing every stop nearby. The journey's page is laid out differently from its panel,
   so it crossfades quickly instead. Panels also move faster and land more crisply. Pushing up anywhere on a panel,
   not just its header, grows it; the list scrolls once it has become the page.
+- **The map no longer reloads when you come back to it.** The home screen (For You, Plan and the Map) now stays alive
+  under any page you open, paused while it's covered. Coming back from a stop, a line, search or settings is instant:
+  the map is exactly as you left it and doesn't rebuild its style or tiles. While a page is on top, the home screen
+  fetches nothing.
+- **Stops and lines are kept between launches.** A line's details, shape, directions and stops are saved for a week,
+  and nearby stops and stop details for a day, in the app's cache. Opening the app doesn't fetch them from PTV again.
+  Departures, disruptions, stopping patterns and search are always fetched fresh.
 - **The map keeps what it's showing in view.** Whatever height a panel is (short of full page), the stop, the line,
   your location, or just the spot you were looking at moves to the middle of the part of the map left uncovered.
 - **A new For You, built from widgets you arrange yourself.** Greeting, Places, Favourites, Disruptions, Commutes and

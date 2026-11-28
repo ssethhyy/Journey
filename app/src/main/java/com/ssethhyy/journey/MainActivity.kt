@@ -30,6 +30,7 @@ import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
@@ -249,25 +250,52 @@ fun JourneyRoot(
 
     CompositionLocalProvider(LocalNavigator provides navigator, LocalAppChrome provides chrome, LocalBarStyle provides barStyle) {
         Box(Modifier.fillMaxSize()) {
+            val edgeBlur = if (barStyle == BarStyle.BOTTOM_BAR) {
+                val barVisible = when (val spec = chrome.current) {
+                    is com.ssethhyy.journey.ui.components.ChromeSpec.Tabs -> spec.visible
+                    is com.ssethhyy.journey.ui.components.ChromeSpec.Page -> true
+                    null -> false
+                }
+                Modifier.appEdgeBlur(barVisible)
+            } else Modifier
+            // A page is on top of the home screen.
+            val covered = backStack.size > 1
+            // The home screen (with the map) lives here, under the pages, so coming back to it is instant and the
+            // map isn't rebuilt. It's paused while covered (see KeepAliveHome).
+            com.ssethhyy.journey.ui.navigation.KeepAliveHome(
+                covered = covered,
+                modifier = Modifier
+                    .fillMaxSize()
+                    .then(edgeBlur)
+                    .background(MaterialTheme.colorScheme.surface),
+            ) {
+                HomeScreen(requestedTab = requestedTab, onTabRequestHandled = { requestedTab = null })
+            }
             NavDisplay(
                 backStack = backStack,
                 modifier = Modifier
                     .fillMaxSize()
+                    .then(if (covered) edgeBlur else Modifier)
+                    // Pages cover the home screen: touches stop here rather than reaching it underneath.
                     .then(
-                        if (barStyle == BarStyle.BOTTOM_BAR) {
-                            val barVisible = when (val spec = chrome.current) {
-                                is com.ssethhyy.journey.ui.components.ChromeSpec.Tabs -> spec.visible
-                                is com.ssethhyy.journey.ui.components.ChromeSpec.Page -> true
-                                null -> false
-                            }
-                            Modifier.appEdgeBlur(barVisible)
+                        if (covered) {
+                            Modifier.pointerInput(Unit) { awaitPointerEventScope { while (true) awaitPointerEvent() } }
                         } else Modifier,
-                    )
-                    .background(MaterialTheme.colorScheme.surface),
+                    ),
                 onBack = { navigator.back() },
                 entryDecorators = listOf(
                     rememberSaveableStateHolderNavEntryDecorator(),
                     rememberViewModelStoreNavEntryDecorator(),
+                    // Every page is opaque (the home screen shows through only its own see-through entry).
+                    remember {
+                        androidx.navigation3.runtime.NavEntryDecorator<androidx.navigation3.runtime.NavKey>(decorate = { entry ->
+                            if (entry.contentKey == HomeKey.toString()) {
+                                entry.Content()
+                            } else {
+                                Box(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.surface)) { entry.Content() }
+                            }
+                        })
+                    },
                 ),
                 transitionSpec = {
                     (slideInHorizontally { it / 3 } + fadeIn()) togetherWith (slideOutHorizontally { -it / 6 } + fadeOut())
@@ -279,7 +307,8 @@ fun JourneyRoot(
                     (slideInHorizontally { -it / 6 } + fadeIn()) togetherWith (slideOutHorizontally { it / 3 } + fadeOut())
                 },
                 entryProvider = entryProvider {
-                    entry<HomeKey> { HomeScreen(requestedTab = requestedTab, onTabRequestHandled = { requestedTab = null }) }
+                    // The home screen itself is drawn underneath (KeepAliveHome); its entry is see-through.
+                    entry<HomeKey> { Box(Modifier.fillMaxSize()) }
                     // Pages pulled up out of a map panel morph in and drop back down, instead of sliding sideways.
                     entry<StopDetailKey>(metadata = { key -> if (key.fromMap) MapPageTransitions.metadata else emptyMap() }) { key -> StopDetailScreen(key) }
                     entry<RouteDetailKey>(metadata = { key -> if (key.fromMap) MapPageTransitions.metadata else emptyMap() }) { key -> RouteDetailScreen(key) }

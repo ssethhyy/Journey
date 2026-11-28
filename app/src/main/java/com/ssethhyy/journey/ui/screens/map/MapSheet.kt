@@ -202,6 +202,10 @@ fun MapSheet(
 
         // Back from the panel's page: it was left as the page, so shrink back down to open.
         LaunchedEffect(Unit) { if (fullPage != null && step == SheetStep.FULL) onStepChange(SheetStep.OPEN) }
+        // The map stays alive under its pages (paused), so coming back is seen as the map starting again.
+        androidx.lifecycle.compose.LifecycleEventEffect(androidx.lifecycle.Lifecycle.Event.ON_START) {
+            if (fullPage != null && step == SheetStep.FULL) onStepChange(SheetStep.OPEN)
+        }
 
         // Changed from outside (Back, a new stop) or the list's natural height changed: follow unless a finger is on it.
         LaunchedEffect(step, openPx, fullPx) {

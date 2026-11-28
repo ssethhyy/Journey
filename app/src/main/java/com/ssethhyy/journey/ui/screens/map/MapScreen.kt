@@ -55,6 +55,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -169,6 +170,10 @@ fun MapScreen(isActive: Boolean, modifier: Modifier = Modifier) {
     // A line opened from search or a stop: drawn on the map with its stops in a panel.
     val mapLine by MapLineRequests.route.collectAsStateWithLifecycle()
     var placeFullProgress by remember { mutableFloatStateOf(0f) }
+    // The shown line's points, so it can be fitted again as its panel moves.
+    var lineFitPoints by remember { mutableStateOf<List<Point>>(emptyList()) }
+    // Until when a fly-to is under way, so re-centring doesn't cut it short.
+    var flyingUntil by remember { mutableLongStateOf(0L) }
 
     // ---- Which overlay is active? ----------------------------------------------------
     val overlay: MapOverlay? = when {
@@ -229,6 +234,7 @@ fun MapScreen(isActive: Boolean, modifier: Modifier = Modifier) {
 
     // ---- Camera helpers --------------------------------------------------------------
     fun flyTo(lat: Double, lon: Double, zoom: Double = 15.5) {
+        flyingUntil = System.currentTimeMillis() + 1_200
         viewportState.flyTo(
             CameraOptions.Builder().center(Point.fromLngLat(lon, lat)).zoom(zoom).padding(visiblePadding).build(),
             MapAnimationOptions.mapAnimationOptions { duration(1_200) },
@@ -331,20 +337,34 @@ fun MapScreen(isActive: Boolean, modifier: Modifier = Modifier) {
         }
     }
 
-    // Keep visible padding up to date as panels open, close or resize.
+    // Keep visible padding up to date as panels open, close or resize, and keep what the map is showing (the stop,
+    // the line, you, or just where you were looking) in the middle of the part the panel leaves uncovered.
     LaunchedEffect(bottomCoveredPx, topCoveredPx) {
         if (nearbyVisible && nearbyFullProgress > 0f) return@LaunchedEffect
+        if (placeFullProgress > 0f && (state.selected != null || mapLine != null || journeyMode)) return@LaunchedEffect
         visiblePadding = EdgeInsets(topCoveredPx.toDouble(), 0.0, bottomCoveredPx.toDouble(), 0.0)
-        kotlinx.coroutines.delay(160)
+        // Wait for the panel to come to rest, and for any fly-to to land.
+        kotlinx.coroutines.delay(maxOf(140L, flyingUntil - System.currentTimeMillis()))
+        val ease = MapAnimationOptions.mapAnimationOptions { duration(400) }
         val here = state.userLocation
-        if (followingUser && here != null && journey == null && state.selected == null && tripRequest == null) {
-            viewportState.easeTo(
-                CameraOptions.Builder()
-                    .center(Point.fromLngLat(here.longitude, here.latitude))
-                    .padding(visiblePadding)
-                    .build(),
-                MapAnimationOptions.mapAnimationOptions { duration(450) },
+        val selected = state.selected
+        when {
+            journeyMode || tripMode -> Unit // Their own panels fit them.
+            selected != null -> viewportState.easeTo(
+                CameraOptions.Builder().center(Point.fromLngLat(selected.longitude, selected.latitude)).padding(visiblePadding).build(),
+                ease,
             )
+            mapLine != null && lineFitPoints.size > 1 -> {
+                val padding = EdgeInsets(topCoveredPx + 24.0, 48.0, bottomCoveredPx + 24.0, 48.0)
+                val camera = viewportState.cameraForCoordinates(lineFitPoints, CameraOptions.Builder().build(), padding, 16.0, null)
+                viewportState.easeTo(camera, ease)
+            }
+            followingUser && here != null -> viewportState.easeTo(
+                CameraOptions.Builder().center(Point.fromLngLat(here.longitude, here.latitude)).padding(visiblePadding).build(),
+                ease,
+            )
+            // Nothing in particular: keep the point you were looking at in the middle of what's still visible.
+            else -> viewportState.easeTo(CameraOptions.Builder().padding(visiblePadding).build(), ease)
         }
     }
 
@@ -655,6 +675,7 @@ fun MapScreen(isActive: Boolean, modifier: Modifier = Modifier) {
                     onOpenStop = com.ssethhyy.journey.ui.components.rememberLegStopOpener(),
                     onClose = container::closeJourneyMap,
                     onFullProgress = { placeFullProgress = it },
+                    onFullPage = request?.let { r -> { navigator.openJourney(r.journeyId, r.fromName, r.toName, fromMap = true) } },
                 )
             }
         }
@@ -762,6 +783,7 @@ fun MapScreen(isActive: Boolean, modifier: Modifier = Modifier) {
                     onClose = MapLineRequests::clear,
                     onFullProgress = { placeFullProgress = it },
                     onFit = { points ->
+                        lineFitPoints = points
                         val padding = EdgeInsets(topCoveredPx + 24.0, 48.0, bottomCoveredPx + 24.0, 48.0)
                         val camera = viewportState.cameraForCoordinates(points, CameraOptions.Builder().build(), padding, 16.0, null)
                         viewportState.flyTo(camera, MapAnimationOptions.mapAnimationOptions { duration(900) })

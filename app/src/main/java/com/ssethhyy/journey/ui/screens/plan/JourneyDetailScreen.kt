@@ -130,8 +130,11 @@ fun JourneyDetailScreen(key: JourneyDetailKey) {
     AutoRefreshEffect(enabled = journey?.end?.isAfter(java.time.Instant.now()) == true, intervalMs = 30_000) { refresh() }
     var logging by remember { mutableStateOf(false) }
     if (logging) journey?.let { com.ssethhyy.journey.ui.screens.myki.LogJourneySheet(it, onDismiss = { logging = false }) }
+    // Pulled up out of the map's journey panel: drag it back down to return to the map.
+    val pullDown = com.ssethhyy.journey.ui.components.rememberPullDownToClose(key.fromMap, navigator::back)
 
     Scaffold(
+        modifier = pullDown.pageModifier,
         topBar = {
             ReusableTopAppBar(
                 title = "To ${key.toName.ifBlank { "destination" }}",
@@ -168,7 +171,8 @@ fun JourneyDetailScreen(key: JourneyDetailKey) {
         LazyColumn(
             modifier = Modifier
                 .fillMaxSize()
-                .floatingBarBlur(padding.calculateTopPadding()),
+                .floatingBarBlur(padding.calculateTopPadding())
+                .nestedScroll(pullDown.connection),
             contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = padding.calculateTopPadding(), bottom = pageBottomInset(104.dp)),
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {

@@ -327,6 +327,11 @@ full page. It follows the finger through drags on its header and over-scrolls of
 `MapStopSheet` and `MapLineSheet` reuse the stop and line pages' list items (`stopDetailItems`, `routeDetailItems`).
 `Navigator.openStop` and `openRoute` send stops and lines to the Map tab, and lines go through `MapLineRequests`.
 `MapControlFlow` lays out the control pills left to right and wraps them into rows that stack upward.
+Pulled all the way up, a sheet with `onFullPage` opens its page (`StopDetailKey`, `RouteDetailKey` or
+`JourneyDetailKey` with `fromMap = true`). Those entries carry `MapPageTransitions` metadata (grow up in, drop down
+out), and the page uses `rememberPullDownToClose` to follow a downward drag past the top of its list and go back. On
+return the sheet starts full and drops to open. `MapScreen` re-centres the camera on the panel's subject whenever the
+covered area settles.
 
 ## Stop alerts
 

@@ -146,8 +146,11 @@ fun RouteDetailScreen(key: RouteDetailKey) {
     val navigator = currentNavigator
     val color = key.mode.color
     val details = state.details.dataOrNull
+    // Pulled up out of the map's panel: drag it back down to return to the map.
+    val pullDown = com.ssethhyy.journey.ui.components.rememberPullDownToClose(key.fromMap, navigator::back)
 
     Scaffold(
+        modifier = pullDown.pageModifier,
         topBar = {
             ReusableTopAppBar(
                 title = if (key.number.isNotBlank() && key.number != key.title) "${key.number} · ${key.title}" else key.title,
@@ -163,7 +166,8 @@ fun RouteDetailScreen(key: RouteDetailKey) {
             is LoadState.Success -> LazyColumn(
                 modifier = Modifier
                     .fillMaxSize()
-                    .floatingBarBlur(padding.calculateTopPadding()),
+                    .floatingBarBlur(padding.calculateTopPadding())
+                    .nestedScroll(pullDown.connection),
                 contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = padding.calculateTopPadding(), bottom = pageBottomInset(32.dp)),
                 verticalArrangement = Arrangement.spacedBy(8.dp),
             ) {

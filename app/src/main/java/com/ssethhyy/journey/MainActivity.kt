@@ -280,8 +280,9 @@ fun JourneyRoot(
                 },
                 entryProvider = entryProvider {
                     entry<HomeKey> { HomeScreen(requestedTab = requestedTab, onTabRequestHandled = { requestedTab = null }) }
-                    entry<StopDetailKey> { key -> StopDetailScreen(key) }
-                    entry<RouteDetailKey> { key -> RouteDetailScreen(key) }
+                    // Pages pulled up out of a map panel morph in and drop back down, instead of sliding sideways.
+                    entry<StopDetailKey>(metadata = { key -> if (key.fromMap) MapPageTransitions.metadata else emptyMap() }) { key -> StopDetailScreen(key) }
+                    entry<RouteDetailKey>(metadata = { key -> if (key.fromMap) MapPageTransitions.metadata else emptyMap() }) { key -> RouteDetailScreen(key) }
                     entry<TripKey> { key -> TripScreen(key) }
                     entry<SearchKey> { SearchScreen() }
                     entry<SettingsKey> { SettingsScreen() }
@@ -291,7 +292,7 @@ fun JourneyRoot(
                     entry<MykiCardKey> { key -> MykiCardScreen(key) }
                     entry<FaresKey> { FaresScreen() }
                     entry<ProfileKey> { ProfileScreen() }
-                    entry<JourneyDetailKey> { key -> JourneyDetailScreen(key) }
+                    entry<JourneyDetailKey>(metadata = { key -> if (key.fromMap) MapPageTransitions.metadata else emptyMap() }) { key -> JourneyDetailScreen(key) }
                 },
             )
             // Bottom-bar style: one toolbar above every page.
@@ -304,4 +305,18 @@ fun JourneyRoot(
             com.ssethhyy.journey.ui.screens.settings.UpdateSheetHost()
         }
     }
+}
+
+/** How a page pulled up out of a map panel comes and goes: it grows up out of the panel, and drops back into it. */
+private object MapPageTransitions {
+    private val enter = (androidx.compose.animation.fadeIn(androidx.compose.animation.core.tween(180)) +
+        androidx.compose.animation.scaleIn(androidx.compose.animation.core.tween(260), initialScale = 0.94f, transformOrigin = androidx.compose.ui.graphics.TransformOrigin(0.5f, 1f))) togetherWith
+        androidx.compose.animation.fadeOut(androidx.compose.animation.core.tween(320))
+    private val exit = androidx.compose.animation.fadeIn(androidx.compose.animation.core.tween(220)) togetherWith
+        (androidx.compose.animation.slideOutVertically(androidx.compose.animation.core.tween(280)) { it / 2 } + androidx.compose.animation.fadeOut(androidx.compose.animation.core.tween(240)))
+
+    val metadata: Map<String, Any> =
+        androidx.navigation3.ui.NavDisplay.transitionSpec { enter } +
+            androidx.navigation3.ui.NavDisplay.popTransitionSpec { exit } +
+            androidx.navigation3.ui.NavDisplay.predictivePopTransitionSpec { exit }
 }

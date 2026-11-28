@@ -104,6 +104,7 @@ fun MapStopSheet(stop: Stop, onClose: () -> Unit, modifier: Modifier = Modifier,
         onStepChange = { step = it },
         name = stop.name,
         onFullProgress = onFullProgress,
+        onFullPage = { navigator.openStopPage(stop, fromMap = true) },
         modifier = modifier,
         header = {
             PlaceHeader(
@@ -159,6 +160,7 @@ fun MapLineSheet(
         onStepChange = { step = it },
         name = route.displayName,
         onFullProgress = onFullProgress,
+        onFullPage = { navigator.openRoutePage(route, fromMap = true) },
         modifier = modifier,
         contentPadding = PaddingValues(start = 12.dp, end = 12.dp, bottom = 12.dp),
         header = {

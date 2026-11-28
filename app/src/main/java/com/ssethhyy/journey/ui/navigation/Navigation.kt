@@ -32,6 +32,8 @@ data class StopDetailKey(
     val suburb: String? = null,
     val latitude: Double = 0.0,
     val longitude: Double = 0.0,
+    /** Opened by pulling the map's stop panel up: it morphs in, and dragging it down goes back to the map. */
+    val fromMap: Boolean = false,
 ) : NavKey {
     val mode: TransportMode get() = TransportMode.fromRouteType(routeType)
 
@@ -39,7 +41,7 @@ data class StopDetailKey(
 }
 
 @Serializable
-data class RouteDetailKey(val routeId: Int, val routeType: Int, val title: String, val number: String = "") : NavKey {
+data class RouteDetailKey(val routeId: Int, val routeType: Int, val title: String, val number: String = "", val fromMap: Boolean = false) : NavKey {
     val mode: TransportMode get() = TransportMode.fromRouteType(routeType)
 }
 
@@ -78,7 +80,7 @@ data object FaresKey : NavKey
 data object ProfileKey : NavKey
 
 @Serializable
-data class JourneyDetailKey(val journeyId: String, val fromName: String, val toName: String) : NavKey
+data class JourneyDetailKey(val journeyId: String, val fromName: String, val toName: String, val fromMap: Boolean = false) : NavKey
 
 enum class HomeTab { FOR_YOU, PLAN, MAP }
 
@@ -102,8 +104,8 @@ class Navigator(
     }
 
     /** The stop's own page (for a stop the map can't place). */
-    fun openStopPage(stop: Stop) = open(
-        StopDetailKey(stop.id, stop.mode.routeType, stop.name, stop.suburb, stop.latitude, stop.longitude),
+    fun openStopPage(stop: Stop, fromMap: Boolean = false) = open(
+        StopDetailKey(stop.id, stop.mode.routeType, stop.name, stop.suburb, stop.latitude, stop.longitude, fromMap),
     )
 
     /** Opens a line on the map: drawn along its route, with its stops in the floating panel. */
@@ -114,7 +116,7 @@ class Navigator(
     }
 
     /** The line's own page. */
-    fun openRoutePage(route: Route) = open(RouteDetailKey(route.id, route.mode.routeType, route.name, route.number))
+    fun openRoutePage(route: Route, fromMap: Boolean = false) = open(RouteDetailKey(route.id, route.mode.routeType, route.name, route.number, fromMap))
 
     fun openTrip(runRef: String, mode: TransportMode, fromStopId: Int, title: String) =
         open(TripKey(runRef, mode.routeType, fromStopId, title))
@@ -128,7 +130,8 @@ class Navigator(
     fun openFares() = open(FaresKey)
     fun openProfile() = open(ProfileKey)
 
-    fun openJourney(journeyId: String, fromName: String, toName: String) = open(JourneyDetailKey(journeyId, fromName, toName))
+    fun openJourney(journeyId: String, fromName: String, toName: String, fromMap: Boolean = false) =
+        open(JourneyDetailKey(journeyId, fromName, toName, fromMap))
 
     fun openTracked(target: TrackingTarget) = when (target) {
         is TrackingTarget.Service -> openTrip(target.runRef, target.mode, target.stopId, target.headsign)

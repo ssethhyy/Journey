@@ -91,6 +91,8 @@ fun JourneyMapPanel(
     modifier: Modifier = Modifier,
     /** 0 at open to 1 at full page, as it moves. */
     onFullProgress: (Float) -> Unit = {},
+    /** The journey's own page, opened when the panel is pulled all the way up. */
+    onFullPage: (() -> Unit)? = null,
 ) {
     val legs = journey.legs
     var step by androidx.compose.runtime.saveable.rememberSaveable(journey.start.epochSecond) { androidx.compose.runtime.mutableStateOf(SheetStep.OPEN) }
@@ -105,6 +107,7 @@ fun JourneyMapPanel(
         modifier = modifier,
         openHeight = if (selected == null) 280.dp else 380.dp,
         onFullProgress = onFullProgress,
+        onFullPage = onFullPage,
         listState = listState,
         contentPadding = PaddingValues(start = 8.dp, end = 8.dp, bottom = 8.dp),
         header = {

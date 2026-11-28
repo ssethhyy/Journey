@@ -114,6 +114,11 @@ fun MapSheet(
     contentPadding: PaddingValues = PaddingValues(start = 12.dp, end = 12.dp, bottom = 12.dp),
     /** What the panel shows, for its accessibility actions ("Collapse Flinders Street Station"). */
     name: String = "panel",
+    /**
+     * Opens the panel's own page once it's pulled all the way up, so it becomes that page (with its Back button) rather
+     * than just covering the map. Coming back, the panel starts full and drops back down to open.
+     */
+    onFullPage: (() -> Unit)? = null,
     content: LazyListScope.() -> Unit,
 ) {
     val view = LocalView.current
@@ -157,18 +162,28 @@ fun MapSheet(
         val reportFull by rememberUpdatedState(onFullProgress)
         LaunchedEffect(fullProgress) { reportFull(fullProgress) }
 
-        fun animateTo(target: Float, velocity: Float = 0f) {
+        var settleTarget by remember { mutableFloatStateOf(-1f) }
+
+        fun animateTo(target: Float, velocity: Float = 0f, then: () -> Unit = {}) {
             settleJob?.cancel()
+            settleTarget = target
             settleJob = scope.launch {
                 animate(height, target, initialVelocity = -velocity, animationSpec = spring(dampingRatio = 0.86f, stiffness = Spring.StiffnessMediumLow)) { value, _ ->
                     height = value
                 }
+                then()
             }
         }
+
+        // Back from the panel's page: it was left full, so morph back down to open.
+        val fullPage by rememberUpdatedState(onFullPage)
+        LaunchedEffect(Unit) { if (fullPage != null && step == SheetStep.FULL) onStepChange(SheetStep.OPEN) }
 
         // Changed from outside (Back, a new stop) or the list's natural height changed: follow unless a finger is on it.
         LaunchedEffect(step, openPx, fullPx) {
             val target = targetFor(step)
+            // Already on its way there (a settle that may open the page when it lands): leave it be.
+            if (settleJob?.isActive == true && settleTarget == target) return@LaunchedEffect
             if (!dragging && height != target) animateTo(target)
         }
 
@@ -185,7 +200,8 @@ fun MapSheet(
                 HapticUtil.performUIHaptic(view)
                 onStepChange(next)
             }
-            animateTo(target, velocity)
+            val page = fullPage
+            if (next == SheetStep.FULL && page != null) animateTo(target, velocity, then = page) else animateTo(target, velocity)
         }
 
         fun atAnchor() = anchors.any { kotlin.math.abs(it - height) < 0.5f }
@@ -259,7 +275,11 @@ fun MapSheet(
                                     true
                                 },
                                 CustomAccessibilityAction(if (step == SheetStep.FULL) "Show the map" else "Open as a full page") {
-                                    onStepChange(if (step == SheetStep.FULL) SheetStep.OPEN else SheetStep.FULL)
+                                    val page = fullPage
+                                    if (step != SheetStep.FULL && page != null) {
+                                        onStepChange(SheetStep.FULL)
+                                        page()
+                                    } else onStepChange(if (step == SheetStep.FULL) SheetStep.OPEN else SheetStep.FULL)
                                     true
                                 },
                             )

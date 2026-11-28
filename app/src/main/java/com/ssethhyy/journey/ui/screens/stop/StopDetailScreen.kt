@@ -91,8 +91,11 @@ fun StopDetailScreen(key: StopDetailKey) {
     val stop = state.stop
 
     AutoRefreshEffect(enabled = state.settings.autoRefresh) { vm.loadBoard(force = true) }
+    // Pulled up out of the map's panel: drag it back down to return to the map.
+    val pullDown = com.ssethhyy.journey.ui.components.rememberPullDownToClose(key.fromMap, navigator::back)
 
     Scaffold(
+        modifier = pullDown.pageModifier,
         topBar = {
             ReusableTopAppBar(
                 title = stop.name,
@@ -130,7 +133,7 @@ fun StopDetailScreen(key: StopDetailKey) {
             modifier = Modifier.fillMaxSize(),
         ) {
             LazyColumn(
-                modifier = Modifier.fillMaxSize().floatingBarBlur(innerPadding.calculateTopPadding()),
+                modifier = Modifier.fillMaxSize().floatingBarBlur(innerPadding.calculateTopPadding()).nestedScroll(pullDown.connection),
                 contentPadding = PaddingValues(
                     start = 16.dp,
                     end = 16.dp,

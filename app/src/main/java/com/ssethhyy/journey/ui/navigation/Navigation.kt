@@ -34,6 +34,9 @@ data class StopDetailKey(
     val longitude: Double = 0.0,
     /** Opened by pulling the map's stop panel up: it morphs in, and dragging it down goes back to the map. */
     val fromMap: Boolean = false,
+    /** Where to start scrolled to (where the panel was). */
+    val scrollIndex: Int = 0,
+    val scrollOffset: Int = 0,
 ) : NavKey {
     val mode: TransportMode get() = TransportMode.fromRouteType(routeType)
 
@@ -41,7 +44,15 @@ data class StopDetailKey(
 }
 
 @Serializable
-data class RouteDetailKey(val routeId: Int, val routeType: Int, val title: String, val number: String = "", val fromMap: Boolean = false) : NavKey {
+data class RouteDetailKey(
+    val routeId: Int,
+    val routeType: Int,
+    val title: String,
+    val number: String = "",
+    val fromMap: Boolean = false,
+    val scrollIndex: Int = 0,
+    val scrollOffset: Int = 0,
+) : NavKey {
     val mode: TransportMode get() = TransportMode.fromRouteType(routeType)
 }
 
@@ -57,6 +68,10 @@ data class TripKey(
 
 @Serializable
 data object SearchKey : NavKey
+
+/** The Nearby panel, pulled up into a page of its own. */
+@Serializable
+data class NearbyKey(val scrollIndex: Int = 0, val scrollOffset: Int = 0) : NavKey
 
 @Serializable
 data object SettingsKey : NavKey
@@ -104,8 +119,8 @@ class Navigator(
     }
 
     /** The stop's own page (for a stop the map can't place). */
-    fun openStopPage(stop: Stop, fromMap: Boolean = false) = open(
-        StopDetailKey(stop.id, stop.mode.routeType, stop.name, stop.suburb, stop.latitude, stop.longitude, fromMap),
+    fun openStopPage(stop: Stop, fromMap: Boolean = false, scroll: com.ssethhyy.journey.ui.screens.map.SheetScroll? = null) = open(
+        StopDetailKey(stop.id, stop.mode.routeType, stop.name, stop.suburb, stop.latitude, stop.longitude, fromMap, scroll?.index ?: 0, scroll?.offset ?: 0),
     )
 
     /** Opens a line on the map: drawn along its route, with its stops in the floating panel. */
@@ -116,7 +131,11 @@ class Navigator(
     }
 
     /** The line's own page. */
-    fun openRoutePage(route: Route, fromMap: Boolean = false) = open(RouteDetailKey(route.id, route.mode.routeType, route.name, route.number, fromMap))
+    fun openRoutePage(route: Route, fromMap: Boolean = false, scroll: com.ssethhyy.journey.ui.screens.map.SheetScroll? = null) =
+        open(RouteDetailKey(route.id, route.mode.routeType, route.name, route.number, fromMap, scroll?.index ?: 0, scroll?.offset ?: 0))
+
+    /** The Nearby panel's page. */
+    fun openNearbyPage(scroll: com.ssethhyy.journey.ui.screens.map.SheetScroll) = open(NearbyKey(scroll.index, scroll.offset))
 
     fun openTrip(runRef: String, mode: TransportMode, fromStopId: Int, title: String) =
         open(TripKey(runRef, mode.routeType, fromStopId, title))

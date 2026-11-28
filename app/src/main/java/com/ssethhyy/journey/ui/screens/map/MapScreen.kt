@@ -101,6 +101,7 @@ import com.ssethhyy.journey.data.model.DepartureBoard
 import com.ssethhyy.journey.data.model.Stop
 import com.ssethhyy.journey.ui.LoadState
 import com.ssethhyy.journey.ui.appViewModel
+import com.ssethhyy.journey.ui.sharedAppViewModel
 import com.ssethhyy.journey.ui.components.DepartureRow
 import com.ssethhyy.journey.ui.components.DepartureSkeleton
 import com.ssethhyy.journey.ui.components.FavouriteToggle
@@ -186,7 +187,7 @@ fun MapScreen(isActive: Boolean, modifier: Modifier = Modifier) {
     val journeyMode = overlay == MapOverlay.JOURNEY
 
     // ---- Nearby ----------------------------------------------------------------------
-    val nearbyVm = appViewModel(key = "map_nearby") { NearbyViewModel(it, maxResults = NEARBY_MAX_STOPS) }
+    val nearbyVm = sharedAppViewModel(key = "map_nearby") { NearbyViewModel(it, maxResults = NEARBY_MAX_STOPS) }
     val nearbyState by nearbyVm.state.collectAsStateWithLifecycle()
     var showNearby by rememberSaveable { mutableStateOf(true) }
     var nearbyExpanded by rememberSaveable { mutableStateOf(true) }

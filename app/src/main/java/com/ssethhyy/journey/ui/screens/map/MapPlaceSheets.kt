@@ -35,7 +35,7 @@ import com.mapbox.geojson.Point
 import com.ssethhyy.journey.data.model.Route
 import com.ssethhyy.journey.data.model.Stop
 import com.ssethhyy.journey.ui.LoadState
-import com.ssethhyy.journey.ui.appViewModel
+import com.ssethhyy.journey.ui.sharedAppViewModel
 import com.ssethhyy.journey.ui.components.AutoRefreshEffect
 import com.ssethhyy.journey.ui.components.ErrorState
 import com.ssethhyy.journey.ui.components.FavouriteToggle
@@ -90,7 +90,7 @@ private fun PlaceHeader(
 /** A stop on the map: its departures, filters, facilities and lines, the same as its page. */
 @Composable
 fun MapStopSheet(stop: Stop, onClose: () -> Unit, modifier: Modifier = Modifier, onFullProgress: (Float) -> Unit = {}) {
-    val vm = appViewModel(key = "stop_${stop.mode.routeType}_${stop.id}") { StopDetailViewModel(it, stop) }
+    val vm = sharedAppViewModel(key = "stop_${stop.mode.routeType}_${stop.id}") { StopDetailViewModel(it, stop) }
     val state by vm.state.collectAsStateWithLifecycle()
     val navigator = currentNavigator
     val now by rememberNow()
@@ -104,7 +104,7 @@ fun MapStopSheet(stop: Stop, onClose: () -> Unit, modifier: Modifier = Modifier,
         onStepChange = { step = it },
         name = stop.name,
         onFullProgress = onFullProgress,
-        onFullPage = { navigator.openStopPage(stop, fromMap = true) },
+        onFullPage = { scroll -> navigator.openStopPage(stop, fromMap = true, scroll = scroll) },
         modifier = modifier,
         header = {
             PlaceHeader(
@@ -129,6 +129,7 @@ fun MapStopSheet(stop: Stop, onClose: () -> Unit, modifier: Modifier = Modifier,
             navigator = navigator,
             updatesCollapsed = updatesCollapsed ?: state.settings.stopDisruptionsCollapsed,
             onToggleUpdates = { updatesCollapsed = !(updatesCollapsed ?: state.settings.stopDisruptionsCollapsed) },
+            // The panel's header already names the stop; the page it turns into leaves the card out too, so they match.
             showHeader = false,
         )
     }
@@ -144,7 +145,7 @@ fun MapLineSheet(
     modifier: Modifier = Modifier,
     onFullProgress: (Float) -> Unit = {},
 ) {
-    val vm = appViewModel(key = "route_${route.id}") { RouteDetailViewModel(it, route.id, route.mode) }
+    val vm = sharedAppViewModel(key = "route_${route.id}") { RouteDetailViewModel(it, route.id, route.mode) }
     val state by vm.state.collectAsStateWithLifecycle()
     val navigator = currentNavigator
     var step by rememberSaveable(route.id) { mutableStateOf(SheetStep.OPEN) }
@@ -160,9 +161,8 @@ fun MapLineSheet(
         onStepChange = { step = it },
         name = route.displayName,
         onFullProgress = onFullProgress,
-        onFullPage = { navigator.openRoutePage(route, fromMap = true) },
+        onFullPage = { scroll -> navigator.openRoutePage(route, fromMap = true, scroll = scroll) },
         modifier = modifier,
-        contentPadding = PaddingValues(start = 12.dp, end = 12.dp, bottom = 12.dp),
         header = {
             PlaceHeader(
                 picture = { ModePictogram(route.mode, size = 40.dp) },
@@ -208,7 +208,7 @@ object MapLineGeometry {
 /** Draws the shown line on the map (inside the map's content). */
 @Composable
 fun MapLineLayer(route: Route) {
-    val vm = appViewModel(key = "route_${route.id}") { RouteDetailViewModel(it, route.id, route.mode) }
+    val vm = sharedAppViewModel(key = "route_${route.id}") { RouteDetailViewModel(it, route.id, route.mode) }
     val state by vm.state.collectAsStateWithLifecycle()
     val paths = remember(state.details, state.directionId) { MapLineGeometry.paths(state.details.dataOrNull, state.directionId) }
     val color = route.mode.color.toArgb()

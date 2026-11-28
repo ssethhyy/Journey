@@ -18,10 +18,12 @@ All notable changes to Journey are documented here. The format follows
   stops) now opens the Map with a floating panel showing what its page showed: departures, filters, service updates,
   facilities and lines for a stop, or directions and stops for a line. A line is also drawn along its route on the map.
   A stop with no known position still opens on its own page.
-- **Pull a map panel up into its page.** The stop, line and journey panels follow your finger all the way up and then
-  become that stop's, line's or journey's own page, with its Back button in the bar. Drag the page down (from the top
-  of its list) and it shrinks back into the panel on the map, or press Back. Nearby, which has no page of its own,
-  morphs into a full-height list with a sliver of map down each side.
+- **Map panels turn into their pages.** Pull the Nearby, stop, line or journey panel up and it becomes the page as
+  you drag. It widens to the screen's edges, its corners straighten, its colour and padding become the page's, and
+  its header folds away. When it lands, the real page is already in place, so only the toolbar changes: it gains the
+  page's Back button. Pull down at the top of the page, or press Back, and it shrinks back into the panel on the map.
+  Nearby now has its own page listing every stop nearby. The journey's page is laid out differently from its panel,
+  so it crossfades quickly instead. Panels also move faster and land more crisply.
 - **The map keeps what it's showing in view.** Whatever height a panel is (short of full page), the stop, the line,
   your location, or just the spot you were looking at moves to the middle of the part of the map left uncovered.
 - **A new For You, built from widgets you arrange yourself.** Greeting, Places, Favourites, Disruptions, Commutes and

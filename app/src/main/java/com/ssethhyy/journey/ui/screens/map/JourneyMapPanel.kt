@@ -107,9 +107,11 @@ fun JourneyMapPanel(
         modifier = modifier,
         openHeight = if (selected == null) 280.dp else 380.dp,
         onFullProgress = onFullProgress,
-        onFullPage = onFullPage,
+        onFullPage = onFullPage?.let { open -> { _: SheetScroll -> open() } },
         listState = listState,
-        contentPadding = PaddingValues(start = 8.dp, end = 8.dp, bottom = 8.dp),
+        panelPadding = 8.dp,
+        pagePadding = 16.dp,
+        spacing = 4.dp,
         header = {
             Row(Modifier.padding(start = 16.dp, end = 4.dp, top = 8.dp, bottom = 8.dp), verticalAlignment = Alignment.CenterVertically) {
                 Column(Modifier.weight(1f)) {

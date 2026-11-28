@@ -56,6 +56,7 @@ import com.ssethhyy.journey.data.model.FacilityKind
 import com.ssethhyy.journey.data.model.Route
 import com.ssethhyy.journey.ui.LoadState
 import com.ssethhyy.journey.ui.appViewModel
+import com.ssethhyy.journey.ui.sharedAppViewModel
 import com.ssethhyy.journey.ui.components.ActionItem
 import com.ssethhyy.journey.ui.components.AutoRefreshEffect
 import com.ssethhyy.journey.ui.components.DepartureRow
@@ -82,7 +83,7 @@ import com.ssethhyy.journey.utils.TimeFormatter
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
 fun StopDetailScreen(key: StopDetailKey) {
-    val vm = appViewModel(key = "stop_${key.routeType}_${key.stopId}") { StopDetailViewModel(it, key.toStop()) }
+    val vm = sharedAppViewModel(key = "stop_${key.routeType}_${key.stopId}") { StopDetailViewModel(it, key.toStop()) }
     val state by vm.state.collectAsStateWithLifecycle()
     // Null until tapped: follows the "Start collapsed" setting.
     var updatesCollapsed by androidx.compose.runtime.saveable.rememberSaveable { androidx.compose.runtime.mutableStateOf<Boolean?>(null) }
@@ -133,6 +134,8 @@ fun StopDetailScreen(key: StopDetailKey) {
             modifier = Modifier.fillMaxSize(),
         ) {
             LazyColumn(
+                // Opened from the map's panel: start where the panel was scrolled to.
+                state = androidx.compose.foundation.lazy.rememberLazyListState(key.scrollIndex, key.scrollOffset),
                 modifier = Modifier.fillMaxSize().floatingBarBlur(innerPadding.calculateTopPadding()).nestedScroll(pullDown.connection),
                 contentPadding = PaddingValues(
                     start = 16.dp,
@@ -149,6 +152,8 @@ fun StopDetailScreen(key: StopDetailKey) {
                     navigator = navigator,
                     updatesCollapsed = updatesCollapsed ?: state.settings.stopDisruptionsCollapsed,
                     onToggleUpdates = { updatesCollapsed = !(updatesCollapsed ?: state.settings.stopDisruptionsCollapsed) },
+                    // From the map: the same items as the panel it grew from, so it opens exactly as the panel looked.
+                    showHeader = !key.fromMap,
                 )
             }
         }

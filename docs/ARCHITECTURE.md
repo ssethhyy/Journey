@@ -327,11 +327,13 @@ full page. It follows the finger through drags on its header and over-scrolls of
 `MapStopSheet` and `MapLineSheet` reuse the stop and line pages' list items (`stopDetailItems`, `routeDetailItems`).
 `Navigator.openStop` and `openRoute` send stops and lines to the Map tab, and lines go through `MapLineRequests`.
 `MapControlFlow` lays out the control pills left to right and wraps them into rows that stack upward.
-Pulled all the way up, a sheet with `onFullPage` opens its page (`StopDetailKey`, `RouteDetailKey` or
-`JourneyDetailKey` with `fromMap = true`). Those entries carry `MapPageTransitions` metadata (grow up in, drop down
-out), and the page uses `rememberPullDownToClose` to follow a downward drag past the top of its list and go back. On
-return the sheet starts full and drops to open. `MapScreen` re-centres the camera on the panel's subject whenever the
-covered area settles.
+Between open and full page `MapSheet` lays itself out as its page: a layout modifier grows it past its parent to
+the screen's edges, the header folds away, the status bar's height is reserved and the list's padding moves to the
+page's. Once it lands it opens the page (`StopDetailKey`, `RouteDetailKey`, `NearbyKey`, or `JourneyDetailKey` with
+`fromMap`) at the same scroll position, with no transition (`MapPageTransitions`; the journey page crossfades).
+Panels and pages share view models through `sharedAppViewModel`, so the page has nothing to reload. On a page,
+`rememberPullDownToClose` goes back as soon as you pull past the top, and the panel, which starts at full height,
+shrinks back down. `MapScreen` re-centres the camera on the panel's subject whenever the covered area settles.
 
 ## Stop alerts
 

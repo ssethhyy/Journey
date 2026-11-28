@@ -37,3 +37,16 @@ inline fun <reified VM : ViewModel> appViewModel(key: String? = null, crossinlin
     val container = LocalContext.current.appContainer
     return viewModel(key = key) { create(container) }
 }
+
+/**
+ * Creates (or finds) a ViewModel shared by the whole app rather than one page: a map panel and the page it morphs into
+ * use the same one, so the page opens already showing what the panel showed, with nothing to reload.
+ */
+@Composable
+inline fun <reified VM : ViewModel> sharedAppViewModel(key: String, crossinline create: (AppContainer) -> VM): VM {
+    val container = LocalContext.current.appContainer
+    val owner = androidx.activity.compose.LocalActivity.current as? androidx.lifecycle.ViewModelStoreOwner
+        ?: androidx.lifecycle.viewmodel.compose.LocalViewModelStoreOwner.current
+        ?: error("No ViewModelStoreOwner")
+    return viewModel(viewModelStoreOwner = owner, key = key) { create(container) }
+}

@@ -58,6 +58,7 @@ import com.ssethhyy.journey.data.model.TransportMode
 import com.ssethhyy.journey.data.repository.AppSettings
 import com.ssethhyy.journey.ui.LoadState
 import com.ssethhyy.journey.ui.appViewModel
+import com.ssethhyy.journey.ui.sharedAppViewModel
 import com.ssethhyy.journey.ui.components.DisruptionCard
 import com.ssethhyy.journey.ui.components.serviceUpdates
 import androidx.compose.runtime.setValue
@@ -139,7 +140,7 @@ class RouteDetailViewModel(private val container: AppContainer, private val rout
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun RouteDetailScreen(key: RouteDetailKey) {
-    val vm = appViewModel(key = "route_${key.routeId}") { RouteDetailViewModel(it, key.routeId, key.mode) }
+    val vm = sharedAppViewModel(key = "route_${key.routeId}") { RouteDetailViewModel(it, key.routeId, key.mode) }
     val state by vm.state.collectAsStateWithLifecycle()
     // Null until tapped: follows the "Start collapsed" setting.
     var updatesCollapsed by androidx.compose.runtime.saveable.rememberSaveable { androidx.compose.runtime.mutableStateOf<Boolean?>(null) }
@@ -164,6 +165,8 @@ fun RouteDetailScreen(key: RouteDetailKey) {
             LoadState.Loading -> Box(Modifier.padding(padding)) { LoadingState() }
             is LoadState.Error -> Box(Modifier.padding(padding)) { ErrorState(d.error, onRetry = { vm.load() }, onOpenSettings = navigator::openSettings) }
             is LoadState.Success -> LazyColumn(
+                // Opened from the map's panel: start where the panel was scrolled to.
+                state = androidx.compose.foundation.lazy.rememberLazyListState(key.scrollIndex, key.scrollOffset),
                 modifier = Modifier
                     .fillMaxSize()
                     .floatingBarBlur(padding.calculateTopPadding())
@@ -180,6 +183,8 @@ fun RouteDetailScreen(key: RouteDetailKey) {
                     onOpenStop = navigator::openStop,
                     updatesCollapsed = updatesCollapsed ?: state.settings.stopDisruptionsCollapsed,
                     onToggleUpdates = { updatesCollapsed = !(updatesCollapsed ?: state.settings.stopDisruptionsCollapsed) },
+                    // From the map the line is already drawn there, and the panel it grew from has no little map.
+                    showMap = !key.fromMap,
                 )
             }
         }

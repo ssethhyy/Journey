@@ -74,6 +74,8 @@ class AppContainer(
     val ptvApi = PtvApi(
         credentialsProvider = { credentialsOverride ?: settingsRepository.current().ptvCredentials },
         baseUrl = ptvBaseUrl,
+        // Stops and lines are kept on disk between launches (not in tests, which use their own server).
+        client = if (ptvBaseUrl == PtvApi.DEFAULT_BASE_URL) com.ssethhyy.journey.data.api.PtvHttpCache.client(context) else PtvApi.defaultClient(),
     )
     // Live vehicle positions come from Transport Victoria's GTFS Realtime feed when there's an Open Data key.
     val ptvRepository = PtvRepository(ptvApi, liveVehicle = { mode, vehicleId, near, radius -> crowdingRepository.vehicleFor(mode, vehicleId, near, radius) })

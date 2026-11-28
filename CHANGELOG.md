@@ -27,7 +27,10 @@ All notable changes to Journey are documented here. The format follows
 - **Services open on the map.** Tapping a departure anywhere (a stop's board, a stop on the map, a favourite)
   now opens the Map with the service drawn and its live position shown, and a panel with how it's running,
   crowding, its stopping pattern and service updates. Pull the panel up for the service's page, and down to return.
-  Back goes to the stop you tapped it on, or the tab you came from.
+  Back goes to the stop you tapped it on, or the tab you came from. The map follows the vehicle's live position by
+  default, keeping it centred as it moves; *Show the line* (just above the panel) zooms out to the trip from your
+  stop to the end, and *Follow the train* (or tram, or bus) goes back to following it. Dragging the map stops
+  following. With no live position, it shows the line.
 - **Planned journeys open on the map.** Choosing a journey on Plan (or a commute on For You) opens it on the Map,
   with a panel that starts with when to leave (*Leave in 12 min*), the leave and arrive times, how long it takes and
   the first service to catch, then its steps, then the stop-by-stop detail. Tap a step to highlight it on the map
@@ -79,8 +82,8 @@ All notable changes to Journey are documented here. The format follows
 ### Changed
 - **Live vehicle positions come from Transport Victoria's GTFS Realtime feed** when an Open Data key is set, instead
   of the PTV API alone. The feed updates often and says when each position was recorded, so the map's estimates and
-  smooth movement work from a known time. Feed positions older than five minutes are ignored, and PTV's position is
-  kept when it's newer.
+  smooth movement work from a known time. The feed's position is always used while it's live (under five minutes old);
+  PTV's position is only the backup, for when the feed has nothing live.
 - **The map's control pills read left to right.** *Nearby*, *Roll a stop* and *My location* sit on the left with no
   gaps, and they never scroll sideways: if they don't fit they close up, then wrap onto a new row above.
 - **The Nearby panel has no collapse arrow.** Swipe it up or down instead. Its handle sits in line with the title, so

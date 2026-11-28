@@ -332,7 +332,8 @@ and the service posts a high-priority "time to leave" notification once per boar
 `PtvRepository.stoppingPattern` asks `CrowdingRepository.vehicleFor` for the vehicle in Transport Victoria's GTFS
 Realtime feed (cached for 20 s). It matches by vehicle id first, then the nearest vehicle to PTV's position or to the
 timetable's expected position. That position replaces PTV's `vehiclePosition`, with its `recordedAt` taken from the
-feed's timestamp, unless PTV's is newer or the feed's is over five minutes old.
+feed's timestamp, whenever the feed's is live (`LivePositionRule`: under five minutes old). PTV's position is only
+the backup.
 
 ## Map panels
 
@@ -353,7 +354,8 @@ shrinks back down. `MapScreen` re-centres the camera on the panel's subject when
 `MapTripSheet` shows `tripItems` (shared with `TripScreen`). `Navigator.openJourney` does the same for a planned
 journey: `JourneyMapPanel` and `JourneyDetailScreen` both show `journeyItems` (summary, steps, then stop by stop) and
 share `JourneyLiveViewModel` for live times. `MapOrigins` remembers where a trip or journey was opened from, so Back
-returns to that stop or tab.
+returns to that stop or tab. On a trip the map follows the vehicle by default: `TripMapLayer` reports where it draws the
+vehicle (`onVehicleMoved`) and `MapScreen` keeps it centred until the map is dragged or *Show the line* is tapped.
 
 ## Stop alerts
 

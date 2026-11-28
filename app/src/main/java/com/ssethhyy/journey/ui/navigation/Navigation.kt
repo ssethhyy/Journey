@@ -96,11 +96,25 @@ class Navigator(
         if (backStack.size > 1) backStack.removeAt(backStack.lastIndex)
     }
 
-    fun openStop(stop: Stop) = open(
+    /** Opens a stop on the map, in its floating panel; a stop with no known position gets its own page. */
+    fun openStop(stop: Stop) {
+        if (stop.latitude == 0.0 && stop.longitude == 0.0) openStopPage(stop) else showOnMap(stop)
+    }
+
+    /** The stop's own page (for a stop the map can't place). */
+    fun openStopPage(stop: Stop) = open(
         StopDetailKey(stop.id, stop.mode.routeType, stop.name, stop.suburb, stop.latitude, stop.longitude),
     )
 
-    fun openRoute(route: Route) = open(RouteDetailKey(route.id, route.mode.routeType, route.name, route.number))
+    /** Opens a line on the map: drawn along its route, with its stops in the floating panel. */
+    fun openRoute(route: Route) {
+        while (backStack.size > 1) backStack.removeAt(backStack.lastIndex)
+        selectTab(HomeTab.MAP)
+        com.ssethhyy.journey.ui.screens.map.MapLineRequests.show(route)
+    }
+
+    /** The line's own page. */
+    fun openRoutePage(route: Route) = open(RouteDetailKey(route.id, route.mode.routeType, route.name, route.number))
 
     fun openTrip(runRef: String, mode: TransportMode, fromStopId: Int, title: String) =
         open(TripKey(runRef, mode.routeType, fromStopId, title))
@@ -148,6 +162,7 @@ class Navigator(
     fun showOnMap(stop: Stop) {
         while (backStack.size > 1) backStack.removeAt(backStack.lastIndex)
         selectTab(HomeTab.MAP)
+        com.ssethhyy.journey.ui.screens.map.MapLineRequests.clear()
         container.focusMap(MapFocusRequest(stop))
     }
 }

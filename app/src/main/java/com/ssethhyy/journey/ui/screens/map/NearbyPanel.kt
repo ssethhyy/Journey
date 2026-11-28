@@ -10,6 +10,7 @@
 
 package com.ssethhyy.journey.ui.screens.map
 
+import androidx.compose.ui.semantics.customActions
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.layout.onSizeChanged
@@ -228,15 +229,18 @@ fun NearbyPanel(
         }
     }
 
+    // Morphs from a floating panel into a page as it's pulled to full screen.
+    val (morphShape, morphColor) = rememberSheetMorph(fullProgress)
     Surface(
         modifier = modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(28.dp),
-        color = MaterialTheme.colorScheme.surfaceContainerHigh,
+        shape = morphShape,
+        color = morphColor,
         shadowElevation = 6.dp,
     ) {
         Column {
-            // Header: drag it to open, collapse or fill the screen with the panel, or tap it.
-            Column(
+            // Header: swipe it up or down to open, collapse or fill the screen with the panel. The handle sits on the
+            // title's line rather than above it, so the panel starts with its title.
+            Box(
                 Modifier
                     .fillMaxWidth()
                     .onSizeChanged { headerPx = it.height.toFloat() }
@@ -246,21 +250,17 @@ fun NearbyPanel(
                         onDragStarted = { dragging = true },
                         onDragStopped = { velocity -> settle(velocity) },
                     )
-                    .clickable(role = Role.Button, onClickLabel = if (expanded) "Collapse nearby" else "Expand nearby") {
-                        HapticUtil.performUIHaptic(view)
-                        if (full) onFullChange(false) else onExpandedChange(!expanded)
-                    }
-                    .semantics { stateDescription = if (expanded) "Expanded" else "Collapsed" }
-                    .padding(start = 16.dp, end = 4.dp, top = 8.dp, bottom = 8.dp),
+                    .semantics {
+                        stateDescription = if (full) "Full screen" else if (expanded) "Expanded" else "Collapsed"
+                        customActions = listOf(
+                            androidx.compose.ui.semantics.CustomAccessibilityAction(if (expanded) "Collapse nearby" else "Expand nearby") {
+                                if (full) onFullChange(false) else onExpandedChange(!expanded)
+                                true
+                            },
+                        )
+                    },
             ) {
-                Box(
-                    Modifier
-                        .align(Alignment.CenterHorizontally)
-                        .size(width = 32.dp, height = 4.dp)
-                        .background(MaterialTheme.colorScheme.outlineVariant, CircleShape),
-                )
-                Spacer(Modifier.height(6.dp))
-                Row(verticalAlignment = Alignment.CenterVertically) {
+                Row(Modifier.padding(start = 16.dp, end = 4.dp, top = 8.dp, bottom = 8.dp), verticalAlignment = Alignment.CenterVertically) {
                     Box(
                         Modifier
                             .size(36.dp)
@@ -278,14 +278,16 @@ fun NearbyPanel(
                         Text("Nearby", style = MaterialTheme.typography.titleMedium)
                         Text(summary, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1, overflow = TextOverflow.Ellipsis)
                     }
-                    Icon(
-                        Sym.KeyboardArrowUp,
-                        contentDescription = null,
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.graphicsLayer { rotationZ = 180f * progress },
-                    )
                     HapticIconButton(Sym.Close, "Hide nearby", onClick = onClose, tint = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
+                // In line with "Nearby" (its line's centre), in the middle of the panel.
+                Box(
+                    Modifier
+                        .align(Alignment.TopCenter)
+                        .padding(top = 18.dp)
+                        .size(width = 32.dp, height = 4.dp)
+                        .background(MaterialTheme.colorScheme.outlineVariant, CircleShape),
+                )
             }
 
             if (height > 0.5f) {

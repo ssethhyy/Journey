@@ -61,7 +61,8 @@ class BottomBarStyleTest {
         runBlocking {
             container.settingsRepository.setBarStyle(BarStyle.BOTTOM_BAR)
             container.favouritesRepository.clear()
-            container.favouritesRepository.add(Stop(1071, TransportMode.TRAIN, "Flinders Street Station", "Melbourne City", -37.8183, 144.9671))
+            // No position, so it opens on its own page (placed stops open on the map instead).
+            container.favouritesRepository.add(Stop(1071, TransportMode.TRAIN, "Flinders Street Station", "Melbourne City", 0.0, 0.0))
         }
 
         // Tabs mode: the three tab icons and the Profile action.

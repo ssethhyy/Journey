@@ -129,17 +129,6 @@ fun StopDetailScreen(key: StopDetailKey) {
             topInset = innerPadding.calculateTopPadding(),
             modifier = Modifier.fillMaxSize(),
         ) {
-            val board = state.board
-            val routes: List<Route> = (board.dataOrNull?.routes.orEmpty() + state.details.dataOrNull?.stop?.routes.orEmpty())
-                .distinctBy { it.id }
-                .sortedWith(compareBy({ it.number.toIntOrNull() ?: Int.MAX_VALUE }, { it.name }))
-            val departures = board.dataOrNull?.departures.orEmpty()
-                .filter { it.bestTime?.isAfter(now.minusSeconds(60)) == true }
-            val directions = departures.mapNotNull { d -> d.directionName?.let { d.directionId to it } }.distinct()
-            val visibleDepartures = departures
-                .filter { state.directionFilter == null || it.directionId == state.directionFilter }
-                .take(if (state.showAll) 40 else 10)
-
             LazyColumn(
                 modifier = Modifier.fillMaxSize().floatingBarBlur(innerPadding.calculateTopPadding()),
                 contentPadding = PaddingValues(
@@ -150,134 +139,170 @@ fun StopDetailScreen(key: StopDetailKey) {
                 ),
                 verticalArrangement = Arrangement.spacedBy(8.dp),
             ) {
-                item(key = "header") { StopHeader(state.stop.mode, routes.size, state.details.dataOrNull?.stationDescription) }
-
-                // Only alerts that matter bring the card up; expanding it shows every alert.
-                serviceUpdates(
-                    state.disruptions,
-                    level = state.settings.stopDisruptionLevel,
-                    collapsed = updatesCollapsed ?: state.settings.stopDisruptionsCollapsed,
-                    onToggle = { updatesCollapsed = !(updatesCollapsed ?: state.settings.stopDisruptionsCollapsed) },
+                stopDetailItems(
+                    state = state,
+                    vm = vm,
+                    now = now,
+                    navigator = navigator,
+                    updatesCollapsed = updatesCollapsed ?: state.settings.stopDisruptionsCollapsed,
+                    onToggleUpdates = { updatesCollapsed = !(updatesCollapsed ?: state.settings.stopDisruptionsCollapsed) },
                 )
+            }
+        }
+    }
+}
 
-                item(key = "departures_label") {
-                    SectionLabel("Departures") {
-                        board.dataOrNull?.let {
-                            Text(
-                                "Updated ${TimeFormatter.clock(it.fetchedAt)}",
-                                style = MaterialTheme.typography.labelMedium,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                modifier = Modifier.padding(end = 8.dp),
-                            )
-                        }
-                    }
-                }
-                if (routes.size > 1) {
-                    item(key = "route_filters") {
-                        FilterRow {
-                            FilterChip(selected = state.routeFilter == null, onClick = { vm.setRouteFilter(null) }, label = { Text("All routes") }, shape = CircleShape)
-                            routes.forEach { route ->
-                                FilterChip(
-                                    selected = state.routeFilter == route.id,
-                                    onClick = { vm.setRouteFilter(if (state.routeFilter == route.id) null else route.id) },
-                                    label = { Text(route.badgeLabel) },
-                                    leadingIcon = { Icon(route.mode.icon, null, Modifier.size(16.dp)) },
-                                    shape = CircleShape,
-                                )
-                            }
-                        }
-                    }
-                }
-                if (directions.size > 1) {
-                    item(key = "direction_filters") {
-                        FilterRow {
-                            FilterChip(selected = state.directionFilter == null, onClick = { vm.setDirectionFilter(null) }, label = { Text("Both directions") }, shape = CircleShape)
-                            directions.forEach { (id, name) ->
-                                FilterChip(
-                                    selected = state.directionFilter == id,
-                                    onClick = { vm.setDirectionFilter(if (state.directionFilter == id) null else id) },
-                                    label = { Text("To $name") },
-                                    shape = CircleShape,
-                                )
-                            }
-                        }
-                    }
-                }
+/**
+ * The stop's timetable, filters, facilities and routes, as list items: shared by the stop page and the map's stop
+ * panel, so both show the same thing.
+ */
+@OptIn(ExperimentalLayoutApi::class)
+fun androidx.compose.foundation.lazy.LazyListScope.stopDetailItems(
+    state: StopDetailUiState,
+    vm: StopDetailViewModel,
+    now: java.time.Instant,
+    navigator: com.ssethhyy.journey.ui.navigation.Navigator,
+    updatesCollapsed: Boolean,
+    onToggleUpdates: () -> Unit,
+    showHeader: Boolean = true,
+) {
+    val stop = state.stop
+    val board = state.board
+    val routes: List<Route> = (board.dataOrNull?.routes.orEmpty() + state.details.dataOrNull?.stop?.routes.orEmpty())
+        .distinctBy { it.id }
+        .sortedWith(compareBy({ it.number.toIntOrNull() ?: Int.MAX_VALUE }, { it.name }))
+    val departures = board.dataOrNull?.departures.orEmpty()
+        .filter { it.bestTime?.isAfter(now.minusSeconds(60)) == true }
+    val directions = departures.mapNotNull { d -> d.directionName?.let { d.directionId to it } }.distinct()
+    val visibleDepartures = departures
+        .filter { state.directionFilter == null || it.directionId == state.directionFilter }
+        .take(if (state.showAll) 40 else 10)
 
-                item(key = "departures") {
-                    when (board) {
-                        LoadState.Loading -> RoundedCardContainer { DepartureSkeleton(rows = 5) }
-                        is LoadState.Error -> ErrorState(board.error, onRetry = { vm.loadBoard() }, onOpenSettings = navigator::openSettings)
-                        is LoadState.Success -> if (visibleDepartures.isEmpty()) {
-                            MessageState(Sym.EventBusy, "No upcoming departures", "There are no services scheduled from this stop soon.")
-                        } else {
-                            RoundedCardContainer {
-                                visibleDepartures.forEach { dep -> DepartureListRow(dep, now, state, onOpenTrip = {
-                                    dep.runRef?.let { navigator.openTrip(it, stop.mode, stop.id, dep.headsign) }
-                                }) }
-                            }
-                        }
-                    }
-                }
-                if (board is LoadState.Success && departures.size > 10) {
-                    item(key = "more") {
-                        ListExpandToggleButton(
-                            isExpanded = state.showAll,
-                            onToggle = vm::toggleShowAll,
-                            expandedText = "Show fewer departures",
-                            collapsedText = "Show more departures",
-                        )
-                    }
-                }
+    if (showHeader) item(key = "header") { StopHeader(state.stop.mode, routes.size, state.details.dataOrNull?.stationDescription) }
 
-                val facilities = state.details.dataOrNull?.facilities.orEmpty()
-                if (facilities.isNotEmpty()) {
-                    item(key = "facilities") {
-                        SectionLabel("Facilities & accessibility")
-                        FlowRow(
-                            horizontalArrangement = Arrangement.spacedBy(8.dp),
-                            verticalArrangement = Arrangement.spacedBy(0.dp),
-                        ) {
-                            facilities.forEach { facility ->
-                                AssistChip(
-                                    onClick = {},
-                                    label = { Text(listOfNotNull(facility.kind.label, facility.detail).joinToString(" · ")) },
-                                    leadingIcon = { Icon(facility.kind.icon(), null, Modifier.size(18.dp)) },
-                                    shape = CircleShape,
-                                    colors = AssistChipDefaults.assistChipColors(containerColor = MaterialTheme.colorScheme.surfaceContainerHigh),
-                                    border = null,
-                                )
-                            }
-                        }
-                    }
-                }
+    // Only alerts that matter bring the card up; expanding it shows every alert.
+    serviceUpdates(
+        state.disruptions,
+        level = state.settings.stopDisruptionLevel,
+        collapsed = updatesCollapsed,
+        onToggle = onToggleUpdates,
+    )
 
-                if (routes.isNotEmpty()) {
-                    item(key = "routes") {
-                        SectionLabel("Routes from this stop")
-                        RoundedCardContainer {
-                            routes.forEach { route ->
-                                ActionItem(
-                                    icon = route.mode.icon,
-                                    title = route.displayName,
-                                    description = route.serviceStatus ?: route.mode.label,
-                                    onClick = { navigator.openRoute(route) },
-                                )
-                            }
-                        }
-                    }
-                }
-
-                item(key = "attribution") {
-                    Text(
-                        "Timetable data: Public Transport Victoria (CC BY 4.0)",
-                        style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.padding(16.dp),
+    item(key = "departures_label") {
+        SectionLabel("Departures") {
+            board.dataOrNull?.let {
+                Text(
+                    "Updated ${TimeFormatter.clock(it.fetchedAt)}",
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(end = 8.dp),
+                )
+            }
+        }
+    }
+    if (routes.size > 1) {
+        item(key = "route_filters") {
+            FilterRow {
+                FilterChip(selected = state.routeFilter == null, onClick = { vm.setRouteFilter(null) }, label = { Text("All routes") }, shape = CircleShape)
+                routes.forEach { route ->
+                    FilterChip(
+                        selected = state.routeFilter == route.id,
+                        onClick = { vm.setRouteFilter(if (state.routeFilter == route.id) null else route.id) },
+                        label = { Text(route.badgeLabel) },
+                        leadingIcon = { Icon(route.mode.icon, null, Modifier.size(16.dp)) },
+                        shape = CircleShape,
                     )
                 }
             }
         }
+    }
+    if (directions.size > 1) {
+        item(key = "direction_filters") {
+            FilterRow {
+                FilterChip(selected = state.directionFilter == null, onClick = { vm.setDirectionFilter(null) }, label = { Text("Both directions") }, shape = CircleShape)
+                directions.forEach { (id, name) ->
+                    FilterChip(
+                        selected = state.directionFilter == id,
+                        onClick = { vm.setDirectionFilter(if (state.directionFilter == id) null else id) },
+                        label = { Text("To $name") },
+                        shape = CircleShape,
+                    )
+                }
+            }
+        }
+    }
+
+    item(key = "departures") {
+        when (board) {
+            LoadState.Loading -> RoundedCardContainer { DepartureSkeleton(rows = 5) }
+            is LoadState.Error -> ErrorState(board.error, onRetry = { vm.loadBoard() }, onOpenSettings = navigator::openSettings)
+            is LoadState.Success -> if (visibleDepartures.isEmpty()) {
+                MessageState(Sym.EventBusy, "No upcoming departures", "There are no services scheduled from this stop soon.")
+            } else {
+                RoundedCardContainer {
+                    visibleDepartures.forEach { dep -> DepartureListRow(dep, now, state, onOpenTrip = {
+                        dep.runRef?.let { navigator.openTrip(it, stop.mode, stop.id, dep.headsign) }
+                    }) }
+                }
+            }
+        }
+    }
+    if (board is LoadState.Success && departures.size > 10) {
+        item(key = "more") {
+            ListExpandToggleButton(
+                isExpanded = state.showAll,
+                onToggle = vm::toggleShowAll,
+                expandedText = "Show fewer departures",
+                collapsedText = "Show more departures",
+            )
+        }
+    }
+
+    val facilities = state.details.dataOrNull?.facilities.orEmpty()
+    if (facilities.isNotEmpty()) {
+        item(key = "facilities") {
+            SectionLabel("Facilities & accessibility")
+            FlowRow(
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalArrangement = Arrangement.spacedBy(0.dp),
+            ) {
+                facilities.forEach { facility ->
+                    AssistChip(
+                        onClick = {},
+                        label = { Text(listOfNotNull(facility.kind.label, facility.detail).joinToString(" · ")) },
+                        leadingIcon = { Icon(facility.kind.icon(), null, Modifier.size(18.dp)) },
+                        shape = CircleShape,
+                        colors = AssistChipDefaults.assistChipColors(containerColor = MaterialTheme.colorScheme.surfaceContainerHigh),
+                        border = null,
+                    )
+                }
+            }
+        }
+    }
+
+    if (routes.isNotEmpty()) {
+        item(key = "routes") {
+            SectionLabel("Routes from this stop")
+            RoundedCardContainer {
+                routes.forEach { route ->
+                    ActionItem(
+                        icon = route.mode.icon,
+                        title = route.displayName,
+                        description = route.serviceStatus ?: route.mode.label,
+                        onClick = { navigator.openRoute(route) },
+                    )
+                }
+            }
+        }
+    }
+
+    item(key = "attribution") {
+        Text(
+            "Timetable data: Public Transport Victoria (CC BY 4.0)",
+            style = MaterialTheme.typography.labelSmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.padding(16.dp),
+        )
     }
 }
 

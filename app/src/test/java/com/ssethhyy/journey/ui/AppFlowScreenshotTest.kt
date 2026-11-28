@@ -13,6 +13,7 @@ import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onFirst
+import androidx.compose.ui.test.onAllNodesWithContentDescription
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.onRoot
@@ -228,13 +229,13 @@ class AppFlowScreenshotTest {
         rule.onNodeWithText("Commute").assertIsDisplayed()
         snap("02_favourites")
 
-        // Stop details.
+        // Stop details, in the map's stop panel.
         rule.onNodeWithText("Commute").performClick()
         waitForText("Departures")
         snap("04_stop_detail")
 
-        // Trip / stopping pattern from a departure.
-        rule.onAllNodesWithText("Carrum").onFirst().performClick()
+        // Trip / stopping pattern from a departure (the one in the panel, not the hidden Favourites tab's).
+        rule.onAllNodesWithText("Carrum").fetchSemanticsNodes().indexOfFirst { node -> node.layoutInfo.isPlaced && node.boundsInRoot.height > 0f && node.boundsInRoot.top < rule.onRoot().fetchSemanticsNode().size.height }.let { i -> rule.onAllNodesWithText("Carrum")[i.coerceAtLeast(0)].performClick() }
         waitForText("Stopping pattern")
         // Crowding from the Open Data feed: the whole train and each carriage.
         waitForText("Standing room only")
@@ -244,6 +245,9 @@ class AppFlowScreenshotTest {
         rule.activity.onBackPressedDispatcher.onBackPressed()
         rule.waitForIdle()
         rule.activity.onBackPressedDispatcher.onBackPressed()
+        rule.waitForIdle()
+        // The stop opened on the map, so Back leaves you there: go back to For You.
+        rule.onAllNodesWithContentDescription("For You").onFirst().performClick()
         rule.waitForIdle()
 
         // Disruptions from the Disruptions widget: expand it, then see them all.

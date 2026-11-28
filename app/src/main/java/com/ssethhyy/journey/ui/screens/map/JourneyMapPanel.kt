@@ -9,6 +9,8 @@
 package com.ssethhyy.journey.ui.screens.map
 
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.expandVertically
@@ -87,16 +89,26 @@ fun JourneyMapPanel(
     onOpenStop: (JourneyLeg, Boolean) -> Unit,
     onClose: () -> Unit,
     modifier: Modifier = Modifier,
+    /** 0 at open to 1 at full page, as it moves. */
+    onFullProgress: (Float) -> Unit = {},
 ) {
     val legs = journey.legs
-    Surface(
-        modifier = modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(28.dp),
-        color = MaterialTheme.colorScheme.surfaceContainerHigh,
-        shadowElevation = 6.dp,
-    ) {
-        Column(Modifier.padding(top = 12.dp, bottom = 8.dp)) {
-            Row(Modifier.padding(start = 16.dp, end = 4.dp), verticalAlignment = Alignment.CenterVertically) {
+    var step by androidx.compose.runtime.saveable.rememberSaveable(journey.start.epochSecond) { androidx.compose.runtime.mutableStateOf(SheetStep.OPEN) }
+    val listState = rememberLazyListState()
+    // Bring the chosen leg, with its details and stop buttons, fully into view.
+    LaunchedEffect(selected) { selected?.let { listState.animateScrollToItem(it) } }
+    // Pull it up into a full page of the journey's legs, or down to just its summary.
+    MapSheet(
+        step = step,
+        onStepChange = { step = it },
+        name = "journey",
+        modifier = modifier,
+        openHeight = if (selected == null) 280.dp else 380.dp,
+        onFullProgress = onFullProgress,
+        listState = listState,
+        contentPadding = PaddingValues(start = 8.dp, end = 8.dp, bottom = 8.dp),
+        header = {
+            Row(Modifier.padding(start = 16.dp, end = 4.dp, top = 8.dp, bottom = 8.dp), verticalAlignment = Alignment.CenterVertically) {
                 Column(Modifier.weight(1f)) {
                     Text("To ${destination.ifBlank { "your destination" }}", style = MaterialTheme.typography.titleMediumEmphasized, maxLines = 1, overflow = TextOverflow.Ellipsis)
                     Text(
@@ -118,25 +130,16 @@ fun JourneyMapPanel(
                 }
                 HapticIconButton(Sym.Close, "Close journey", onClick = onClose, tint = MaterialTheme.colorScheme.onSurfaceVariant)
             }
-            val listState = rememberLazyListState()
-            // Bring the chosen leg, with its details and stop buttons, fully into view.
-            LaunchedEffect(selected) { selected?.let { listState.animateScrollToItem(it) } }
-            LazyColumn(
-                state = listState,
-                modifier = Modifier.heightIn(max = if (selected == null) 280.dp else 380.dp),
-                contentPadding = PaddingValues(start = 8.dp, end = 8.dp, top = 8.dp),
-                verticalArrangement = Arrangement.spacedBy(4.dp),
-            ) {
-                itemsIndexed(legs, key = { index, leg -> "$index-${leg.start.epochSecond}" }) { index, leg ->
-                    LegRow(
-                        leg = leg,
-                        title = JourneyLegText.title(leg, isLast = index == legs.lastIndex, destination = destination),
-                        expanded = index == selected,
-                        onClick = { onSelect(if (index == selected) null else index) },
-                        onOpenStop = { boarding -> onOpenStop(leg, boarding) },
-                    )
-                }
-            }
+        },
+    ) {
+        itemsIndexed(legs, key = { index, leg -> "$index-${leg.start.epochSecond}" }) { index, leg ->
+            LegRow(
+                leg = leg,
+                title = JourneyLegText.title(leg, isLast = index == legs.lastIndex, destination = destination),
+                expanded = index == selected,
+                onClick = { onSelect(if (index == selected) null else index) },
+                onOpenStop = { boarding -> onOpenStop(leg, boarding) },
+            )
         }
     }
 }

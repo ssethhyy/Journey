@@ -166,10 +166,13 @@ fun MapScreen(isActive: Boolean, modifier: Modifier = Modifier) {
     }
     val tripRequest by container.tripMap.collectAsStateWithLifecycle()
     val rouletteRequest by container.rouletteRequest.collectAsStateWithLifecycle()
+    // A line opened from search or a stop: drawn on the map with its stops in a panel.
+    val mapLine by MapLineRequests.route.collectAsStateWithLifecycle()
+    var placeFullProgress by remember { mutableFloatStateOf(0f) }
 
     // ---- Which overlay is active? ----------------------------------------------------
     val overlay: MapOverlay? = when {
-        state.selected != null -> null
+        state.selected != null || mapLine != null -> null
         tripRequest != null -> MapOverlay.TRIP
         journey != null -> MapOverlay.JOURNEY
         else -> MapOverlay.NEARBY
@@ -204,7 +207,7 @@ fun MapScreen(isActive: Boolean, modifier: Modifier = Modifier) {
 
     val journeyPanelVisible = journeyMode
     val previewClearance: androidx.compose.ui.unit.Dp = when {
-        state.selected != null -> with(density) { previewHeightPx.toDp() } + 4.dp
+        state.selected != null || mapLine != null -> with(density) { previewHeightPx.toDp() } + 4.dp
         journeyPanelVisible -> with(density) { journeyPanelHeightPx.toDp() } + 4.dp
         nearbyVisible -> with(density) { nearbyHeightPx.toDp() } + 4.dp
         else -> 0.dp
@@ -214,7 +217,7 @@ fun MapScreen(isActive: Boolean, modifier: Modifier = Modifier) {
     val rouletteVm = appViewModel(key = "stop_roulette") { StopRouletteViewModel(it) }
     val roulette by rouletteVm.state.collectAsStateWithLifecycle()
     val controlsVisible = (roulette is RouletteState.Idle || state.selected == null) &&
-        !(nearbyVisible && nearbyFullProgress > 0.6f)
+        !(nearbyVisible && nearbyFullProgress > 0.6f) && (placeFullProgress <= 0.6f || (state.selected == null && mapLine == null && !journeyMode))
     val controlsClearance: androidx.compose.ui.unit.Dp = if (controlsVisible) ControlRowHeight + 8.dp else 0.dp
 
     val statusTopPx = WindowInsets.statusBars.getTop(density)
@@ -316,6 +319,10 @@ fun MapScreen(isActive: Boolean, modifier: Modifier = Modifier) {
         }
     }
 
+    // A stop and a line share the panel: opening one closes the other.
+    LaunchedEffect(mapLine) { if (mapLine != null) vm.select(null) }
+    LaunchedEffect(state.selected) { if (state.selected != null) MapLineRequests.clear() }
+
     // The Stop roulette shortcut on For You.
     LaunchedEffect(rouletteRequest, isActive) {
         if (rouletteRequest != null && isActive) {
@@ -416,6 +423,7 @@ fun MapScreen(isActive: Boolean, modifier: Modifier = Modifier) {
                     }
                 },
             ) {
+                mapLine?.let { MapLineLayer(it) }
                 // ---- Journey route lines (only when a journey is active) -------------
                 if (overlay == MapOverlay.JOURNEY) {
                     journey?.let { j ->
@@ -561,7 +569,7 @@ fun MapScreen(isActive: Boolean, modifier: Modifier = Modifier) {
 
         // ---- Map control pills -------------------------------------------------------
         if (controlsVisible) {
-            BoxWithConstraints(
+            Box(
                 Modifier
                     .align(Alignment.BottomCenter)
                     .graphicsLayer {
@@ -571,15 +579,11 @@ fun MapScreen(isActive: Boolean, modifier: Modifier = Modifier) {
                     .windowInsetsPadding(WindowInsets.navigationBars)
                     .padding(bottom = ToolbarClearance + previewClearance + 4.dp),
             ) {
-                val rowWidth = maxWidth
-                Row(
+                // Left to right with no gaps; overflow wraps onto rows above instead of scrolling.
+                MapControlFlow(
                     Modifier
-                        .horizontalScroll(rememberScrollState())
-                        .widthIn(min = rowWidth)
-                        .height(ControlRowHeight)
-                        .padding(horizontal = 12.dp),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.End),
-                    verticalAlignment = Alignment.CenterVertically,
+                        .fillMaxWidth()
+                        .padding(horizontal = 12.dp, vertical = 4.dp),
                 ) {
                     if (!showNearby) {
                         MapControlPill(
@@ -615,6 +619,8 @@ fun MapScreen(isActive: Boolean, modifier: Modifier = Modifier) {
         LaunchedEffect(journey, journeyPanelHeightPx, isActive) {
             val j = journey ?: return@LaunchedEffect
             if (!isActive) return@LaunchedEffect
+            // Wait for the panel to stop moving (it changes height every frame while dragged) before flying.
+            kotlinx.coroutines.delay(250)
             val drawable = JourneyGeometry.drawable(j)
             val points = JourneyGeometry.allPoints(drawable)
             if (points.size < 2) return@LaunchedEffect
@@ -648,6 +654,7 @@ fun MapScreen(isActive: Boolean, modifier: Modifier = Modifier) {
                     onSelect = {},
                     onOpenStop = com.ssethhyy.journey.ui.components.rememberLegStopOpener(),
                     onClose = container::closeJourneyMap,
+                    onFullProgress = { placeFullProgress = it },
                 )
             }
         }
@@ -736,7 +743,7 @@ fun MapScreen(isActive: Boolean, modifier: Modifier = Modifier) {
 
         // ---- Stop preview ------------------------------------------------------------
         AnimatedVisibility(
-            visible = state.selected != null,
+            visible = state.selected != null || mapLine != null,
             enter = slideInVertically { it / 2 } + fadeIn(),
             exit = slideOutVertically { it / 2 } + fadeOut(),
             modifier = Modifier
@@ -745,28 +752,19 @@ fun MapScreen(isActive: Boolean, modifier: Modifier = Modifier) {
                 .padding(start = 12.dp, end = 12.dp, bottom = ToolbarClearance - 8.dp)
                 .onSizeChanged { previewHeightPx = it.height },
         ) {
-            val now by rememberNow()
+            // The stop or line, in a panel that pulls up into a full page (MapPlaceSheets.kt).
             val stop = state.selected
-            if (stop != null) {
-                StopPreviewCard(
-                    stop = stop,
-                    board = state.selectedBoard,
-                    now = now,
-                    isFavourite = stop.key in state.favouriteKeys,
-                    timeDisplay = state.settings.timeDisplay,
-                    onToggleFavourite = { vm.toggleFavourite(stop) },
-                    onClose = { vm.select(null) },
-                    onOpen = { navigator.openStop(stop) },
-                    onRetry = vm::refreshSelected,
-                    onOpenTrip = { dep ->
-                        dep.runRef?.let { navigator.openTrip(it, stop.mode, stop.id, dep.headsign) }
-                    },
-                    onPlan = {
-                        navigator.planTo(
-                            com.ssethhyy.journey.data.planner.PlanLocation(
-                                stop.name, stop.latitude, stop.longitude, stop.suburb,
-                            ),
-                        )
+            val line = mapLine
+            when {
+                stop != null -> MapStopSheet(stop = stop, onClose = { vm.select(null) }, onFullProgress = { placeFullProgress = it })
+                line != null -> MapLineSheet(
+                    route = line,
+                    onClose = MapLineRequests::clear,
+                    onFullProgress = { placeFullProgress = it },
+                    onFit = { points ->
+                        val padding = EdgeInsets(topCoveredPx + 24.0, 48.0, bottomCoveredPx + 24.0, 48.0)
+                        val camera = viewportState.cameraForCoordinates(points, CameraOptions.Builder().build(), padding, 16.0, null)
+                        viewportState.flyTo(camera, MapAnimationOptions.mapAnimationOptions { duration(900) })
                     },
                 )
             }

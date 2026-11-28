@@ -167,50 +167,76 @@ fun RouteDetailScreen(key: RouteDetailKey) {
                 contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = padding.calculateTopPadding(), bottom = pageBottomInset(32.dp)),
                 verticalArrangement = Arrangement.spacedBy(8.dp),
             ) {
-                // The route's real shape, smoothed like every other line in the app.
-                val paths = (d.data.geopaths[state.directionId] ?: d.data.geopaths.values.firstOrNull().orEmpty())
-                    .map(com.ssethhyy.journey.data.model.RouteLine::smooth)
-                if (paths.isNotEmpty()) {
-                    item(key = "map") { RouteMapPreview(paths, color, state.settings) }
-                }
-                if (d.data.directions.size > 1) {
-                    item(key = "directions") {
-                        SegmentedPicker(
-                            items = d.data.directions,
-                            selectedItem = d.data.directions.firstOrNull { it.id == state.directionId } ?: d.data.directions.first(),
-                            onItemSelected = { vm.selectDirection(it.id) },
-                            labelProvider = { "To ${it.name}" },
-                        )
-                    }
-                }
-                // Only alerts that matter bring the card up; expanding it shows every alert.
-                serviceUpdates(
-                    state.disruptions,
-                    level = state.settings.stopDisruptionLevel,
-                    collapsed = updatesCollapsed ?: state.settings.stopDisruptionsCollapsed,
-                    onToggle = { updatesCollapsed = !(updatesCollapsed ?: state.settings.stopDisruptionsCollapsed) },
+                routeDetailItems(
+                    data = d.data,
+                    state = state,
+                    color = color,
+                    onSelectDirection = vm::selectDirection,
+                    onRetry = { vm.load() },
+                    onOpenStop = navigator::openStop,
+                    updatesCollapsed = updatesCollapsed ?: state.settings.stopDisruptionsCollapsed,
+                    onToggleUpdates = { updatesCollapsed = !(updatesCollapsed ?: state.settings.stopDisruptionsCollapsed) },
                 )
-                item(key = "stops_label") { SectionLabel("Stops") }
-                when (val stops = state.stops) {
-                    LoadState.Loading -> item(key = "stops_loading") { LoadingState() }
-                    is LoadState.Error -> item(key = "stops_error") { ErrorState(stops.error, onRetry = { vm.load() }) }
-                    is LoadState.Success -> if (stops.data.isEmpty()) {
-                        item(key = "stops_empty") { MessageState(Sym.Route, "No stops listed", "PTV didn't return any stops for this direction.") }
-                    } else {
-                        item(key = "stops") {
-                            RoundedCardContainer(spacing = 0.dp) {
-                                stops.data.forEachIndexed { index, stop ->
-                                    TimelineRow(
-                                        title = stop.name,
-                                        subtitle = stop.suburb,
-                                        lineColor = color,
-                                        isFirst = index == 0,
-                                        isLast = index == stops.data.lastIndex,
-                                        onClick = hapticClick { navigator.openStop(stop) },
-                                    )
-                                }
-                            }
-                        }
+            }
+        }
+    }
+}
+
+/** A line's directions, service updates and stops, as list items: shared by the line page and the map's line panel. */
+fun androidx.compose.foundation.lazy.LazyListScope.routeDetailItems(
+    data: RouteDetails,
+    state: RouteUiState,
+    color: androidx.compose.ui.graphics.Color,
+    onSelectDirection: (Int) -> Unit,
+    onRetry: () -> Unit,
+    onOpenStop: (Stop) -> Unit,
+    updatesCollapsed: Boolean,
+    onToggleUpdates: () -> Unit,
+    /** The little map at the top; off when the line is already drawn on the big map behind. */
+    showMap: Boolean = true,
+) {
+    val d = LoadState.Success(data)
+    // The route's real shape, smoothed like every other line in the app.
+    val paths = (d.data.geopaths[state.directionId] ?: d.data.geopaths.values.firstOrNull().orEmpty())
+        .map(com.ssethhyy.journey.data.model.RouteLine::smooth)
+    if (showMap && paths.isNotEmpty()) {
+        item(key = "map") { RouteMapPreview(paths, color, state.settings) }
+    }
+    if (d.data.directions.size > 1) {
+        item(key = "directions") {
+            SegmentedPicker(
+                items = d.data.directions,
+                selectedItem = d.data.directions.firstOrNull { it.id == state.directionId } ?: d.data.directions.first(),
+                onItemSelected = { onSelectDirection(it.id) },
+                labelProvider = { "To ${it.name}" },
+            )
+        }
+    }
+    // Only alerts that matter bring the card up; expanding it shows every alert.
+    serviceUpdates(
+        state.disruptions,
+        level = state.settings.stopDisruptionLevel,
+        collapsed = updatesCollapsed,
+        onToggle = onToggleUpdates,
+    )
+    item(key = "stops_label") { SectionLabel("Stops") }
+    when (val stops = state.stops) {
+        LoadState.Loading -> item(key = "stops_loading") { LoadingState() }
+        is LoadState.Error -> item(key = "stops_error") { ErrorState(stops.error, onRetry = onRetry) }
+        is LoadState.Success -> if (stops.data.isEmpty()) {
+            item(key = "stops_empty") { MessageState(Sym.Route, "No stops listed", "PTV didn't return any stops for this direction.") }
+        } else {
+            item(key = "stops") {
+                RoundedCardContainer(spacing = 0.dp) {
+                    stops.data.forEachIndexed { index, stop ->
+                        TimelineRow(
+                            title = stop.name,
+                            subtitle = stop.suburb,
+                            lineColor = color,
+                            isFirst = index == 0,
+                            isLast = index == stops.data.lastIndex,
+                            onClick = hapticClick { onOpenStop(stop) },
+                        )
                     }
                 }
             }

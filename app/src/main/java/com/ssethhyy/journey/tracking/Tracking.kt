@@ -54,6 +54,8 @@ data class TrackingStatus(
     val finished: Boolean,
     val mode: TransportMode?,
     val updatedAt: Instant,
+    /** How fast to go to make the service, from where you are (when that's turned on and you're on your way). */
+    val pace: Pace? = null,
 )
 
 object TrackingLogic {

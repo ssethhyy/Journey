@@ -141,6 +141,7 @@ enum class SettingsCategory(val title: String) {
     NEARBY("Nearby stops"),
     MAP("Map"),
     WIDGET("Home screen widget"),
+    LIVE_TRACKING("Live tracking"),
     STOP_ALERTS("Stop alerts"),
     CROWDING("Crowding"),
     GAME("Game"),
@@ -193,6 +194,12 @@ object Prefs {
     val WIDGET_SUBTITLE = EnumPref("widget_subtitle", WidgetSubtitle.DISTANCE, WidgetSubtitle.entries)
     val WIDGET_SHOW_DESTINATION = BoolPref("widget_show_destination", true)
     val WIDGET_SHOW_LIVE = BoolPref("widget_show_live", true)
+
+    // Live tracking
+    /** A "leave now" alert, from where you are, for the service you're tracking. */
+    val TRACKING_LEAVE_ALERT = BoolPref("tracking_leave_alert", true)
+    /** How fast to go (a stroll to a run) on the live notification. */
+    val TRACKING_PACE = BoolPref("tracking_pace", true)
 
     // Stop alerts
     val STOP_ALERTS = BoolPref("stop_alerts", true)
@@ -275,6 +282,10 @@ data class AppSettings(
     val gameSkipNearby: Boolean = Prefs.GAME_SKIP_NEARBY.default,
     val gameChallenges: Boolean = Prefs.GAME_CHALLENGES.default,
     val gameRollAnimation: Boolean = Prefs.GAME_ANIMATION.default,
+    /** A "leave now" alert for the tracked service, from where you are. */
+    val trackingLeaveAlert: Boolean = Prefs.TRACKING_LEAVE_ALERT.default,
+    /** The pace to aim for on the live notification. */
+    val trackingPace: Boolean = Prefs.TRACKING_PACE.default,
     /** Full-screen "get off here" alert while a journey is tracked. */
     val stopAlerts: Boolean = Prefs.STOP_ALERTS.default,
     /** Whether that alert vibrates (never on silent). It never rings. */
@@ -380,6 +391,8 @@ class SettingsRepository(context: Context) {
             gameSkipNearby = Prefs.GAME_SKIP_NEARBY.read(p),
             gameChallenges = Prefs.GAME_CHALLENGES.read(p),
             gameRollAnimation = Prefs.GAME_ANIMATION.read(p),
+            trackingLeaveAlert = Prefs.TRACKING_LEAVE_ALERT.read(p),
+            trackingPace = Prefs.TRACKING_PACE.read(p),
             stopAlerts = Prefs.STOP_ALERTS.read(p),
             stopAlertVibrate = Prefs.STOP_ALERT_VIBRATE.read(p),
             searchRegion = Prefs.SEARCH_REGION.read(p),

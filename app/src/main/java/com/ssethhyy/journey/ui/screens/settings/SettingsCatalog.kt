@@ -247,6 +247,17 @@ object SettingsCatalog {
             Toggle(Prefs.WIDGET_SHOW_LIVE, "Live indicator", Sym.Schedule, "Mark times that come from live tracking"),
         )
 
+        SettingsCategory.LIVE_TRACKING -> listOf(
+            Toggle(
+                Prefs.TRACKING_LEAVE_ALERT, "Time to leave", Sym.NotificationsActive,
+                "While you track a service, an alert when it's time to set off, from where you are and how long the walk takes",
+            ),
+            Toggle(
+                Prefs.TRACKING_PACE, "How fast to go", Sym.DirectionsWalk,
+                "On the live notification: a leisurely walk, a brisk walk, a jog or a run, from where you are and the time left",
+            ),
+        )
+
         SettingsCategory.STOP_ALERTS -> listOf(
             Toggle(
                 Prefs.STOP_ALERTS, "Full-screen alert to get off", Sym.NotificationsActive,

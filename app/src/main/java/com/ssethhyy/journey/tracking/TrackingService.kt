@@ -98,8 +98,8 @@ class TrackingService : Service() {
         val placeholder = TrackingStatus("Tracking…", "Getting live times", "…", 0f, false, false, null, Instant.now())
         val notification = buildNotification(target, placeholder)
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
-            // A tracked journey also uses location (for the "get off here" alert) when location is allowed.
-            val type = if (target is TrackingTarget.Trip && appContainer.locationProvider.hasPermission()) {
+            // Location (when allowed) drives the "get off here" alert, the pace to aim for and when to leave.
+            val type = if (appContainer.locationProvider.hasPermission()) {
                 ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE or ServiceInfo.FOREGROUND_SERVICE_TYPE_LOCATION
             } else {
                 ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE
@@ -123,6 +123,8 @@ class TrackingService : Service() {
         var departure: com.ssethhyy.journey.data.model.Departure? = null
         var lastCrowdAlert: Occupancy? = null
         val stopAlertsShown = mutableSetOf<String>()
+        val leaveAlertsShown = mutableSetOf<String>()
+        var here: com.ssethhyy.journey.data.location.LatLng? = null
         var journey = (target as? TrackingTarget.Trip)?.let { container.journeyRepository.journey(it.journeyId) }
 
         while (scope.isActive) {
@@ -139,13 +141,31 @@ class TrackingService : Service() {
                     is TrackingTarget.Trip -> runCatching { container.journeyRepository.refreshJourney(target.journeyId) }
                         .onSuccess { refreshed -> if (refreshed != null) journey = refreshed }
                 }
+                // Where you are, for the pace and the leave alert (only while you're still on your way to board).
+                val settings = container.settingsRepository.current()
+                here = if ((settings.trackingPace || settings.trackingLeaveAlert) && container.locationProvider.hasPermission() &&
+                    boarding(target, departure, journey, now) != null
+                ) runCatching { container.locationProvider.currentLocation() }.getOrNull() ?: here else null
             }
             // "Get off here": once per ride, when you're close to the stop or it's about to arrive.
             if (target is TrackingTarget.Trip) journey?.let { j -> checkStopAlert(j, now, stopAlertsShown) }
-            val status = when (target) {
+            val baseStatus = when (target) {
                 is TrackingTarget.Service -> TrackingLogic.serviceStatus(target, departure, startedAt, now)
                 is TrackingTarget.Trip -> journey?.let { TrackingLogic.journeyStatus(it, target.toName, now) }
                     ?: TrackingStatus("Journey unavailable", "Plan the trip again to keep tracking", "—", 1f, false, true, null, now)
+            }
+            val board = boarding(target, departure, journey, now)
+            val distance = board?.let { b -> here?.let { h -> com.ssethhyy.journey.utils.GeoUtils.haversineMeters(h.latitude, h.longitude, b.latitude, b.longitude) } }
+            val settings = container.settingsRepository.current()
+            val status = if (settings.trackingPace && !baseStatus.finished && board != null && distance != null) {
+                baseStatus.copy(pace = PaceLogic.pace(distance, board.departs, now))
+            } else baseStatus
+            // "Time to leave": once per service, when an ordinary walk from here would only just make it.
+            if (settings.trackingLeaveAlert && board != null && distance != null && distance >= PaceLogic.AT_STOP_METERS &&
+                board.key !in leaveAlertsShown && now.isBefore(board.departs) && !now.isBefore(PaceLogic.leaveAt(distance, board.departs).minusSeconds(15))
+            ) {
+                leaveAlertsShown += board.key
+                notifyLeave(board, distance)
             }
             if (status != lastStatus) {
                 // Taps on the wrist of the phone: leaving now needs you; arriving is a small "well done".
@@ -162,6 +182,59 @@ class TrackingService : Service() {
             delay(15_000)
         }
         stopTracking()
+    }
+
+    /** The stop you're heading to board at, and when the service leaves it. */
+    private data class Boarding(val key: String, val departs: Instant, val latitude: Double, val longitude: Double, val stopName: String, val label: String)
+
+    /** Where and when you board next; null once you're on board (or there's nothing left to catch). */
+    private suspend fun boarding(
+        target: TrackingTarget,
+        departure: com.ssethhyy.journey.data.model.Departure?,
+        journey: com.ssethhyy.journey.data.planner.Journey?,
+        now: Instant,
+    ): Boarding? = when (target) {
+        is TrackingTarget.Service -> {
+            val time = departure?.bestTime?.takeIf { it.isAfter(now) }
+            val stop = time?.let { runCatching { appContainer.ptvRepository.stopDetails(target.mode, target.stopId).stop }.getOrNull() }
+            if (time == null || stop == null || (stop.latitude == 0.0 && stop.longitude == 0.0)) null
+            else Boarding(target.id, time, stop.latitude, stop.longitude, target.stopName, target.routeLabel)
+        }
+        is TrackingTarget.Trip -> journey?.legs
+            ?.firstOrNull { it.kind == com.ssethhyy.journey.data.planner.LegKind.TRANSIT && it.start.isAfter(now) }
+            ?.let { leg ->
+                val from = leg.path.firstOrNull() ?: return@let null
+                Boarding("${target.id}@${leg.start.epochSecond}", leg.start, from.latitude, from.longitude, leg.fromName.ifBlank { "your stop" }, leg.label)
+            }
+    }
+
+    /** "Leave now": a separate alert, since it needs you to act. */
+    private fun notifyLeave(board: Boarding, distance: Double) {
+        if (!manager.canPostNotifications()) return
+        val nm = getSystemService(NotificationManager::class.java)
+        if (nm.getNotificationChannel(LEAVE_CHANNEL_ID) == null) {
+            nm.createNotificationChannel(
+                NotificationChannel(LEAVE_CHANNEL_ID, "Time to leave", NotificationManager.IMPORTANCE_HIGH).apply {
+                    description = "When to set off to catch the service you're tracking, from where you are"
+                },
+            )
+        }
+        val open = PendingIntent.getActivity(
+            this,
+            3,
+            Intent(this, MainActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP),
+            PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
+        )
+        val notification = Notification.Builder(this, LEAVE_CHANNEL_ID)
+            .setSmallIcon(R.drawable.ic_stat_tracking)
+            .setContentTitle("Leave now for the ${board.label}")
+            .setContentText("About ${PaceLogic.walkMinutes(distance)} min walk to ${board.stopName} · leaves ${com.ssethhyy.journey.utils.TimeFormatter.clock(board.departs)}")
+            .setCategory(Notification.CATEGORY_REMINDER)
+            .setAutoCancel(true)
+            .setContentIntent(open)
+            .build()
+        nm.notify(LEAVE_NOTIFICATION_ID, notification)
+        HapticUtil.performAttentionHaptic(this)
     }
 
     private suspend fun checkStopAlert(journey: com.ssethhyy.journey.data.planner.Journey, now: Instant, shown: MutableSet<String>) {
@@ -269,7 +342,8 @@ class TrackingService : Service() {
         val builder = Notification.Builder(this, CHANNEL_ID)
             .setSmallIcon(R.drawable.ic_stat_tracking)
             .setContentTitle(status.title)
-            .setContentText(status.detail + if (status.isLive) " · Live" else "")
+            // The pace to aim for leads the line, so it's the first thing you read.
+            .setContentText(listOfNotNull(status.pace?.label, status.detail + if (status.isLive) " · Live" else "").joinToString(" · "))
             .setSubText(if (target is TrackingTarget.Trip) "To ${target.toName}" else null)
             .setColor(accent)
             .setOngoing(!status.finished)
@@ -289,7 +363,8 @@ class TrackingService : Service() {
                     Notification.ProgressStyle()
                         .setStyledByProgress(true)
                         .setProgress(progress)
-                        .setProgressTrackerIcon(Icon.createWithResource(this, R.drawable.ic_stat_tracking))
+                        // The tracker shows how to move: walking, or running when you need to hurry.
+                        .setProgressTrackerIcon(Icon.createWithResource(this, paceIcon(status.pace)))
                         .setProgressSegments(listOf(Notification.ProgressStyle.Segment(1000).setColor(accent))),
                 )
             }
@@ -299,6 +374,12 @@ class TrackingService : Service() {
         return builder.build()
     }
 
+    private fun paceIcon(pace: Pace?): Int = when (pace) {
+        null -> R.drawable.ic_stat_tracking
+        Pace.LEISURELY, Pace.WALK, Pace.BRISK -> R.drawable.rounded_directions_walk_24px
+        Pace.JOG, Pace.RUN, Pace.TOO_LATE -> R.drawable.ic_pace_run
+    }
+
     companion object {
         const val ACTION_START = "com.ssethhyy.journey.tracking.START"
         const val ACTION_STOP = "com.ssethhyy.journey.tracking.STOP"
@@ -306,5 +387,7 @@ class TrackingService : Service() {
         private const val NOTIFICATION_ID = 4201
         private const val CROWDING_CHANNEL_ID = "crowding_alerts"
         private const val CROWDING_NOTIFICATION_ID = 4202
+        private const val LEAVE_CHANNEL_ID = "time_to_leave"
+        private const val LEAVE_NOTIFICATION_ID = 4203
     }
 }

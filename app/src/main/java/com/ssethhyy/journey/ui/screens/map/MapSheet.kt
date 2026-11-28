@@ -244,7 +244,9 @@ fun MapSheet(
                         dragBy(available.y)
                         return available
                     }
-                    if (available.y < 0 && height < openPx - 0.5f) {
+                    // Pushing up grows the panel first (all the way into its page); the list only scrolls once it's
+                    // as big as it gets.
+                    if (available.y < 0 && height < fullPx - 0.5f) {
                         dragging = true
                         dragBy(available.y)
                         return available

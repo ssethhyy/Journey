@@ -23,7 +23,8 @@ All notable changes to Journey are documented here. The format follows
   its header folds away. When it lands, the real page is already in place, so only the toolbar changes: it gains the
   page's Back button. Pull down at the top of the page, or press Back, and it shrinks back into the panel on the map.
   Nearby now has its own page listing every stop nearby. The journey's page is laid out differently from its panel,
-  so it crossfades quickly instead. Panels also move faster and land more crisply.
+  so it crossfades quickly instead. Panels also move faster and land more crisply. Pushing up anywhere on a panel,
+  not just its header, grows it; the list scrolls once it has become the page.
 - **The map keeps what it's showing in view.** Whatever height a panel is (short of full page), the stop, the line,
   your location, or just the spot you were looking at moves to the middle of the part of the map left uncovered.
 - **A new For You, built from widgets you arrange yourself.** Greeting, Places, Favourites, Disruptions, Commutes and

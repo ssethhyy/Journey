@@ -22,9 +22,17 @@ All notable changes to Journey are documented here. The format follows
   you drag. It widens to the screen's edges, its corners straighten, its colour and padding become the page's, and
   its header folds away. When it lands, the real page is already in place, so only the toolbar changes: it gains the
   page's Back button. Pull down at the top of the page, or press Back, and it shrinks back into the panel on the map.
-  Nearby now has its own page listing every stop nearby. The journey's page is laid out differently from its panel,
-  so it crossfades quickly instead. Panels also move faster and land more crisply. Pushing up anywhere on a panel,
+  Nearby now has its own page listing every stop nearby. Panels also move faster and land more crisply. Pushing up anywhere on a panel,
   not just its header, grows it; the list scrolls once it has become the page.
+- **Services open on the map.** Tapping a departure anywhere (a stop's board, a stop on the map, a favourite)
+  now opens the Map with the service drawn and its live position shown, and a panel with how it's running,
+  crowding, its stopping pattern and service updates. Pull the panel up for the service's page, and down to return.
+  Back goes to the stop you tapped it on, or the tab you came from.
+- **Planned journeys open on the map.** Choosing a journey on Plan (or a commute on For You) opens it on the Map,
+  with a panel that starts with when to leave (*Leave in 12 min*), the leave and arrive times, how long it takes and
+  the first service to catch, then its steps, then the stop-by-stop detail. Tap a step to highlight it on the map
+  and zoom to it. Pull the panel up for the journey's page, laid out the same way, and down to return. Back goes
+  back to Plan (or For You). The journey's times update live on the map too, and you can track it from the panel.
 - **The map no longer reloads when you come back to it.** The home screen (For You, Plan and the Map) now stays alive
   under any page you open, paused while it's covered. Coming back from a stop, a line, search or settings is instant:
   the map is exactly as you left it and doesn't rebuild its style or tiles. While a page is on top, the home screen

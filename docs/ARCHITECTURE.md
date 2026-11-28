@@ -344,11 +344,16 @@ full page. It follows the finger through drags on its header and over-scrolls of
 `MapControlFlow` lays out the control pills left to right and wraps them into rows that stack upward.
 Between open and full page `MapSheet` lays itself out as its page: a layout modifier grows it past its parent to
 the screen's edges, the header folds away, the status bar's height is reserved and the list's padding moves to the
-page's. Once it lands it opens the page (`StopDetailKey`, `RouteDetailKey`, `NearbyKey`, or `JourneyDetailKey` with
-`fromMap`) at the same scroll position, with no transition (`MapPageTransitions`; the journey page crossfades).
+page's. Once it lands it opens the page (`StopDetailKey`, `RouteDetailKey`, `TripKey`, `NearbyKey`, or
+`JourneyDetailKey` with `fromMap`) at the same scroll position, with no transition (`MapPageTransitions`).
 Panels and pages share view models through `sharedAppViewModel`, so the page has nothing to reload. On a page,
 `rememberPullDownToClose` goes back as soon as you pull past the top, and the panel, which starts at full height,
 shrinks back down. `MapScreen` re-centres the camera on the panel's subject whenever the covered area settles.
+`Navigator.openTrip` sends a departure to the Map tab through `AppContainer.openTripMap`: the trip layer draws it and
+`MapTripSheet` shows `tripItems` (shared with `TripScreen`). `Navigator.openJourney` does the same for a planned
+journey: `JourneyMapPanel` and `JourneyDetailScreen` both show `journeyItems` (summary, steps, then stop by stop) and
+share `JourneyLiveViewModel` for live times. `MapOrigins` remembers where a trip or journey was opened from, so Back
+returns to that stop or tab.
 
 ## Stop alerts
 

@@ -125,6 +125,7 @@ import com.ssethhyy.journey.utils.HapticUtil
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.filterNotNull
+import kotlinx.coroutines.flow.first
 import java.time.Instant
 
 private val MELBOURNE = Point.fromLngLat(144.9631, -37.8136)
@@ -172,6 +173,14 @@ fun MapScreen(isActive: Boolean, modifier: Modifier = Modifier) {
     var tripPanelHeightPx by remember { mutableIntStateOf(0) }
     // The trip's points, so it can be fitted again as its panel moves.
     var tripFitPoints by remember(tripRequest) { mutableStateOf<List<Point>>(emptyList()) }
+    // A trip follows its vehicle's live position by default; "Show the line" fits the line instead.
+    // One state for the map's lifetime (not keyed by the trip), so the drag listener, set up once, can turn it off.
+    var tripFollow by remember { mutableStateOf(true) }
+    LaunchedEffect(tripRequest) { tripFollow = true }
+    // Whether the trip has a live position to follow (known once its panel has loaded).
+    var tripHasLive by remember(tripRequest) { mutableStateOf(false) }
+    // Where the trip layer draws the vehicle, many times a second; only read by the follow loop, never in composition.
+    val tripVehicle = remember(tripRequest) { mutableStateOf<Point?>(null) }
     val rouletteRequest by container.rouletteRequest.collectAsStateWithLifecycle()
     // A line opened from search or a stop: drawn on the map with its stops in a panel.
     val mapLine by MapLineRequests.route.collectAsStateWithLifecycle()
@@ -238,6 +247,23 @@ fun MapScreen(isActive: Boolean, modifier: Modifier = Modifier) {
         (ToolbarClearance + previewClearance + controlsClearance).toPx()
     }
     val topCoveredPx = statusTopPx + with(density) { 72.dp.toPx() }
+    val windowHeightPx = androidx.compose.ui.platform.LocalWindowInfo.current.containerSize.height.toDouble()
+
+    /**
+     * Padding for fitting a line or a trip into the uncovered map. A tall panel can leave too thin a strip for Mapbox
+     * to fit anything into (it then gives no camera at all), so the bottom never covers more than leaves a third of
+     * the screen for the fit.
+     */
+    fun fitPadding(): EdgeInsets {
+        val top = topCoveredPx + 24.0
+        val bottom = (bottomCoveredPx + 24.0).coerceAtMost((windowHeightPx * 0.67 - top).coerceAtLeast(0.0))
+        return EdgeInsets(top, 48.0, bottom, 48.0)
+    }
+
+    /** The camera that fits [points] into the uncovered map, or into the whole map if that's too small. */
+    suspend fun fitCamera(points: List<Point>): CameraOptions? =
+        viewportState.cameraForCoordinates(points, CameraOptions.Builder().build(), fitPadding(), 16.0, null).takeIf { it.center != null }
+            ?: viewportState.cameraForCoordinates(points, CameraOptions.Builder().build(), EdgeInsets(48.0, 48.0, 48.0, 48.0), 16.0, null).takeIf { it.center != null }
 
     // ---- Camera helpers --------------------------------------------------------------
     fun flyTo(lat: Double, lon: Double, zoom: Double = 15.5) {
@@ -362,10 +388,9 @@ fun MapScreen(isActive: Boolean, modifier: Modifier = Modifier) {
         val selected = state.selected
         when {
             journeyMode -> Unit // Its panel fits it.
+            tripMode && tripFollow && tripHasLive -> Unit // The follow loop keeps the vehicle centred.
             tripMode && tripFitPoints.size > 1 -> {
-                val padding = EdgeInsets(topCoveredPx + 24.0, 48.0, bottomCoveredPx + 24.0, 48.0)
-                val camera = viewportState.cameraForCoordinates(tripFitPoints, CameraOptions.Builder().build(), padding, 16.0, null)
-                viewportState.easeTo(camera, ease)
+                fitCamera(tripFitPoints)?.let { camera -> viewportState.easeTo(camera, ease) }
             }
             tripMode -> Unit
             selected != null -> viewportState.easeTo(
@@ -373,9 +398,7 @@ fun MapScreen(isActive: Boolean, modifier: Modifier = Modifier) {
                 ease,
             )
             mapLine != null && lineFitPoints.size > 1 -> {
-                val padding = EdgeInsets(topCoveredPx + 24.0, 48.0, bottomCoveredPx + 24.0, 48.0)
-                val camera = viewportState.cameraForCoordinates(lineFitPoints, CameraOptions.Builder().build(), padding, 16.0, null)
-                viewportState.easeTo(camera, ease)
+                fitCamera(lineFitPoints)?.let { camera -> viewportState.easeTo(camera, ease) }
             }
             followingUser && here != null -> viewportState.easeTo(
                 CameraOptions.Builder().center(Point.fromLngLat(here.longitude, here.latitude)).padding(visiblePadding).build(),
@@ -384,6 +407,31 @@ fun MapScreen(isActive: Boolean, modifier: Modifier = Modifier) {
             // Nothing in particular: keep the point you were looking at in the middle of what's still visible.
             else -> viewportState.easeTo(CameraOptions.Builder().padding(visiblePadding).build(), ease)
         }
+    }
+
+    // Following a trip's vehicle: fly to it, then keep it centred in the uncovered map as it moves. The trip layer
+    // moves the vehicle smoothly between updates, so the camera glides with it.
+    LaunchedEffect(tripRequest, tripFollow, tripHasLive, isActive) {
+        if (tripRequest == null || !tripFollow || !tripHasLive || !isActive) return@LaunchedEffect
+        val first = snapshotFlow { tripVehicle.value }.filterNotNull().first()
+        flyingUntil = System.currentTimeMillis() + 900
+        viewportState.flyTo(
+            CameraOptions.Builder().center(first).zoom(15.5).padding(visiblePadding).build(),
+            MapAnimationOptions.mapAnimationOptions { duration(900) },
+        )
+        kotlinx.coroutines.delay(900)
+        snapshotFlow { tripVehicle.value }.filterNotNull().collect { point ->
+            viewportState.setCameraOptions(CameraOptions.Builder().center(point).padding(visiblePadding).build())
+        }
+    }
+    // "Show the line": fit the trip from your stop to the end.
+    LaunchedEffect(tripRequest, tripFollow) {
+        if (tripRequest == null || tripFollow || tripFitPoints.size < 2) return@LaunchedEffect
+        // Let the follow loop's last camera move land first, or it would cut this flight short.
+        kotlinx.coroutines.delay(60)
+        val camera = fitCamera(tripFitPoints) ?: return@LaunchedEffect
+        flyingUntil = System.currentTimeMillis() + 900
+        viewportState.flyTo(camera, MapAnimationOptions.mapAnimationOptions { duration(900) })
     }
 
     // ---- Layout ----------------------------------------------------------------------
@@ -480,7 +528,8 @@ fun MapScreen(isActive: Boolean, modifier: Modifier = Modifier) {
                         runRef = currentTrip.runRef,
                         mode = currentTrip.mode,
                         directionId = currentTrip.directionId,
-                        render3dVehicles = state.settings.mapRender3dVehicles
+                        render3dVehicles = state.settings.mapRender3dVehicles,
+                        onVehicleMoved = { tripVehicle.value = it },
                     )
                 }
 
@@ -505,6 +554,7 @@ fun MapScreen(isActive: Boolean, modifier: Modifier = Modifier) {
                     mapView.gestures.addOnMoveListener(object : com.mapbox.maps.plugin.gestures.OnMoveListener {
                         override fun onMoveBegin(detector: com.mapbox.android.gestures.MoveGestureDetector) {
                             followingUser = false
+                            tripFollow = false
                         }
                         override fun onMove(detector: com.mapbox.android.gestures.MoveGestureDetector) = false
                         override fun onMoveEnd(detector: com.mapbox.android.gestures.MoveGestureDetector) = Unit
@@ -623,7 +673,15 @@ fun MapScreen(isActive: Boolean, modifier: Modifier = Modifier) {
                         .fillMaxWidth()
                         .padding(horizontal = 12.dp, vertical = 4.dp),
                 ) {
-                    if (!showNearby) {
+                    if (tripMode && tripHasLive) {
+                        val tripModeLabel = tripRequest?.mode?.label?.lowercase() ?: "service"
+                        if (tripFollow) {
+                            MapControlPill(icon = Sym.Route, label = "Show the line", onClick = { tripFollow = false })
+                        } else {
+                            MapControlPill(icon = Sym.NearMe, label = "Follow the $tripModeLabel", onClick = { tripFollow = true })
+                        }
+                    }
+                    if (!showNearby && !tripMode) {
                         MapControlPill(
                             icon = Sym.NearMe,
                             label = "Nearby",
@@ -720,11 +778,14 @@ fun MapScreen(isActive: Boolean, modifier: Modifier = Modifier) {
                     request = request,
                     onClose = container::closeTripMap,
                     onFullProgress = { placeFullProgress = it },
-                    onFit = { points ->
+                    onLoaded = { points, vehicle ->
                         tripFitPoints = points
-                        val padding = EdgeInsets(topCoveredPx + 24.0, 48.0, bottomCoveredPx + 24.0, 48.0)
-                        val camera = viewportState.cameraForCoordinates(points, CameraOptions.Builder().build(), padding, 16.0, null)
-                        viewportState.flyTo(camera, MapAnimationOptions.mapAnimationOptions { duration(900) })
+                        tripHasLive = vehicle != null
+                        if (vehicle == null) tripFollow = false
+                        // Following starts at the vehicle (the follow loop flies there); otherwise show the line.
+                        if (!tripFollow && points.size > 1) {
+                            fitCamera(points)?.let { camera -> viewportState.flyTo(camera, MapAnimationOptions.mapAnimationOptions { duration(900) }) }
+                        }
                     },
                 )
             }
@@ -789,9 +850,7 @@ fun MapScreen(isActive: Boolean, modifier: Modifier = Modifier) {
                     onFullProgress = { placeFullProgress = it },
                     onFit = { points ->
                         lineFitPoints = points
-                        val padding = EdgeInsets(topCoveredPx + 24.0, 48.0, bottomCoveredPx + 24.0, 48.0)
-                        val camera = viewportState.cameraForCoordinates(points, CameraOptions.Builder().build(), padding, 16.0, null)
-                        viewportState.flyTo(camera, MapAnimationOptions.mapAnimationOptions { duration(900) })
+                        fitCamera(points)?.let { camera -> viewportState.flyTo(camera, MapAnimationOptions.mapAnimationOptions { duration(900) }) }
                     },
                 )
             }

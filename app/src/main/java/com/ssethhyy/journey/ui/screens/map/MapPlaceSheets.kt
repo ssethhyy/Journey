@@ -249,8 +249,11 @@ fun MapTripSheet(
     request: com.ssethhyy.journey.AppContainer.TripMapRequest,
     /** Takes the trip off the map. */
     onClose: () -> Unit,
-    /** Fits the map to the trip's points, in the part of the map the panel leaves uncovered. */
-    onFit: suspend (List<Point>) -> Unit,
+    /**
+     * Once it has loaded: the trip's points (from your stop to the end of the line) and where the vehicle is, if it's
+     * sharing a live position. The map follows the vehicle, or fits the line when there's no live position.
+     */
+    onLoaded: suspend (points: List<Point>, vehicle: Point?) -> Unit,
     modifier: Modifier = Modifier,
     onFullProgress: (Float) -> Unit = {},
 ) {
@@ -282,9 +285,9 @@ fun MapTripSheet(
     LaunchedEffect(request.runRef, pattern != null) {
         val p = pattern ?: return@LaunchedEffect
         val from = p.stops.indexOfFirst { it.stop.id == fromStopId }.coerceAtLeast(0)
-        val points = p.stops.drop(from).map { Point.fromLngLat(it.stop.longitude, it.stop.latitude) } +
-            listOfNotNull(p.vehiclePosition?.takeIf { it.isFresh(now) }?.let { Point.fromLngLat(it.longitude, it.latitude) })
-        if (points.size > 1) onFit(points)
+        val vehicle = p.vehiclePosition?.takeIf { it.isFresh(now) }?.let { Point.fromLngLat(it.longitude, it.latitude) }
+        val points = p.stops.drop(from).map { Point.fromLngLat(it.stop.longitude, it.stop.latitude) } + listOfNotNull(vehicle)
+        onLoaded(points, vehicle)
     }
 
     val trackTarget = com.ssethhyy.journey.ui.screens.trip.tripTrackTarget(request.runRef, request.mode, fromStopId, request.title, pattern)

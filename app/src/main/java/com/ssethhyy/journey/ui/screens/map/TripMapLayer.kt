@@ -135,6 +135,8 @@ fun TripMapLayer(
     onLoaded: (StoppingPattern) -> Unit = {},
     render3dVehicles: Boolean = false,
     usePatternGeopath: Boolean = false,
+    /** Where the vehicle is drawn, as it moves (null while it isn't shown); the map follows it. */
+    onVehicleMoved: (Point?) -> Unit = {},
 ) {
 
     val container = LocalContext.current.appContainer
@@ -168,6 +170,13 @@ fun TripMapLayer(
 
     val markerVisible = remember(runRef, mode) {
         mutableStateOf(false)
+    }
+
+    // Reports the drawn position to the map, so the camera can follow the vehicle.
+    val reportVehicle = androidx.compose.runtime.rememberUpdatedState(onVehicleMoved)
+    LaunchedEffect(markerPoint, markerVisible) {
+        androidx.compose.runtime.snapshotFlow { markerPoint.value?.takeIf { markerVisible.value } }
+            .collect { reportVehicle.value(it) }
     }
 
     val frontDistance = remember(runRef, mode) {

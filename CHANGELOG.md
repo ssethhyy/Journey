@@ -7,6 +7,20 @@ All notable changes to Journey are documented here. The format follows
 ## [Unreleased]
 
 ### Added
+- **"Time to leave" alert while you track a service.** From where you are and how long the walk to the stop takes
+  (at an ordinary pace, with a minute to spare), Journey tells you when to set off. It alerts once per service, and
+  not when you're already at the stop. Turn it off in Settings → *Live tracking*.
+- **How fast to go, on the live notification.** While you're on your way to board, the notification starts with a
+  pace to aim for (*Leisurely walk*, *Walk*, *Brisk walk*, *Jog*, *Run*, or *You may miss it*), from how far you are
+  and the time left. The progress tracker shows a walking or running figure to match. Turn it off in Settings →
+  *Live tracking*.
+- **Stops and lines open on the map.** Tapping a stop or line (from search, favourites, a stop's lines or a line's
+  stops) now opens the Map with a floating panel showing what its page showed: departures, filters, service updates,
+  facilities and lines for a stop, or directions and stops for a line. A line is also drawn along its route on the map.
+  A stop with no known position still opens on its own page.
+- **Pull a map panel up into a full page.** The Nearby, journey, stop and line panels follow your finger all the way
+  up. As they go they morph into a page you can scroll, with a sliver of map still showing on each side, and they
+  morph back into the floating panel when you pull them down. Back returns from the full page.
 - **A new For You, built from widgets you arrange yourself.** Greeting, Places, Favourites, Disruptions, Commutes and
   Near you are each a widget. Tap the pencil at the top of For You to edit the page:
   - **Move widgets by dragging.** Hold a widget, or grab its handle, and it lifts and follows your finger. A filled
@@ -42,6 +56,14 @@ All notable changes to Journey are documented here. The format follows
   that stop, and undo puts back exactly the one you removed.
 
 ### Changed
+- **Live vehicle positions come from Transport Victoria's GTFS Realtime feed** when an Open Data key is set, instead
+  of the PTV API alone. The feed updates often and says when each position was recorded, so the map's estimates and
+  smooth movement work from a known time. Feed positions older than five minutes are ignored, and PTV's position is
+  kept when it's newer.
+- **The map's control pills read left to right.** *Nearby*, *Roll a stop* and *My location* sit on the left with no
+  gaps, and they never scroll sideways: if they don't fit they close up, then wrap onto a new row above.
+- **The Nearby panel has no collapse arrow.** Swipe it up or down instead. Its handle sits in line with the title, so
+  the panel starts with its title and no empty space above it.
 - **Saved places all work the same way** (thanks @AstonBolwell, #15). There's no separate Home and Work any more:
   every place has a name and an icon, and Home, Work and School are icons any place can use, so you can save two
   homes or none. *Set home* and *Set work* are still suggested until you've saved your first place.

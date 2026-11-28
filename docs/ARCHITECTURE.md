@@ -304,6 +304,30 @@ status.
   (`ProgressStyle` on Android 16) and `TrackingUi` shows the in-app banner.
 - `widget` is a Jetpack Glance widget with responsive layouts, refreshed by WorkManager and the manual refresh button.
 
+## Pace and "time to leave"
+
+While you're still on your way to board (a tracked service, or a journey's next transit leg), `TrackingService` reads
+the phone's location on each fetch when either setting is on. `PaceLogic` stretches the straight-line distance to the
+stop by 1.3 for real streets. `pace` turns the speed needed, with 30 s spare, into a `Pace` shown first on the
+notification (with a walking or running tracker icon). `leaveAt` gives the time to set off at 1.35 m/s with 60 s spare,
+and the service posts a high-priority "time to leave" notification once per boarding.
+
+## Live positions (GTFS Realtime)
+
+`PtvRepository.stoppingPattern` asks `CrowdingRepository.vehicleFor` for the vehicle in Transport Victoria's GTFS
+Realtime feed (cached for 20 s). It matches by vehicle id first, then the nearest vehicle to PTV's position or to the
+timetable's expected position. That position replaces PTV's `vehiclePosition`, with its `recordedAt` taken from the
+feed's timestamp, unless PTV's is newer or the feed's is over five minutes old.
+
+## Map panels
+
+`MapSheet` is the floating panel for stops, lines and journeys. It has three steps (`SheetStep`): its header, open and
+full page. It follows the finger through drags on its header and over-scrolls of its list, settles with
+`MapSheetSettle`, and morphs its shape and colour by `rememberSheetMorph`; `NearbyPanel` uses the same morph.
+`MapStopSheet` and `MapLineSheet` reuse the stop and line pages' list items (`stopDetailItems`, `routeDetailItems`).
+`Navigator.openStop` and `openRoute` send stops and lines to the Map tab, and lines go through `MapLineRequests`.
+`MapControlFlow` lays out the control pills left to right and wraps them into rows that stack upward.
+
 ## Stop alerts
 
 While a journey is tracked, `TrackingService` asks `StopAlertLogic.due` every loop whether a ride is about to end:

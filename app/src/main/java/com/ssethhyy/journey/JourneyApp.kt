@@ -75,7 +75,8 @@ class AppContainer(
         credentialsProvider = { credentialsOverride ?: settingsRepository.current().ptvCredentials },
         baseUrl = ptvBaseUrl,
     )
-    val ptvRepository = PtvRepository(ptvApi)
+    // Live vehicle positions come from Transport Victoria's GTFS Realtime feed when there's an Open Data key.
+    val ptvRepository = PtvRepository(ptvApi, liveVehicle = { mode, vehicleId, near, radius -> crowdingRepository.vehicleFor(mode, vehicleId, near, radius) })
     val crowdingRepository = com.ssethhyy.journey.data.crowding.CrowdingRepository(
         com.ssethhyy.journey.data.crowding.CrowdingApi(
             keyProvider = {

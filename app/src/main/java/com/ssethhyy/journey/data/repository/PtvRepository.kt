@@ -19,6 +19,7 @@ import com.ssethhyy.journey.data.model.StopDetails
 import com.ssethhyy.journey.data.fare.StopFare
 import com.ssethhyy.journey.data.model.StoppingPattern
 import com.ssethhyy.journey.data.model.TransportMode
+import com.ssethhyy.journey.data.model.VehiclePosition
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
@@ -79,7 +80,14 @@ class TtlCache<K : Any, V : Any>(
     }
 }
 
-class PtvRepository(private val api: PtvApi) {
+/**
+ * [liveVehicle] looks a service's vehicle up in Transport Victoria's GTFS Realtime feed (see [stoppingPattern]); null
+ * keeps to PTV's positions only.
+ */
+class PtvRepository(
+    private val api: PtvApi,
+    private val liveVehicle: (suspend (mode: TransportMode, vehicleId: String?, near: Pair<Double, Double>?, radiusMeters: Double) -> com.ssethhyy.journey.data.crowding.RtVehicle?)? = null,
+) {
     private val departuresCache = TtlCache<String, DepartureBoard>(ttlMs = 20_000, minForceAgeMs = 8_000)
     // Stops don't move, so a nearby list stays good for a while.
     private val nearbyCache = TtlCache<String, List<Stop>>(ttlMs = 10 * 60_000L, minForceAgeMs = 30_000)
@@ -216,7 +224,10 @@ class PtvRepository(private val api: PtvApi) {
      * only if PTV has no shape at all is a smooth curve drawn through the stops.
      */
     suspend fun stoppingPattern(runRef: String, mode: TransportMode, withPath: Boolean = true): StoppingPattern {
-        val pattern = PtvMappers.stoppingPattern(api.pattern(runRef, mode.routeType, stopId = null, includeGeopath = withPath), withPath)
+        val pattern = withLivePosition(
+            PtvMappers.stoppingPattern(api.pattern(runRef, mode.routeType, stopId = null, includeGeopath = withPath), withPath),
+            mode,
+        )
         if (!withPath || pattern.path.isNotEmpty()) return pattern
         val stops = pattern.stops.map { it.stop.latitude to it.stop.longitude }
         val routeShapes = pattern.route?.id?.let { id ->
@@ -225,6 +236,64 @@ class PtvRepository(private val api: PtvApi) {
         // Stitching thousands of shape points is real work: keep it off the main thread.
         val line = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Default) { RouteLine.forStops(stops, routeShapes) }
         return pattern.copy(path = line)
+    }
+
+    /**
+     * Prefers Transport Victoria's GTFS Realtime position for the service's vehicle: it's sent more reliably than PTV's
+     * and says when it was recorded, so the vehicle can be placed between updates. The vehicle is found by its numbers,
+     * near PTV's position when there is one, or near where the timetable says it should be. PTV's position stays when
+     * it's newer, or when the feed has nothing.
+     */
+    private suspend fun withLivePosition(pattern: StoppingPattern, mode: TransportMode): StoppingPattern {
+        val lookup = liveVehicle ?: return pattern
+        val ptv = pattern.vehiclePosition
+        val (near, radius) = when {
+            ptv != null -> (ptv.latitude to ptv.longitude) to 250.0
+            else -> (expectedPosition(pattern, java.time.Instant.now()) ?: return if (pattern.vehicle?.id != null) {
+                lookupOrSame(pattern, lookup, mode, null, 0.0)
+            } else pattern) to 600.0
+        }
+        return lookupOrSame(pattern, lookup, mode, near, radius)
+    }
+
+    private suspend fun lookupOrSame(
+        pattern: StoppingPattern,
+        lookup: suspend (TransportMode, String?, Pair<Double, Double>?, Double) -> com.ssethhyy.journey.data.crowding.RtVehicle?,
+        mode: TransportMode,
+        near: Pair<Double, Double>?,
+        radius: Double,
+    ): StoppingPattern {
+        val rt = runCatching { lookup(mode, pattern.vehicle?.id, near, radius) }.getOrNull() ?: return pattern
+        val lat = rt.latitude ?: return pattern
+        val lon = rt.longitude ?: return pattern
+        val recorded = rt.timestampSec?.let { java.time.Instant.ofEpochSecond(it) }
+        val ptv = pattern.vehiclePosition
+        // Keep PTV's when it's the newer of the two.
+        if (ptv?.recordedAt != null && recorded != null && ptv.recordedAt.isAfter(recorded)) return pattern
+        // A position more than a few minutes old isn't live any more.
+        if (recorded != null && recorded.isBefore(java.time.Instant.now().minusSeconds(300))) return pattern
+        return pattern.copy(
+            vehiclePosition = VehiclePosition(
+                latitude = lat,
+                longitude = lon,
+                bearing = rt.bearing?.toDouble() ?: ptv?.bearing,
+                recordedAt = recorded,
+                expiresAt = recorded?.plusSeconds(180),
+            ),
+        )
+    }
+
+    /** Where the timetable puts the service now: between the stop it last left and the next, by time. */
+    private fun expectedPosition(pattern: StoppingPattern, now: java.time.Instant): Pair<Double, Double>? {
+        val stops = pattern.stops.filter { it.bestTime != null && (it.stop.latitude != 0.0 || it.stop.longitude != 0.0) }
+        if (stops.size < 2) return null
+        val nextIndex = stops.indexOfFirst { it.bestTime!!.isAfter(now) }
+        if (nextIndex <= 0) return null // Not left the first stop yet, or already finished.
+        val a = stops[nextIndex - 1]
+        val b = stops[nextIndex]
+        val span = java.time.Duration.between(a.bestTime, b.bestTime).seconds.coerceAtLeast(1)
+        val f = (java.time.Duration.between(a.bestTime, now).seconds.toDouble() / span).coerceIn(0.0, 1.0)
+        return (a.stop.latitude + (b.stop.latitude - a.stop.latitude) * f) to (a.stop.longitude + (b.stop.longitude - a.stop.longitude) * f)
     }
 
     fun clearCaches() {

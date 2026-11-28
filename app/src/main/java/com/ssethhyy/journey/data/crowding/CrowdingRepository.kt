@@ -163,7 +163,8 @@ object CrowdingMatcher {
 }
 
 class CrowdingRepository(private val api: CrowdingApi) {
-    private val cache = TtlCache<CrowdingFeed, List<RtVehicle>>(ttlMs = 30_000L, maxEntries = 8)
+    // Shared by crowding and live positions; short enough that a tracked vehicle stays current.
+    private val cache = TtlCache<CrowdingFeed, List<RtVehicle>>(ttlMs = 20_000L, maxEntries = 8, minForceAgeMs = 10_000L)
 
     suspend fun isConfigured(): Boolean = api.hasKey()
 
@@ -181,6 +182,26 @@ class CrowdingRepository(private val api: CrowdingApi) {
         }
         val match = CrowdingMatcher.match(vehicles, runVehicleId, position) ?: return CrowdingResult.NotFound
         return CrowdingResult.Found(CrowdingMatcher.toCrowding(match))
+    }
+
+    /**
+     * The tracked service's vehicle in Transport Victoria's GTFS Realtime feed, matched by its vehicle numbers or, failing
+     * that, by being the nearest vehicle to where it should be ([near], within [radiusMeters]). Null without an Open
+     * Data key, when the feed can't be read, or when no vehicle matches.
+     */
+    suspend fun vehicleFor(mode: TransportMode, runVehicleId: String?, near: Pair<Double, Double>?, radiusMeters: Double = CrowdingMatcher.NEAREST_METERS): RtVehicle? {
+        if (!api.hasKey()) return null
+        val feed = CrowdingFeed.forMode(mode)
+        val vehicles = runCatching { cache.getOrLoad(feed) { api.vehicles(feed) } }.getOrNull() ?: return null
+        val wanted = CrowdingMatcher.tokens(runVehicleId)
+        if (wanted.isNotEmpty()) vehicles.firstOrNull { v -> v.allIds.any { it in wanted } }?.let { return it }
+        val point = near ?: return null
+        return vehicles
+            .filter { it.latitude != null && it.longitude != null }
+            .map { it to com.ssethhyy.journey.utils.GeoUtils.haversineMeters(point.first, point.second, it.latitude!!, it.longitude!!) }
+            .filter { it.second <= radiusMeters }
+            .minByOrNull { it.second }
+            ?.first
     }
 
     fun clearCache() = cache.clear()
